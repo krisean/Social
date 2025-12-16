@@ -1,0 +1,96 @@
+import React from "react";
+import { Button } from "../../../components/Button";
+import { FormField } from "../../../components/FormField";
+import { Modal } from "../../../components/Modal";
+
+interface CreateSessionModalProps {
+  open: boolean;
+  onClose: () => void;
+  createForm: { teamName: string; venueName: string };
+  setCreateForm: React.Dispatch<
+    React.SetStateAction<{ teamName: string; venueName: string }>
+  >;
+  createErrors: Record<string, string>;
+  isCreating: boolean;
+  canCreateSession: boolean;
+  onSubmit: (event: React.FormEvent<HTMLFormElement>) => void;
+}
+
+export function CreateSessionModal({
+  open,
+  onClose,
+  createForm,
+  setCreateForm,
+  createErrors,
+  isCreating,
+  canCreateSession,
+  onSubmit,
+}: CreateSessionModalProps) {
+  return (
+    <Modal
+      open={open}
+      onClose={onClose}
+      title="Create a Side Bets session"
+      footer={
+        <div className="flex w-full items-center justify-between">
+          <Button variant="ghost" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button
+            form="create-session-form"
+            type="submit"
+            isLoading={isCreating}
+            disabled={!canCreateSession || isCreating}
+            title={
+              !canCreateSession
+                ? "Please wait for authentication to complete, or check that Firebase emulators are running"
+                : undefined
+            }
+          >
+            Create session
+          </Button>
+        </div>
+      }
+    >
+      <form id="create-session-form" className="space-y-4" onSubmit={onSubmit}>
+        {!canCreateSession && (
+          <div className="rounded-lg bg-amber-50 border border-amber-200 p-3 text-sm text-amber-800">
+            <p className="font-semibold">Authentication required</p>
+            <p className="mt-1">
+              {isCreating
+                ? "Creating session..."
+                : "Please wait for authentication to complete. If this persists, ensure Firebase emulators are running."}
+            </p>
+          </div>
+        )}
+        <FormField
+          label="Your team name"
+          name="teamName"
+          placeholder="Host team name"
+          maxLength={15}
+          value={createForm.teamName}
+          onChange={(e) =>
+            setCreateForm((prev) => ({ ...prev, teamName: e.target.value }))
+          }
+          error={createErrors.teamName}
+        />
+        <FormField
+          label="Venue name (optional)"
+          name="venueName"
+          placeholder="Bar, team, or event name"
+          maxLength={40}
+          value={createForm.venueName}
+          onChange={(e) =>
+            setCreateForm((prev) => ({ ...prev, venueName: e.target.value }))
+          }
+          hint="Shown to teams in the lobby"
+          error={createErrors.venueName}
+        />
+        <p className="text-xs text-slate-500">
+          You'll get a 6-character room code and QR to share with teams.
+          Anonymous sign-in keeps things lightweight.
+        </p>
+      </form>
+    </Modal>
+  );
+}
