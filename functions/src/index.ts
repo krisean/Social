@@ -18,6 +18,11 @@ import {
   setSessionPromptLibrary,
 } from "./sessionManager";
 import { firestore } from "./firebase";
+import { initializeGames } from "./games";
+import { GameManager } from "./engine/GameManager";
+
+// Initialize all games on module load
+initializeGames();
 
 type RequestData = Record<string, unknown>;
 

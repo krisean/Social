@@ -1,73 +1,81 @@
-# Bar Scores MVP
+# Bar Scores - Social Gaming Platform
 
-Bar Scores is a mobile-first party game for bars and venues. Hosts spin up live prompt battles, players join via room code or QR, and everyone writes, votes, and celebrates the best ideas in three fast rounds.
+A flexible game engine supporting multiple social games with **Event Mode** (host-controlled multiplayer) and **Patron Mode** (self-service solo play).
 
-## Recent UI Improvements
+## 🎮 Features
 
-**Recent UI enhancements include: solid white cards, floating lobby mascots, optimized background animations (reduced lag), modal improvements, QR code integration in presenter view, and social media-style heart voting (implemented November 18, 2025).**
+- **Game Engine Architecture**: Modular system for multiple games
+- **Event Mode**: Host-controlled multiplayer sessions with QR codes and presenter views
+- **Patron Mode**: Self-service solo play for patrons (NEW!)
+- **Real-time Updates**: Live synchronization via Firebase
+- **Beautiful UI**: Modern, responsive design with TailwindCSS
+- **TypeScript**: Full type safety across frontend and backend
 
-## Deployment & Access
+## 🎯 Current Games
+
+### Top Comment
+- **Event Mode**: Teams compete to write the funniest answers to prompts, then vote on favorites
+- **Patron Mode**: Solo play against historical answers from other patrons
+
+## 📚 Documentation
+
+- **[Game Engine Architecture](./GAME_ENGINE.md)** - Detailed architecture and development guide
+- **[System Architecture](./architecture.md)** - High-level system design
+
+## 🚀 Deployment & Access
 
 ### Live Application
-The application is deployed and accessible at: **https://game.barscores.ca**
-Product Page: https://barscores.ca
-
-Architecture: https://github.com/SideBets/SideBets_V2/blob/main/architecture.md
-
-### Access Instructions
-- **No account required** - The app uses anonymous authentication for instant access
-- **No special credentials needed** - Simply visit the URL above to start using the application
+- **Main App**: https://game.barscores.ca
+- **Product Page**: https://barscores.ca
 
 ### Testing the Application
-1. **Host Interface**: Visit `https://barscores.ca/host` to create and manage game sessions
-2. **Player Interface**: Visit `https://barscores.ca/play` to join games as a player
-3. **Presenter Interface**: Use `https://barscores.ca/presenter/{sessionId}` for TV display (requires active session)
+
+#### Event Mode (Multiplayer)
+1. **Host Interface**: Visit `https://game.barscores.ca/host` to create and manage game sessions
+2. **Player Interface**: Visit `https://game.barscores.ca/play` to join games as a player
+3. **Presenter Interface**: Use `https://game.barscores.ca/presenter/{sessionId}` for TV display
+
+#### Patron Mode (Solo Play)
+1. Visit `https://game.barscores.ca/solo` for self-service solo play
+2. No host or room code required!
 
 ### Test Scenario
-1. **Host Setup**: Open the host interface on a laptop/desktop computer at `https://barscores.ca/host`
-2. Create a new session - the room code and QR code will be displayed, and a "Presenter" link will appear at the top of the host page for TV display
-3. **Team Setup**: Have 4 different people open `https://barscores.ca/play` on their phones, or simulate multiple teams using different browser windows/incognito mode on the same device if phones aren't available
-4. Each person/device joins as a team by **scanning the QR code** displayed by the host (recommended) or manually entering the room code
-5. Once at least 4 teams have joined, the host can start the game
-6. Teams follow the prompts on their devices through the complete answer → vote → results flow
+1. **Host Setup**: Open the host interface on a laptop/desktop
+2. Create a new session - room code and QR code will be displayed
+3. **Team Setup**: Have players scan the QR code or enter the room code
+4. Once teams have joined, the host starts the game
+5. Teams answer prompts, vote, and compete through multiple rounds
 
-## Game flow highlights
+## 🛠️ Development Setup
 
-- Hosts create sessions, share a 6-character code and QR, manage lobby controls, and move through `answer → vote → results` phases.
-- Players join on `/play`, submit answers (auto-submitted at 0 seconds), vote for anonymous cards, and track results plus personal feedback.
-- Presenter view `/presenter/:sessionId` offers a TV-friendly layout with large timers, prompt text, and live results.
-- Analytics captured at end-of-game: players joined, completion %, average votes per round, and duration.
+### Prerequisites
+- **Node.js 20** (use `nvm install 20 && nvm use 20`)
+- **Firebase CLI**: `npm install -g firebase-tools`
 
-## Project structure
+### Installation
 
-- `client/` – React + TypeScript + Vite front-end with Tailwind styling.
-- `functions/` – Firebase Cloud Functions (Node.js 20) with Firestore data model and game orchestration.
-- `firestore.rules` – Baseline Firestore security rules for session-scoped access.
-- `firebase.json` / `.firebaserc` – Firebase CLI configuration placeholders.
-
-## Getting started
-
-### 1. Prerequisites
-- **Node.js 20** – the Cloud Functions runtime and TypeScript build both target Node 20. If you use `nvm`, run `nvm install 20 && nvm use 20` in every terminal before continuing.
-- **Firebase CLI** – install globally with `npm install -g firebase-tools` if you have not already.
-
-### 2. Authenticate with Firebase
-Run the following once on your machine to let the Firebase CLI access your project:
 ```bash
-firebase login
-```
-Confirm that `.firebaserc` points to the intended Firebase project (update the `default` entry if needed).
-
-### 3. Install dependencies
-Install packages for the client and Functions workspaces:
-```bash
+# Install dependencies
 cd client && npm install
 cd ../functions && npm install
 ```
 
-### 4. Configure environment variables
-Create `client/.env.local` if it does not exist and supply your Firebase web app credentials:
+### Local Development
+
+```bash
+# 1. Start Firebase emulators
+firebase emulators:start --only auth,firestore,functions,database
+
+# 2. In another terminal, start the client
+cd client
+npm run dev -- --host
 ```
+
+### Environment Variables
+
+Create `client/.env.local`:
+
+```env
 VITE_FIREBASE_API_KEY=your-api-key
 VITE_FIREBASE_AUTH_DOMAIN=your-project.firebaseapp.com
 VITE_FIREBASE_PROJECT_ID=your-project
@@ -76,48 +84,151 @@ VITE_FIREBASE_MESSAGING_SENDER_ID=your-sender-id
 VITE_FIREBASE_APP_ID=your-app-id
 VITE_FIREBASE_DATABASE_URL=https://your-project.firebaseio.com
 VITE_FIREBASE_FUNCTIONS_REGION=us-central1
-VITE_USE_FIREBASE_EMULATORS=true
+VITE_USE_FIREBASE_EMULATORS=true  # Set to false for production
 ```
-The values come from **Project Settings → General** in the Firebase console. Leave the emulator flag on `true` while developing locally so the app connects to the emulator suite instead of production.
 
-### 5. Start the local Firebase stack
-From the project root (and still using Node 20):
-```bash
-firebase emulators:start --only auth,firestore,functions,database
+## 🏗️ Project Structure
+
 ```
-This launches anonymous Auth, Firestore, Functions, and Realtime Database emulators on the standard ports declared in `firebase.json`. Keep this process running while you develop.
-
-### 6. Run the client
-In a new terminal window, start the Vite dev server:
-```bash
-cd client
-npm run dev -- --host
+├── client/                 # React frontend
+│   ├── src/
+│   │   ├── engine/        # Game engine types (frontend)
+│   │   ├── games/         # Game implementations
+│   │   │   └── topComment/
+│   │   │       ├── event/     # Event mode UI
+│   │   │       ├── patron/    # Patron mode UI
+│   │   │       └── components/
+│   │   ├── features/      # Legacy feature modules
+│   │   └── shared/        # Shared utilities
+│   └── package.json
+│
+├── functions/             # Firebase Cloud Functions
+│   ├── src/
+│   │   ├── engine/       # Game engine core
+│   │   │   ├── types.ts
+│   │   │   ├── GameEngine.ts
+│   │   │   ├── GameRegistry.ts
+│   │   │   └── GameManager.ts
+│   │   ├── games/        # Game implementations
+│   │   │   └── topComment/
+│   │   │       ├── TopCommentEventGame.ts
+│   │   │       ├── TopCommentSoloGame.ts
+│   │   │       └── sharedLogic.ts
+│   │   └── shared/       # Shared utilities
+│   └── package.json
+│
+├── GAME_ENGINE.md        # Architecture documentation
+├── architecture.md       # System architecture
+└── README.md            # This file
 ```
-Vite prints a local URL (e.g. `http://localhost:5173`) and a LAN URL you can share on the same Wi‑Fi network for multi-device testing. Each browser window uses anonymous auth against the emulator instance, so open additional browser profiles or devices to simulate multiple players.
 
-> Tip: for faster function rebuilds during development, run `npm run watch` inside the `functions` directory to keep TypeScript compiling into `functions/lib`.
+## 🎨 Tech Stack
 
-### 7. Deploying (optional)
-When you are ready to demo from production infrastructure, flip `VITE_USE_FIREBASE_EMULATORS` to `false`, then:
+- **Frontend**: React 19, TypeScript, TailwindCSS, React Router, TanStack Query
+- **Backend**: Firebase Functions v2, Firestore, Firebase Auth
+- **Build Tools**: Vite, ESLint, PostCSS
+- **Testing**: Playwright (E2E), Vitest (Unit)
+
+## 📦 Deployment
+
 ```bash
-cd functions && npm run build && firebase deploy --only functions,firestore:rules
-cd ../client && npm run build
+# Deploy functions
+cd functions
+npm run build
+firebase deploy --only functions,firestore:rules
+
+# Deploy client
+cd ../client
+npm run build
 firebase deploy --only hosting
 ```
-This publishes the callable functions, Firestore rules, and static client bundle to your Firebase project.
 
-## Tech stack
+## 🎮 Adding New Games
 
-- **Front-end:** React 19, TypeScript, TailwindCSS, React Router, TanStack Query, Firebase Web SDK.
-- **Back-end:** Firebase Functions (v2 `onCall` handlers), Firestore data model, bad-words profanity filtering, transactional state transitions.
+See the **[Game Engine Documentation](./GAME_ENGINE.md)** for a complete guide on:
+- Creating new game implementations
+- Implementing Event and Patron modes
+- Registering games in the engine
+- Building game-specific UI
 
-## Testing & linting
+Quick example:
 
-- Front-end build: `cd client && npm run build`
-- Functions build/typecheck: `cd functions && npm run build`
+```typescript
+// 1. Implement the game engine
+export class MyGameEventGame extends BaseGameEngine {
+  descriptor = {
+    id: "my-game-event",
+    name: "My Game",
+    mode: "event",
+    // ...
+  };
+  
+  async createSession(/* ... */) { /* ... */ }
+  async advancePhase(/* ... */) { /* ... */ }
+  // ... implement other methods
+}
 
-## Notes
+// 2. Register it
+GameRegistry.register(new MyGameEventGame());
 
-- Security rules restrict read access to participants; all writes go through server functions.
-- `PROMPTS` for the MVP are defined in `functions/src/config.ts` and mirrored in client fallback text.
-- Update Tailwind theme or prompts as the brand evolves.
+// 3. Create UI components
+// client/src/games/myGame/event/HostPage.tsx
+```
+
+## 🧪 Testing
+
+```bash
+# Frontend build check
+cd client && npm run build
+
+# Functions build check
+cd functions && npm run build
+
+# E2E tests (requires emulators running)
+cd client && npm run test:e2e
+```
+
+## 📝 Game Flow (Event Mode)
+
+1. **Lobby**: Host creates session, players join via QR code
+2. **Answer Phase**: Teams write creative answers to prompts (45s)
+3. **Vote Phase**: Teams vote for their favorite answers (25s)
+4. **Results Phase**: See winners and updated leaderboard (10s)
+5. **Repeat**: Multiple rounds, ending with final scores
+
+## 📝 Game Flow (Patron Mode)
+
+1. **Welcome**: Player starts a solo session
+2. **Answer**: Write answer to prompt (45s)
+3. **Vote**: Vote between your answer and historical answers from others
+4. **Results**: See how you did
+5. **Repeat**: 5 quick rounds, final score
+
+## 🔒 Security
+
+- Anonymous authentication for instant access
+- Session-scoped Firestore security rules
+- All game state mutations via authenticated Cloud Functions
+- Input validation and profanity filtering
+
+## 🚧 Roadmap
+
+- [ ] More game types (trivia, drawing, etc.)
+- [ ] Tournament mode
+- [ ] Global leaderboards
+- [ ] Achievements system
+- [ ] Custom prompt libraries
+- [ ] AI-generated prompts
+- [ ] Multiplayer patron mode (matchmaking)
+
+## 📄 License
+
+Proprietary - Bar Scores
+
+## 🤝 Contributing
+
+This is a private project. For questions or issues, contact the development team.
+
+---
+
+**Recent UI improvements**: Solid white cards, floating lobby mascots, optimized background animations, modal improvements, QR code integration in presenter view, and social media-style heart voting (implemented November 2025).
