@@ -112,7 +112,6 @@ export class TopCommentSoloGame extends BaseGameEngine<
     });
   }
 
-
   async endSession(sessionId: string, tx: Transaction): Promise<void> {
     const sessionRef = firestore.collection(SOLO_SESSION_COLLECTION).doc(sessionId);
     tx.update(sessionRef, {
@@ -400,6 +399,7 @@ export class TopCommentSoloGame extends BaseGameEngine<
     });
   }
 }
+
 
 
 
