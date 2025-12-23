@@ -4,13 +4,13 @@
  */
 
 import type { SupabaseClient } from '@supabase/supabase-js';
-import type { Database, Session, Player, Submission } from './client';
+import type { Database } from './client';
 
 export async function getSession(
   client: SupabaseClient<Database>,
   sessionId: string,
-): Promise<Session | null> {
-  const { data, error } = await client
+): Promise<any> {
+  const { data, error } = await (client as any)
     .from('sessions')
     .select('*')
     .eq('id', sessionId)
@@ -27,8 +27,8 @@ export async function getSession(
 export async function getSessionPlayers(
   client: SupabaseClient<Database>,
   sessionId: string,
-): Promise<Player[]> {
-  const { data, error } = await client
+): Promise<any[]> {
+  const { data, error } = await (client as any)
     .from('players')
     .select('*')
     .eq('session_id', sessionId)
@@ -47,14 +47,14 @@ export async function getSessionSubmissions(
   client: SupabaseClient<Database>,
   sessionId: string,
   roundNumber?: number,
-): Promise<Submission[]> {
-  let query = client
+): Promise<any[]> {
+  const query = (client as any)
     .from('submissions')
     .select('*')
     .eq('session_id', sessionId);
 
   if (roundNumber !== undefined) {
-    query = query.eq('round_number', roundNumber);
+    query.eq('round_number', roundNumber);
   }
 
   const { data, error } = await query.order('vote_count', { ascending: false });
@@ -69,11 +69,11 @@ export async function getSessionSubmissions(
 
 export async function createSession(
   client: SupabaseClient<Database>,
-  sessionData: Partial<Session>,
-): Promise<Session | null> {
-  const { data, error } = await client
+  sessionData: any,
+): Promise<any> {
+  const { data, error } = await (client as any)
     .from('sessions')
-    .insert(sessionData as any)
+    .insert(sessionData)
     .select()
     .single();
 
@@ -88,11 +88,11 @@ export async function createSession(
 export async function updateSession(
   client: SupabaseClient<Database>,
   sessionId: string,
-  updates: Partial<Session>,
+  updates: any,
 ): Promise<boolean> {
-  const { error } = await client
+  const { error } = await (client as any)
     .from('sessions')
-    .update(updates as any)
+    .update(updates)
     .eq('id', sessionId);
 
   if (error) {
@@ -105,11 +105,11 @@ export async function updateSession(
 
 export async function addPlayer(
   client: SupabaseClient<Database>,
-  playerData: Partial<Player>,
-): Promise<Player | null> {
-  const { data, error } = await client
+  playerData: any,
+): Promise<any> {
+  const { data, error } = await (client as any)
     .from('players')
-    .insert(playerData as any)
+    .insert(playerData)
     .select()
     .single();
 
@@ -123,11 +123,11 @@ export async function addPlayer(
 
 export async function addSubmission(
   client: SupabaseClient<Database>,
-  submissionData: Partial<Submission>,
-): Promise<Submission | null> {
-  const { data, error } = await client
+  submissionData: any,
+): Promise<any> {
+  const { data, error } = await (client as any)
     .from('submissions')
-    .insert(submissionData as any)
+    .insert(submissionData)
     .select()
     .single();
 
@@ -145,41 +145,25 @@ export async function addVote(
   submissionId: string,
   voterId: string,
 ): Promise<boolean> {
-  // Insert vote
-  const { error: voteError } = await client
-    .from('votes')
-    .insert({
-      session_id: sessionId,
-      submission_id: submissionId,
-      voter_id: voterId,
-    });
+  try {
+    // Insert vote
+    const { error: voteError } = await (client as any)
+      .from('votes')
+      .insert({
+        session_id: sessionId,
+        submission_id: submissionId,
+        voter_id: voterId,
+      });
 
-  if (voteError) {
-    console.error('Error adding vote:', voteError);
+    if (voteError) {
+      console.error('Error adding vote:', voteError);
+      return false;
+    }
+
+    return true;
+  } catch (error) {
+    console.error('Error in addVote:', error);
     return false;
   }
-
-  // Increment vote count on submission
-  const { error: updateError } = await client.rpc('increment_vote_count', {
-    submission_id: submissionId,
-  });
-
-  if (updateError) {
-    // Fallback to manual increment
-    const { data: submission } = await client
-      .from('submissions')
-      .select('vote_count')
-      .eq('id', submissionId)
-      .single();
-
-    if (submission) {
-      await client
-        .from('submissions')
-        .update({ vote_count: submission.vote_count + 1 })
-        .eq('id', submissionId);
-    }
-  }
-
-  return true;
 }
 

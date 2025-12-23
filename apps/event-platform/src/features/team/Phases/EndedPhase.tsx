@@ -110,7 +110,7 @@ export function EndedPhase({
       )}
 
       <div
-        ref={scoreboardRef}
+        ref={scoreboardRef as React.LegacyRef<HTMLDivElement>}
         className="max-h-80 overflow-y-auto rounded-3xl bg-white p-4 shadow-2xl"
       >
         <Leaderboard

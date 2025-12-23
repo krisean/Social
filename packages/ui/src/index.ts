@@ -10,7 +10,7 @@ export { ProgressBar } from './components/ProgressBar';
 export { QRCodeBlock } from './components/QRCodeBlock';
 export { FormField } from './components/FormField';
 export { TextAreaField } from './components/TextAreaField';
-export { Toaster, toast } from './components/Toaster';
+export { Toaster } from './components/Toaster';
 
 // Phase components
 export {
@@ -19,3 +19,7 @@ export {
   GroupCard,
   RoundSummaryCard,
 } from './components/phases';
+
+// Toast utilities
+export { toast, ToastProvider, useToast } from './shared/providers/ToastContext';
+export type { Toast } from './shared/providers/ToastContext';

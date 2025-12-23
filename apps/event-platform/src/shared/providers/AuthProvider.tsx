@@ -1,49 +1,50 @@
 import { useEffect, useMemo, useState } from "react";
 import type { PropsWithChildren } from "react";
-import type { User } from "firebase/auth";
-import { onAuthStateChanged } from "firebase/auth";
+import type { User } from "@supabase/supabase-js";
 import {
-  auth,
+  supabase,
   ensureAnonymousAuth,
   signInWithEmail,
   createUserWithEmail,
   signOutUser,
   signInAnonymouslyUser,
-} from "../../firebase/app";
+} from "../../supabase/client";
 import { AuthContext } from "./AuthContext";
 
 export function AuthProvider({ children }: PropsWithChildren) {
-  const [user, setUser] = useState<User | null>(auth.currentUser);
-  const [loading, setLoading] = useState(!auth.currentUser);
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
+
+    // Get initial session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!cancelled) {
+        setUser(session?.user ?? null);
+        setLoading(false);
+      }
+    });
+
+    // Ensure anonymous auth if needed
     ensureAnonymousAuth().catch((error) => {
       // Log authentication errors for debugging
       console.error("Failed to authenticate anonymously:", error);
-      // The state change listener will still fire, but we log the error here
-      // so developers can see what went wrong (e.g., emulators not running)
     });
 
-    const unsubscribe = onAuthStateChanged(
-      auth,
-      (nextUser) => {
-        if (cancelled) return;
-        setUser(nextUser);
-        setLoading(false);
-      },
-      (error) => {
-        // Log auth state change errors
-        console.error("Auth state change error:", error);
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
         if (!cancelled) {
+          setUser(session?.user ?? null);
           setLoading(false);
         }
-      },
+      }
     );
 
     return () => {
       cancelled = true;
-      unsubscribe();
+      subscription.unsubscribe();
     };
   }, []);
 
@@ -67,7 +68,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
     await signInAnonymouslyUser();
   };
 
-  const isGuest = user?.isAnonymous ?? false;
+  const isGuest = user?.is_anonymous ?? false;
 
   const value = useMemo(
     () => ({

@@ -1,27 +1,27 @@
-import type { DocumentData, FirestoreDataConverter } from "firebase/firestore";
-import { Timestamp } from "firebase/firestore";
+// Supabase utility functions (replacing Firestore utilities)
 
 type WithId<T> = T & { id: string };
 
-export function toIsoDate(value: unknown | Timestamp | null | undefined) {
+export function toIsoDate(value: unknown | null | undefined) {
   if (!value) return undefined;
   if (typeof value === "string") return value;
-  if (value instanceof Timestamp) return value.toDate().toISOString();
+  if (value instanceof Date) return value.toISOString();
   return undefined;
 }
 
-export function buildConverter<T extends DocumentData>(
-  mapFrom: (data: DocumentData, docId: string) => T,
-  mapTo?: (data: T) => DocumentData,
-): FirestoreDataConverter<WithId<T>> {
+// Supabase doesn't need converters like Firestore did
+// Data mapping is handled in the service layer
+export function buildConverter<T extends Record<string, any>>(
+  mapFrom: (data: Record<string, any>, docId: string) => T,
+  mapTo?: (data: T) => Record<string, any>,
+) {
   return {
-    toFirestore: (value) =>
-      mapTo ? mapTo(value as T) : (value as DocumentData),
-    fromFirestore: (snapshot) => {
-      const data = snapshot.data();
+    toSupabase: (value: WithId<T>) =>
+      mapTo ? mapTo(value as T) : (value as Record<string, any>),
+    fromSupabase: (data: Record<string, any>, id: string): WithId<T> => {
       return {
-        ...mapFrom(data, snapshot.id),
-        id: snapshot.id,
+        ...mapFrom(data, id),
+        id,
       };
     },
   };

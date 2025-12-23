@@ -11,10 +11,12 @@
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
-    "@social/db": "workspace:*"
+    "@social/db": "workspace:*",
+    "@supabase/supabase-js": "^2.47.10"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",
+    "@types/react": "^18.3.18",
     "typescript": "^5.7.2"
   }
 }

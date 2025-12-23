@@ -14,7 +14,7 @@ function getStripeClient(): Stripe {
       throw new Error('Missing Stripe API key');
     }
     stripeClient = new Stripe(apiKey, {
-      apiVersion: '2024-12-18.acacia',
+      apiVersion: '2025-02-24.acacia',
     });
   }
   return stripeClient;

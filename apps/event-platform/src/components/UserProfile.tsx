@@ -23,11 +23,11 @@ export function UserProfile({ className = "" }: UserProfileProps) {
       <div className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-primary text-sm font-semibold text-white">
         {isGuest
           ? "G"
-          : (user.displayName?.[0] || user.email?.[0] || "U").toUpperCase()}
+          : (user.user_metadata?.display_name?.[0] || user.email?.[0] || "U").toUpperCase()}
       </div>
       <div className="flex flex-col">
         <span className="text-sm font-medium text-slate-900">
-          {isGuest ? "Guest Team" : user.displayName || user.email}
+          {isGuest ? "Guest Team" : user.user_metadata?.display_name || user.email}
         </span>
         <span className="text-xs text-slate-500">
           {isGuest ? "No data saved" : "Account linked"}

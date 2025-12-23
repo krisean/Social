@@ -256,7 +256,7 @@ export function TeamPage() {
 
         // Double-check after join (safety check in case code changed or something)
         const kickedFromSessions = getKickedFromSessions();
-        if (kickedFromSessions.has(response.sessionId)) {
+        if (response && kickedFromSessions.has(response.sessionId)) {
           // They were kicked from this session, prevent the join
           // Clear everything immediately to prevent them from appearing in lobby
           setSessionId(null);
@@ -274,23 +274,25 @@ export function TeamPage() {
         }
 
         // Remove from kicked sessions if they successfully join (means it's a different/new session)
-        removeKickedSession(response.sessionId);
+        if (response) {
+          removeKickedSession(response.sessionId);
 
-        setSessionId(response.sessionId);
-        setTeamSession({
-          sessionId: response.sessionId,
-          teamId: response.team.id,
-          teamName: response.team.teamName,
-          code: response.session.code,
-        });
-        setJoinForm({
-          code: response.session.code,
-          teamName: response.team.teamName,
-        });
-        setAnswerText("");
+          setSessionId(response.sessionId);
+          setTeamSession({
+            sessionId: response.sessionId,
+            teamId: response.team.id,
+            teamName: response.team.teamName,
+            code: response.session.code,
+          });
+          setJoinForm({
+            code: response.session.code,
+            teamName: response.team.teamName,
+          });
+          setAnswerText("");
 
-        // Reset hasManuallyLeft flag when user successfully joins
-        setHasManuallyLeft(false);
+          // Reset hasManuallyLeft flag when user successfully joins
+          setHasManuallyLeft(false);
+        }
         if (typeof window !== "undefined") {
           try {
             window.sessionStorage.removeItem(HAS_MANUALLY_LEFT_KEY);
@@ -335,8 +337,8 @@ export function TeamPage() {
     if (teamSession?.teamId) {
       return activeTeams.find((team) => team.id === teamSession.teamId) ?? null;
     }
-    return activeTeams.find((team) => team.uid === user?.uid) ?? null;
-  }, [activeTeams, teamSession?.teamId, user?.uid]);
+    return activeTeams.find((team) => team.uid === user?.id) ?? null;
+  }, [activeTeams, teamSession?.teamId, user?.id]);
 
   // Detect when player is kicked (currentTeam becomes null while session exists and other teams are still present)
   useEffect(() => {

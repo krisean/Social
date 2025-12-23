@@ -4,7 +4,7 @@ import { createSession } from "../../session/sessionService";
 import { createSessionSchema } from "../../../shared/schemas";
 import { maskProfanity } from "../../../shared/utils/profanity";
 import { getErrorMessage } from "../../../shared/utils/errors";
-import type { User } from "firebase/auth";
+import type { User } from "@supabase/supabase-js";
 
 interface CreateSessionHandlersDeps {
   user: User | null;
@@ -87,15 +87,17 @@ export const handleCreateSession =
           ? maskProfanity(parsed.data.venueName)
           : undefined,
       });
-      setSessionId(response.sessionId);
-      setHostSession({ sessionId: response.sessionId, code: response.code });
-      setShowCreateModal(false);
-      onSessionCreated();
-      toast({
-        title: "Game room ready",
-        description: `Share code ${response.session.code} to invite teams.`,
-        variant: "success",
-      });
+      if (response) {
+        setSessionId(response.sessionId);
+        setHostSession({ sessionId: response.sessionId, code: response.code });
+        setShowCreateModal(false);
+        onSessionCreated();
+        toast({
+          title: "Game room ready",
+          description: `Share code ${response.session.code} to invite teams.`,
+          variant: "success",
+        });
+      }
     } catch (error: unknown) {
       toast({
         title: "Could not create session",
