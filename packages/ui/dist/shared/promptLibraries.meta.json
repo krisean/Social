@@ -1,0 +1,51 @@
+[
+    {
+        "id": "classic",
+        "name": "Classic Crowd",
+        "emoji": "🔥",
+        "description": "Lighthearted pop-culture roasts for any crowd.",
+        "promptFile": "prompts.json"
+    },
+    {
+        "id": "dangerfield",
+        "name": "Modern Day Dangerfield",
+        "emoji": "👨",
+        "description": "Dangerfield-themed prompts for Millennials and Gen Zers.",
+        "promptFile": "dangerfieldPrompts.json"
+    },
+    {
+        "id": "bar",
+        "name": "Bar Banter",
+        "emoji": "🍻",
+        "description": "Prompt pack built for bar trivia nights and regulars.",
+        "promptFile": "barPrompts.json"
+    },
+    {
+        "id": "basic",
+        "name": "Basic Prompts",
+        "emoji": "✨",
+        "description": "A simple mix of easygoing prompts for any crowd.",
+        "promptFile": "basicprompts.json"
+    },
+    {
+        "id": "halloween",
+        "name": "Spooky Season",
+        "emoji": "🎃",
+        "description": "Creepy, kooky, and perfect for costume parties.",
+        "promptFile": "halloweenPrompts.json"
+    },
+    {
+        "id": "selfie",
+        "name": "Selfie Stars",
+        "emoji": "📸",
+        "description": "Creative selfie challenges for social-ready crowds.",
+        "promptFile": "selfiePrompts.json"
+    },
+    {
+        "id": "victoria",
+        "name": "Victoria Nights",
+        "emoji": "🌊",
+        "description": "Local flavor tailored for Victoria, BC crowds.",
+        "promptFile": "victoriaPrompts.json"
+    }
+]

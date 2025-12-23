@@ -150,6 +150,7 @@ export function SoloPage() {
 
             <Card>
               <TextAreaField
+                label="Your Answer"
                 value={answerInput}
                 onChange={(e) => setAnswerInput(e.target.value)}
                 placeholder="Type your funniest answer..."
@@ -274,5 +275,8 @@ export function SoloPage() {
 }
 
 export default SoloPage;
+
+
+
 
 
