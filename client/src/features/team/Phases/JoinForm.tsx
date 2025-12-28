@@ -24,7 +24,7 @@ export function JoinForm({
   return (
     <Card className="space-y-5">
       <div className="space-y-2 text-center">
-        <h1 className="text-3xl font-black text-slate-900">Join Bar_Scores</h1>
+        <h1 className="text-3xl font-black text-slate-900">Join Söcial</h1>
         <p className="text-sm text-slate-600">
           Enter the room code from the host screen and pick a team name.
         </p>

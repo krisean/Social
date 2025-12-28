@@ -1144,7 +1144,7 @@ export function TeamPage() {
                         </p>
                       )}
                       <p className="text-sm font-bold text-blue-300">
-                        Powered by Bar_Scores
+                        Powered by Söcial
                       </p>
                     </div>
                   </div>

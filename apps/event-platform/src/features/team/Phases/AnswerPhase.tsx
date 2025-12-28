@@ -1,5 +1,6 @@
 import { Card } from "../../../components/Card";
 import { Button } from "../../../components/Button";
+import { useTheme } from "../../../shared/providers/ThemeProvider";
 import { Timer } from "../../../components/Timer";
 import { ProgressBar } from "../../../components/ProgressBar";
 import { clsx } from "clsx";
@@ -30,6 +31,7 @@ export function AnswerPhase({
   isSubmittingAnswer,
   totalSeconds,
 }: AnswerPhaseProps) {
+  const { isDark } = useTheme();
   const CHAR_LIMIT = 120;
   const promptFallback =
     myGroup?.prompt ??
@@ -39,7 +41,7 @@ export function AnswerPhase({
   const limitReached = characterCount >= CHAR_LIMIT;
 
   return (
-    <Card className="space-y-3 p-3 text-slate-900 sm:space-y-5 sm:p-5">
+    <Card className={`space-y-3 p-3 sm:space-y-5 sm:p-5 ${!isDark ? 'text-slate-900' : 'text-pink-400'}`}>
       <div className="space-y-2 text-center">
         <div className="rounded-2xl bg-slate-900/95 px-3 py-2 text-white shadow-2xl text-xs font-semibold">
           <Timer endTime={session.endsAt} label="Time left" size="md" />
@@ -62,7 +64,7 @@ export function AnswerPhase({
         <>
           <div className="space-y-2 sm:space-y-3">
             <div className="bg-white rounded-3xl px-3 py-3 text-center text-slate-900 sm:px-4 sm:py-4 shadow-md">
-              <p className="text-2xl font-black tracking-tight text-slate-900 drop-shadow-lg sm:text-3xl">
+              <p className={`text-2xl font-black tracking-tight drop-shadow-lg sm:text-3xl ${!isDark ? 'text-slate-900' : 'text-pink-400'}`}>
                 {promptFallback}
               </p>
             </div>

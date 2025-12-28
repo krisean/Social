@@ -1,5 +1,6 @@
 import { Card } from "../../../components/Card";
 import { Button } from "../../../components/Button";
+import { useTheme } from "../../../shared/providers/ThemeProvider";
 import { Leaderboard } from "../../../components/phases/Leaderboard";
 import type { Team } from "../../../shared/types";
 
@@ -34,11 +35,12 @@ export function EndedPhase({
   handleLeave,
   scoreboardRef,
 }: EndedPhaseProps) {
+  const { isDark } = useTheme();
   return (
     <Card className="space-y-5">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-slate-900">
+          <h2 className={`text-2xl font-bold ${!isDark ? 'text-slate-900' : 'text-pink-400'}`}>
             Final Scoreboard
           </h2>
           <p className="text-sm text-slate-600">Thanks for playing!</p>

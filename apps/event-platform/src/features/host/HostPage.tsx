@@ -6,6 +6,7 @@ import { Card } from "../../components/Card";
 import { Modal } from "../../components/Modal";
 import { useAuth } from "../../shared/providers/AuthContext";
 import { useCurrentPhase } from "../../shared/providers/CurrentPhaseContext";
+import { useTheme } from "../../shared/providers/ThemeProvider";
 import { useHostSession } from "./useHostSession";
 import { useToast } from "../../shared/hooks/useToast";
 import {
@@ -51,6 +52,7 @@ import type {
 export function HostPage() {
   const { user, loading: authLoading } = useAuth();
   const { toast } = useToast();
+  const { isDark } = useTheme();
   const {
     sessionId: storedSessionId,
     code: storedCode,
@@ -460,19 +462,19 @@ export function HostPage() {
   const promptLibraryCard =
     session && session.status === "lobby" ? (
       <Card className="flex flex-col gap-4">
-        <div className="flex flex-col gap-1 text-slate-700">
-          <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+        <div className={`flex flex-col gap-1 ${!isDark ? 'text-slate-700' : 'text-cyan-100'}`}>
+          <span className={`text-xs font-semibold uppercase tracking-wide ${!isDark ? 'text-slate-500' : 'text-cyan-400'}`}>
             Prompt library
           </span>
-          <p className="text-lg font-bold text-slate-900">
+          <p className={`text-lg font-bold ${!isDark ? 'text-slate-900' : 'text-pink-400'}`}>
             {currentPromptLibrary.emoji} {currentPromptLibrary.name}
           </p>
-          <p className="text-sm text-slate-500">
+          <p className={`text-sm ${!isDark ? 'text-slate-500' : 'text-cyan-300'}`}>
             {currentPromptLibrary.description}
           </p>
         </div>
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <p className="text-xs text-slate-500">
+          <p className={`text-xs ${!isDark ? 'text-slate-500' : 'text-cyan-300'}`}>
             Pick a deck for tonight before you start the first round.
           </p>
           <Button
@@ -491,7 +493,7 @@ export function HostPage() {
     if (!session) {
       return (
         <Card className="min-h-[360px]">
-          <p className="text-lg text-slate-600">
+          <p className={`text-lg ${!isDark ? 'text-slate-600' : 'text-cyan-300'}`}>
             Create a session to unlock the host controls.
           </p>
         </Card>
@@ -575,40 +577,40 @@ export function HostPage() {
   ) : null;
 
   return (
-    <main className="min-h-screen bg-slate-50 px-4 py-8">
+    <main className={`min-h-screen px-4 py-8 ${!isDark ? 'bg-slate-50' : 'bg-slate-950'}`}>
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-8">
-        <header className="flex flex-col items-start gap-4 rounded-3xl bg-white p-6 shadow-lg sm:flex-row sm:items-center sm:justify-between">
+        <header className={`flex flex-col items-start gap-4 rounded-3xl p-6 shadow-lg sm:flex-row sm:items-center sm:justify-between ${!isDark ? 'bg-white shadow-slate-300/40' : 'bg-slate-800 shadow-fuchsia-500/20'}`}>
           <div className="space-y-3">
             <div className="flex items-center gap-3">
-              <Link to="/" className="text-sm font-semibold text-brand-primary">
+              <Link to="/" className={`text-sm font-semibold ${!isDark ? 'text-brand-primary' : 'text-cyan-400 hover:text-cyan-300'}`}>
                 ← Back
               </Link>
               {presenterButton}
             </div>
             <div>
-              <h1 className="text-3xl font-black text-slate-900">
+              <h1 className={`text-3xl font-black ${!isDark ? 'text-slate-900' : 'text-pink-400'}`}>
                 Host Console
               </h1>
               {session ? (
-                <p className="text-sm text-slate-600">
+                <p className={`text-sm ${!isDark ? 'text-slate-600' : 'text-cyan-300'}`}>
                   {phaseCopy[session.status]}
                 </p>
               ) : (
-                <p className="text-sm text-slate-600">
+                <p className={`text-sm ${!isDark ? 'text-slate-600' : 'text-cyan-300'}`}>
                   Create a game room when you're ready to host.
                 </p>
               )}
             </div>
           </div>
-          <div className="flex flex-col items-center gap-2 rounded-2xl bg-slate-900 px-6 py-4 text-white">
-            <span className="text-xs uppercase tracking-wider text-white/60">
+          <div className={`flex flex-col items-center gap-2 rounded-2xl px-6 py-4 ${!isDark ? 'bg-slate-900 text-white' : 'bg-cyan-600 text-slate-900'}`}>
+            <span className={`text-xs uppercase tracking-wider ${!isDark ? 'text-white/60' : 'text-slate-900/70'}`}>
               Room code
             </span>
             <span className="text-3xl font-black tracking-widest">
               {session?.code ?? storedCode ?? "---"}
             </span>
             {session ? (
-              <span className="text-xs text-white/70">
+              <span className={`text-xs ${!isDark ? 'text-white/70' : 'text-slate-900/80'}`}>
                 {teams.length} team{teams.length === 1 ? "" : "s"} online
               </span>
             ) : null}
@@ -662,17 +664,17 @@ export function HostPage() {
             {session ? (
               <QRCodeBlock value={inviteLink || ""} caption="Scan to join" />
             ) : (
-              <div className="rounded-3xl bg-white p-6 text-center text-sm text-slate-500 shadow">
+              <div className={`rounded-3xl p-6 text-center text-sm shadow ${!isDark ? 'bg-white text-slate-500' : 'bg-slate-800 text-cyan-300'}`}>
                 Start a session to generate a QR code for your guests.
               </div>
             )}
             {session ? (
-              <div className="space-y-4 rounded-3xl bg-white p-5 shadow">
+              <div className={`space-y-4 rounded-3xl p-5 shadow ${!isDark ? 'bg-white' : 'bg-slate-800'}`}>
                 <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-semibold text-slate-900">
+                  <h3 className={`text-lg font-semibold ${!isDark ? 'text-slate-900' : 'text-pink-400'}`}>
                     Lobby ({teams.length})
                   </h3>
-                  <span className="text-xs text-slate-500">
+                  <span className={`text-xs ${!isDark ? 'text-slate-500' : 'text-cyan-300'}`}>
                     Max {session.settings.maxTeams}
                   </span>
                 </div>
@@ -680,9 +682,9 @@ export function HostPage() {
                   {teams.map((team) => (
                     <li
                       key={team.id}
-                      className="flex items-center justify-between rounded-2xl bg-slate-100 px-4 py-3"
+                      className={`flex items-center justify-between rounded-2xl px-4 py-3 ${!isDark ? 'bg-slate-100' : 'bg-slate-700'}`}
                     >
-                      <span className="font-medium text-slate-800">
+                      <span className={`font-medium ${!isDark ? 'text-slate-800' : 'text-cyan-100'}`}>
                         {team.teamName}
                         {team.isHost ? " (Host)" : ""}
                       </span>
@@ -700,7 +702,7 @@ export function HostPage() {
                     </li>
                   ))}
                   {!teams.length ? (
-                    <li className="rounded-2xl bg-slate-100 px-4 py-3 text-sm text-slate-500">
+                    <li className={`rounded-2xl px-4 py-3 text-sm ${!isDark ? 'bg-slate-100 text-slate-500' : 'bg-slate-700 text-cyan-300'}`}>
                       Teams will appear here as they join.
                     </li>
                   ) : null}

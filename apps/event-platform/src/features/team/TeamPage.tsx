@@ -17,6 +17,7 @@ import { useTeamSession } from "./useTeamSession";
 import { useSelfieCamera } from "./useSelfieCamera";
 import { useAuth } from "../../shared/providers/AuthContext";
 import { useCurrentPhase } from "../../shared/providers/CurrentPhaseContext";
+import { useTheme } from "../../shared/providers/ThemeProvider";
 import { maskProfanity, containsProfanity } from "../../shared/utils/profanity";
 import { getErrorMessage } from "../../shared/utils/errors";
 import type { Session, Team, Answer, Vote } from "../../shared/types";
@@ -125,6 +126,7 @@ export function TeamPage() {
   const navigate = useNavigate();
   const { teamSession, setTeamSession, clearTeamSession } = useTeamSession();
   const { setCurrentPhase } = useCurrentPhase();
+  const { isDark } = useTheme();
 
   const [sessionId, setSessionId] = useState<string | null>(
     teamSession?.sessionId ?? null,
@@ -979,8 +981,8 @@ export function TeamPage() {
   } else if (!sessionSnapshotReady) {
     mainContent = (
       <Card className="space-y-3 text-center">
-        <h2 className="text-xl font-semibold text-slate-900">Connecting...</h2>
-        <p className="text-sm text-slate-600">Pulling the latest game state.</p>
+        <h2 className={`text-xl font-semibold ${!isDark ? 'text-slate-900' : 'text-pink-400'}`}>Connecting...</h2>
+        <p className={`text-sm ${!isDark ? 'text-slate-600' : 'text-cyan-300'}`}>Pulling the latest game state.</p>
       </Card>
     );
   } else if (session) {
@@ -1043,7 +1045,7 @@ export function TeamPage() {
         <button
           type="button"
           onClick={handleOpenHowToPlay}
-          className="flex items-center gap-2 rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition-all hover:border-brand-primary hover:bg-brand-light hover:text-brand-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-primary"
+          className={`flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold shadow-sm transition-all focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 ${!isDark ? 'border-slate-300 bg-white text-slate-700 hover:border-brand-primary hover:bg-brand-light hover:text-brand-primary focus-visible:outline-brand-primary' : 'border-cyan-400/50 bg-slate-800 text-cyan-300 hover:border-cyan-300 hover:bg-slate-700 focus-visible:outline-cyan-400'}`}
         >
           <svg
             className="h-4 w-4"
@@ -1146,7 +1148,7 @@ export function TeamPage() {
                         </p>
                       )}
                       <p className="text-sm font-bold text-blue-300">
-                        Powered by Bar_Scores
+                        Powered by Söcial
                       </p>
                     </div>
                   </div>
@@ -1210,7 +1212,7 @@ export function TeamPage() {
             </Button>
           }
         >
-          <p className="text-sm text-slate-600">
+          <p className={`text-sm ${!isDark ? 'text-slate-600' : 'text-cyan-300'}`}>
             The host has removed you from this session. You'll be redirected to
             the entry page.
           </p>
@@ -1241,7 +1243,7 @@ export function TeamPage() {
             </Button>
           }
         >
-          <p className="text-sm text-slate-600">
+          <p className={`text-sm ${!isDark ? 'text-slate-600' : 'text-cyan-300'}`}>
             The host has ended this session.
           </p>
         </Modal>

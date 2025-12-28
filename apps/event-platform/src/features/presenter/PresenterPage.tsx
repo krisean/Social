@@ -4,6 +4,7 @@ import { Timer } from "../../components/Timer";
 import { BackgroundAnimation } from "../../components/BackgroundAnimation";
 import { Card } from "../../components/Card";
 import { useSession, useTeams, useAnswers, useVotes } from "../session/hooks";
+import { useTheme } from "../../shared/providers/ThemeProvider";
 import { phaseSubtitle, prompts, phaseHeadline } from "../../shared/constants";
 import type { Answer } from "../../shared/types";
 import {
@@ -19,6 +20,7 @@ import QRCodeBlock from "../../components/QRCodeBlock";
 export function PresenterPage() {
   const params = useParams<{ sessionId: string }>();
   const sessionId = params.sessionId ?? "";
+  const { isDark } = useTheme();
 
   const { session, hasSnapshot } = useSession(sessionId);
   const teams = useTeams(sessionId);
@@ -191,23 +193,23 @@ export function PresenterPage() {
 
   if (!hasSnapshot) {
     return (
-      <main className="flex min-h-screen flex-col items-center justify-center bg-slate-950 px-6 py-12 text-white">
-        <p className="text-lg text-white/70">Fetching session...</p>
+      <main className={`flex min-h-screen flex-col items-center justify-center px-6 py-12 ${!isDark ? 'bg-slate-50 text-slate-900' : 'bg-slate-950 text-white'}`}>
+        <p className={`text-lg ${!isDark ? 'text-slate-600' : 'text-white/70'}`}>Fetching session...</p>
       </main>
     );
   }
 
   if (!session) {
     return (
-      <main className="flex min-h-screen flex-col items-center justify-center bg-slate-950 px-6 py-12 text-center text-white">
-        <h1 className="text-4xl font-black">Session not found</h1>
-        <p className="mt-3 max-w-md text-white/70">
+      <main className={`flex min-h-screen flex-col items-center justify-center px-6 py-12 text-center ${!isDark ? 'bg-slate-50 text-slate-900' : 'bg-slate-950 text-white'}`}>
+        <h1 className={`text-4xl font-black ${!isDark ? 'text-slate-900' : 'text-pink-400'}`}>Session not found</h1>
+        <p className={`mt-3 max-w-md ${!isDark ? 'text-slate-600' : 'text-white/70'}`}>
           Double-check the presenter link or launch a new session from the host
           console.
         </p>
         <Link
           to="/"
-          className="mt-6 rounded-full bg-white px-6 py-3 text-sm font-semibold text-slate-900"
+          className={`mt-6 rounded-full px-6 py-3 text-sm font-semibold ${!isDark ? 'bg-white text-slate-900' : 'bg-slate-700 text-cyan-100 hover:bg-slate-600'}`}
         >
           Back to home
         </Link>
@@ -284,26 +286,26 @@ export function PresenterPage() {
   return (
     <>
       <BackgroundAnimation show={true} />
-      <main className="relative min-h-screen px-6 py-10 text-white">
+      <main className={`relative min-h-screen px-6 py-10 ${!isDark ? 'text-slate-900' : 'text-white'}`}>
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-8">
         <header className="flex flex-col items-center justify-between gap-6 lg:flex-row">
           <Card className="text-center lg:text-left">
-            <h1 className="text-4xl font-black tracking-tight text-slate-900">
+            <h1 className={`text-4xl font-black tracking-tight ${!isDark ? 'text-slate-900' : 'text-pink-400'}`}>
               {phaseHeadline[session.status]}
             </h1>
-            <p className="mt-2 text-sm text-slate-600">
+            <p className={`mt-2 text-sm ${!isDark ? 'text-slate-600' : 'text-cyan-300'}`}>
               {phaseSubtitle[session.status]}
             </p>
           </Card>
           <div className="flex items-center gap-6">
-            <div className="flex flex-col items-center rounded-3xl bg-white px-6 py-4 shadow-md">
-              <span className="text-xs uppercase tracking-[0.4em] text-slate-600">
+            <div className={`flex flex-col items-center rounded-3xl px-6 py-4 shadow-md ${!isDark ? 'bg-white' : 'bg-slate-700'}`}>
+              <span className={`text-xs uppercase tracking-[0.4em] ${!isDark ? 'text-slate-600' : 'text-cyan-400'}`}>
                 Room
               </span>
-              <span className="mt-2 text-5xl font-black tracking-[0.2em] text-slate-900">
+              <span className={`mt-2 text-5xl font-black tracking-[0.2em] ${!isDark ? 'text-slate-900' : 'text-pink-400'}`}>
                 {session.code}
               </span>
-              <span className="mt-3 text-sm text-slate-600">
+              <span className={`mt-3 text-sm ${!isDark ? 'text-slate-600' : 'text-cyan-300'}`}>
                 {teams.length} team{teams.length === 1 ? "" : "s"} active
               </span>
             </div>

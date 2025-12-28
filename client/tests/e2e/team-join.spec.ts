@@ -26,7 +26,7 @@ test.describe("Player join view", () => {
   });
 
   test("keeps join form accessible and responsive", async ({ page }) => {
-    await expect(page.getByRole("heading", { name: /Join Bar_Scores/i })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /Join Söcial/i })).toBeVisible();
     await expect(page.getByLabel(/Room code/i)).toBeVisible();
     await expect(page.getByLabel(/Team name/i)).toBeVisible();
   });

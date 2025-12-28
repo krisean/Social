@@ -12,7 +12,7 @@ test.describe("Auth page", () => {
       .getByRole("button", { name: /don't have an account\? sign up/i })
       .click();
 
-    await expect(page.getByRole("heading", { name: /Join Bar_Scores/i })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /Join Söcial/i })).toBeVisible();
     await expect(page.getByLabel(/Display Name/i)).toBeVisible();
     await expect(page.getByRole("button", { name: /Sign Up/i })).toBeVisible();
   });

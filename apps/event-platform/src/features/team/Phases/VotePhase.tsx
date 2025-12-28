@@ -4,6 +4,7 @@ import { ProgressBar } from "../../../components/ProgressBar";
 import { getMascotById } from "../../../shared/mascots";
 import type { Session, RoundGroup, Answer, Vote, Team } from "../../../shared/types";
 import { statusHeadline } from "../../../shared/constants";
+import { useTheme } from "../../../shared/providers/ThemeProvider";
 
 interface VotePhaseProps {
   session: Session;
@@ -54,6 +55,7 @@ export function VotePhase({
   totalSeconds,
   isVotingOnOwnGroup,
 }: VotePhaseProps) {
+  const { isDark } = useTheme();
   const promptValue =
     activeGroup?.prompt ??
     roundGroups[activeGroupIndex]?.prompt ??
@@ -63,7 +65,7 @@ export function VotePhase({
     : "No groups";
 
   return (
-    <Card className="space-y-3 p-3 text-slate-900 sm:space-y-5 sm:p-5">
+    <Card className={`space-y-3 p-3 sm:space-y-5 sm:p-5 ${!isDark ? 'text-slate-900' : 'text-pink-400'}`}>
       <div className="space-y-1.5 text-center sm:space-y-2">
         <h2 className="text-xl font-bold text-slate-900 sm:text-2xl">
           {statusHeadline[session.status]}

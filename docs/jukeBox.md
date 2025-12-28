@@ -1,4 +1,4 @@
-# BarScores AI Jukebox SaaS Report - Hybrid Model
+# Söcial AI Jukebox SaaS Report - Hybrid Model
 
 ## Executive Summary
 
@@ -45,7 +45,7 @@ Stickiness: 30–70 songs built → venues stay
 ```
 400 songs (CAD $1,120 gross):
 TouchTunes: CAD $448 venue (40% after fees)
-BarScores: CAD $631 venue (56%) → 40% better
+Söcial: CAD $631 venue (56%) → 40% better
 ```
 
 ## Market Timing - 6-12 Month Window

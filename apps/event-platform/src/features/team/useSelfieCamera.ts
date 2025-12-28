@@ -293,7 +293,7 @@ export function useSelfieCamera({ currentTeam, finalLeaderboard, venueName }: Us
     ctx.font = `${18 * viewportScale}px Arial, sans-serif`;
     ctx.fillText(`You placed #${teamWithRank.rank} with ${currentTeam.score} points!`, canvas.width / 2, overlayY + 60 * viewportScale);
 
-    // Venue callout (if set) - before Powered by Bar_Scores, match text-sm
+    // Venue callout (if set) - before Powered by Söcial, match text-sm
     let nextY = overlayY + 90 * viewportScale;
     if (venueName) {
       // White for venue text, match text-sm (0.875rem = 14px base)
@@ -303,10 +303,10 @@ export function useSelfieCamera({ currentTeam, finalLeaderboard, venueName }: Us
       nextY += 20 * viewportScale; // Spacing between venue and powered by
     }
 
-    // Powered by Bar_Scores - light blue color, match text-sm from preview
+    // Powered by Söcial - light blue color, match text-sm from preview
     ctx.fillStyle = '#60a5fa'; // light blue-400 from Tailwind
     ctx.font = `bold ${14 * viewportScale}px Arial, sans-serif`;
-    ctx.fillText('Powered by Bar_Scores', canvas.width / 2, nextY);
+    ctx.fillText('Powered by Söcial', canvas.width / 2, nextY);
 
     // Convert to image
     const imageDataUrl = canvas.toDataURL('image/png');
@@ -348,7 +348,7 @@ export function useSelfieCamera({ currentTeam, finalLeaderboard, venueName }: Us
       const blob = await response.blob();
       
       const shareData = {
-        title: 'Bar_Scores Selfie',
+        title: 'Söcial Selfie',
         text: `I got ${currentTeam?.score} points and placed #${finalLeaderboard.find(t => t.id === currentTeam?.id)?.rank || '?'}!`,
         files: [new File([blob], 'bar-scores-selfie.png', { type: 'image/png' })]
       };

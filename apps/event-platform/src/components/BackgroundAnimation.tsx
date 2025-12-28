@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import { clsx } from "clsx";
+import { useTheme } from "../shared/providers/ThemeProvider";
 
 interface BackgroundAnimationProps {
   show: boolean;
@@ -7,6 +8,7 @@ interface BackgroundAnimationProps {
 }
 
 export function BackgroundAnimation({ show, className }: BackgroundAnimationProps) {
+  const { theme } = useTheme();
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -45,12 +47,18 @@ export function BackgroundAnimation({ show, className }: BackgroundAnimationProp
       {/* 1. Background — forced to paint FIRST */}
       <div
         className={clsx(
-          "fixed inset-0 bg-gradient-to-r from-amber-600 via-orange-700 to-amber-900",
+          "fixed inset-0 bg-gradient-to-r",
+          theme.colors.background.gradient.from,
+          theme.colors.background.gradient.via,
+          theme.colors.background.gradient.to,
           className
         )}
         style={{ zIndex: 1 }}
       >
-        <div className="absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-amber-200/40 to-transparent" />
+        <div className={clsx(
+          "absolute inset-x-0 top-0 h-32 bg-gradient-to-b to-transparent",
+          theme.colors.background.foam
+        )} />
       </div>
 
       {/* 2. Bubbles — rendered AFTER background, no chance of black flash */}
@@ -60,18 +68,17 @@ export function BackgroundAnimation({ show, className }: BackgroundAnimationProp
         style={{ zIndex: 2 }}
       />
 
-      {/* Your exact original CSS — untouched */}
+      {/* Dynamic theme-aware CSS */}
       <style>{`
         .beer-bubble {
           position: absolute;
           bottom: -100px;
           border-radius: 50%;
-          background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.95), rgba(255,255,255,0.3) 50%, transparent 70%);
-          border: 1px solid rgba(255,255,255,0.3);
+          background: ${theme.colors.bubble.gradient};
+          border: 1px solid ${theme.colors.bubble.border};
           box-shadow: 
-            0 0 20px rgba(255,255,255,0.5),
-            inset 0 0 20px rgba(255,255,255,0.4),
-            inset -8px -8px 15px rgba(0,0,0,0.3);
+            ${theme.colors.bubble.shadow},
+            ${theme.colors.bubble.innerShadow};
           filter: blur(0.4px);
           will-change: transform, opacity;
         }

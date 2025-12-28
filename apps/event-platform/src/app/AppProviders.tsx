@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { AuthProvider } from "../shared/providers/AuthProvider";
 import { ToastProvider } from "../shared/providers/ToastProvider";
+import { ThemeProvider } from "../shared/providers/ThemeProvider";
 import { CurrentPhaseProvider } from "../shared/providers/CurrentPhaseContext";
 import { Toaster } from "../components/Toaster";
 
@@ -23,14 +24,16 @@ export function AppProviders({ children }: PropsWithChildren) {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <CurrentPhaseProvider>
-          <ToastProvider>
-            {children}
-            <Toaster />
-          </ToastProvider>
-        </CurrentPhaseProvider>
-      </AuthProvider>
+      <ThemeProvider>
+        <AuthProvider>
+          <CurrentPhaseProvider>
+            <ToastProvider>
+              {children}
+              <Toaster />
+            </ToastProvider>
+          </CurrentPhaseProvider>
+        </AuthProvider>
+      </ThemeProvider>
       <ReactQueryDevtools initialIsOpen={false} />
     </QueryClientProvider>
   );

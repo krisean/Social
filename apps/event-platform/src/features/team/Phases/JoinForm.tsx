@@ -3,6 +3,7 @@ import { Card } from "../../../components/Card";
 import { Button } from "../../../components/Button";
 import { FormField } from "../../../components/FormField";
 import { formatCode } from "../../../shared/constants";
+import { useTheme } from "../../../shared/providers/ThemeProvider";
 
 interface JoinFormProps {
   joinForm: { code: string; teamName: string };
@@ -21,11 +22,13 @@ export function JoinForm({
   handleJoin,
   setJoinForm,
 }: JoinFormProps) {
+  const { isDark } = useTheme();
+
   return (
     <Card className="space-y-5">
       <div className="space-y-2 text-center">
-        <h1 className="text-3xl font-black text-slate-900">Join Bar_Scores</h1>
-        <p className="text-sm text-slate-600">
+        <h1 className={`text-3xl font-black ${!isDark ? 'text-slate-900' : 'text-pink-400'}`}>Join Söcial</h1>
+        <p className={`text-sm ${!isDark ? 'text-slate-600' : 'text-cyan-300'}`}>
           Enter the room code from the host screen and pick a team name.
         </p>
       </div>

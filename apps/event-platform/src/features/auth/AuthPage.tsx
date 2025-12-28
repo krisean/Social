@@ -139,12 +139,12 @@ export function AuthPage() {
           <div className="mb-4">
             <img
               src="/logo.png"
-              alt="Bar_Scores logo"
+              alt="Söcial logo"
               className="mx-auto h-16 w-auto"
             />
           </div>
           <h1 className="text-3xl font-black text-brand-primary sm:text-4xl">
-            {isLogin ? "Welcome Back" : "Join Bar_Scores"}
+            {isLogin ? "Welcome Back" : "Join Söcial"}
           </h1>
           <p className="mt-2 text-slate-600">
             {isLogin

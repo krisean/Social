@@ -1,4 +1,4 @@
-# BarScores App Game Flow – Social Game Engine Edition
+# Söcial App Game Flow – Social Game Engine Edition
 
 ## 1. Overview
 

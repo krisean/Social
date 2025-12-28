@@ -7,9 +7,9 @@ export default {
     extend: {
       colors: {
         brand: {
-          primary: "#ec9f05",
-          dark: "#BF3100",
-          light: "#DDC9B4",
+          primary: "var(--color-brand-primary)",
+          dark: "var(--color-brand-dark)",
+          light: "var(--color-brand-light)",
         },
       },
       fontFamily: {
