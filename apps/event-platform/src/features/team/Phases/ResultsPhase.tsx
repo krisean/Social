@@ -2,6 +2,7 @@ import { Card } from "../../../components/Card";
 import { Leaderboard } from "../../../components/phases/Leaderboard";
 import type { Session, Team } from "../../../shared/types";
 import { statusHeadline } from "../../../shared/constants";
+import { useTheme } from "../../../shared/providers/ThemeProvider";
 
 interface LeaderboardTeam extends Team {
   rank: number;
@@ -22,10 +23,11 @@ export function ResultsPhase({
   votesForMe,
   myRoundPoints,
 }: ResultsPhaseProps) {
+  const { isDark } = useTheme();
   return (
     <Card className="space-y-5">
       <div className="space-y-2 text-center">
-        <h2 className="text-2xl font-bold text-slate-900">
+        <h2 className={`text-2xl font-bold ${!isDark ? 'text-slate-900' : 'text-pink-400'}`}>
           {statusHeadline[session.status]}
         </h2>
         <p className="text-sm text-slate-600">

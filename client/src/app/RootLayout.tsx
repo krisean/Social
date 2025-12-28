@@ -11,7 +11,7 @@ export function RootLayout() {
         <Link to="/" className="block transition-transform hover:scale-105">
           <img
             src="/logo.png"
-            alt="Bar_Scores logo - Click to go home"
+            alt="Söcial logo - Click to go home"
             className="h-16 w-auto drop-shadow-lg cursor-pointer"
             title="Click to go home"
           />

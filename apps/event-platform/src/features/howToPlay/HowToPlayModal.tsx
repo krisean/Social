@@ -5,7 +5,7 @@ import type { SessionStatus } from "../../shared/types";
 const steps = [
   {
     emoji: '🎮',
-    title: 'What is Bar_Scores?',
+    title: 'What is Söcial?',
     description: [
       'Teams compete with short, clever, or hilarious answers',
       'Answer quirky prompts—don’t be correct, be funny!',

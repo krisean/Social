@@ -1,5 +1,6 @@
 import type { PropsWithChildren } from "react";
 import { clsx } from "clsx";
+import { useTheme } from "../shared/providers/ThemeProvider";
 
 interface CardProps {
   className?: string;
@@ -13,10 +14,16 @@ export function Card({
   selected,
   children,
 }: PropsWithChildren<CardProps>) {
+  const { isDark } = useTheme();
+  
   return (
     <div
       className={clsx(
-        "rounded-3xl border border-slate-100 bg-white p-5 shadow-md shadow-slate-300/40 transition",
+        "rounded-3xl border p-5 shadow-md transition",
+        // Light mode styles
+        !isDark && "border-slate-100 bg-white shadow-slate-300/40",
+        // Dark mode styles - Neon Nocturne theme
+        isDark && "border-fuchsia-500/30 bg-[#0a0a0a]/95 shadow-fuchsia-500/20",
         interactive &&
           "cursor-pointer hover:shadow-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-primary",
         selected && "border-brand-primary shadow-lg",

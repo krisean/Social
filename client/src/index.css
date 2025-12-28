@@ -3,7 +3,20 @@
 @tailwind utilities;
 
 :root {
-    color-scheme: only light;
+    color-scheme: light dark;
+    --color-text-primary: #0f172a;
+    --color-text-secondary: #64748b;
+    --color-brand-primary: #ec9f05;
+    --color-brand-dark: #BF3100;
+    --color-brand-light: #DDC9B4;
+}
+
+[data-theme="dark"] {
+    --color-text-primary: #ffffff;
+    --color-text-secondary: #e0e0e0;
+    --color-brand-primary: #06b6d4;
+    --color-brand-dark: #0891b2;
+    --color-brand-light: #cffafe;
 }
 
 html,

@@ -2,6 +2,7 @@ import React from "react";
 import { Button } from "../../../components/Button";
 import { FormField } from "../../../components/FormField";
 import { Modal } from "../../../components/Modal";
+import { useTheme } from "../../../shared/providers/ThemeProvider";
 
 interface CreateSessionModalProps {
   open: boolean;
@@ -26,6 +27,7 @@ export function CreateSessionModal({
   canCreateSession,
   onSubmit,
 }: CreateSessionModalProps) {
+  const { isDark } = useTheme();
   return (
     <Modal
       open={open}
@@ -54,7 +56,7 @@ export function CreateSessionModal({
     >
       <form id="create-session-form" className="space-y-4" onSubmit={onSubmit}>
         {!canCreateSession && (
-          <div className="rounded-lg bg-amber-50 border border-amber-200 p-3 text-sm text-amber-800">
+          <div className={`rounded-lg border p-3 text-sm ${!isDark ? 'bg-amber-50 border-amber-200 text-amber-800' : 'bg-slate-700 border-cyan-400/50 text-cyan-200'}`}>
             <p className="font-semibold">Authentication required</p>
             <p className="mt-1">
               {isCreating
@@ -86,7 +88,7 @@ export function CreateSessionModal({
           hint="Shown to teams in the lobby"
           error={createErrors.venueName}
         />
-        <p className="text-xs text-slate-500">
+        <p className={`text-xs ${!isDark ? 'text-slate-500' : 'text-cyan-400'}`}>
           You'll get a 6-character room code and QR to share with teams.
           Anonymous sign-in keeps things lightweight.
         </p>

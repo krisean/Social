@@ -1,4 +1,5 @@
 import { createBrowserRouter } from "react-router-dom";
+import { AppProviders } from "./AppProviders";
 import { RootLayout } from "./RootLayout";
 import { EntryPage } from "../features/entry/EntryPage";
 import { AuthPage } from "../features/auth/AuthPage";
@@ -10,7 +11,11 @@ import { NotFoundPage } from "../features/404/NotFoundPage";
 export const appRouter = createBrowserRouter([
   {
     path: "/",
-    element: <RootLayout />,
+    element: (
+      <AppProviders>
+        <RootLayout />
+      </AppProviders>
+    ),
     children: [
       { index: true, element: <EntryPage /> },
       { path: "auth", element: <AuthPage /> },
@@ -20,5 +25,12 @@ export const appRouter = createBrowserRouter([
       { path: "*", element: <NotFoundPage /> },
     ],
   },
-  { path: "*", element: <NotFoundPage /> },
+  { 
+    path: "*", 
+    element: (
+      <AppProviders>
+        <NotFoundPage />
+      </AppProviders>
+    ),
+  },
 ]);

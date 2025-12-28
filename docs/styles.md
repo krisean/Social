@@ -1,7 +1,7 @@
-# **Styles for Bar Scores**
+# **Styles for Söcial**
 Web-App Brand Icon
 
-It's called "Bar Scores" 
+It's called "Söcial" 
 Less words, optimal and memorable icon.
 
 Products include AI and Social Media themed Bar Games and AI Jukebox
