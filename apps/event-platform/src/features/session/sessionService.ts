@@ -323,6 +323,7 @@ export const createSession = async (payload: CreateSessionRequest) => {
     "sessions-create",
     { body: payload }
   );
+
   if (error) throw error;
   if (!data) throw new Error("No data returned from createSession");
   return data;
@@ -365,10 +366,19 @@ export const advancePhase = async (payload: TransitionPhaseRequest) => {
 };
 
 export const submitAnswer = async (payload: SubmitAnswerRequest) => {
+  // #region agent log - Submit answer
+  fetch('http://127.0.0.1:7242/ingest/339ce828-5f9b-4ebe-8fc8-4666788034c5',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'sessionService.ts:368',message:'Submitting answer',data:{sessionId:payload.sessionId,textLength:payload.text?.length,timestamp:Date.now()},sessionId:'debug-session',runId:'submit-answer-debug'})}).catch(()=>{});
+  // #endregion
+
   const { data, error } = await supabase.functions.invoke<{ success: boolean }>(
     "answers-submit",
     { body: payload }
   );
+
+  // #region agent log - Submit answer result
+  fetch('http://127.0.0.1:7242/ingest/339ce828-5f9b-4ebe-8fc8-4666788034c5',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'sessionService.ts:372',message:'Submit answer result',data:{hasData:!!data,hasError:!!error,errorMessage:error?.message || error,status:error?.status,timestamp:Date.now()},sessionId:'debug-session',runId:'submit-answer-debug'})}).catch(()=>{});
+  // #endregion
+
   if (error) throw error;
   return data;
 };

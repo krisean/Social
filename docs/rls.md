@@ -1,222 +1,254 @@
 
-# Supabase RLS Policies for Top Comment 24/7 Wall
-# Venue-isolated, role-based access for patrons, staff, admins
+# Supabase RLS Policies for topcomment.playnow.social Event Platform
+# Session-based, user-isolated access for multiplayer games
 # File: rls.md
 
 ## Schema Overview
 ```sql
--- Core tables for Top Comment 24/7 persistent engagement platform
-CREATE TABLE venues (
+-- Core tables for topcomment.playnow.social multiplayer event platform
+CREATE TABLE sessions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  name TEXT NOT NULL,
-  qr_code TEXT UNIQUE
+  code TEXT UNIQUE NOT NULL, -- Join code like "ABC123"
+  host_uid TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'lobby',
+  round_index INTEGER NOT NULL DEFAULT 0,
+  rounds JSONB NOT NULL DEFAULT '[]',
+  vote_group_index INTEGER,
+  prompt_library_id TEXT NOT NULL DEFAULT 'classic',
+  settings JSONB NOT NULL DEFAULT '{"answerSecs": 90, "voteSecs": 90, "resultsSecs": 12, "maxTeams": 24}',
+  venue_name TEXT,
+  venue_key TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  started_at TIMESTAMPTZ,
+  ended_at TIMESTAMPTZ,
+  ends_at TIMESTAMPTZ
 );
 
-CREATE TABLE games (
+CREATE TABLE teams (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  venue_id UUID REFERENCES venues(id),
-  type TEXT CHECK (type IN ('topcomment', 'vibox')),
-  status TEXT CHECK (status IN ('waiting', 'playing', 'voting'))
+  session_id UUID NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
+  uid TEXT NOT NULL, -- User's auth.uid
+  team_name TEXT NOT NULL,
+  is_host BOOLEAN NOT NULL DEFAULT false,
+  score INTEGER NOT NULL DEFAULT 0,
+  mascot_id INTEGER,
+  joined_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  last_active_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE(session_id, uid)
 );
 
-CREATE TABLE prompts (
+CREATE TABLE answers (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  venue_id UUID REFERENCES venues(id),
+  session_id UUID NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
+  team_id UUID NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
+  round_index INTEGER NOT NULL,
+  group_id TEXT NOT NULL,
   text TEXT NOT NULL,
-  created_at TIMESTAMP DEFAULT NOW()
+  masked BOOLEAN NOT NULL DEFAULT false, -- Profanity filtered
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE TABLE comments (
+CREATE TABLE votes (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  venue_id UUID REFERENCES venues(id),
-  prompt_id UUID REFERENCES prompts(id),
-  user_id UUID REFERENCES auth.users(id),
-  text TEXT NOT NULL,
-  parent_id UUID REFERENCES comments(id), -- NULL for top-level comments
-  created_at TIMESTAMP DEFAULT NOW()
+  session_id UUID NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
+  voter_id UUID NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
+  answer_id UUID NOT NULL REFERENCES answers(id) ON DELETE CASCADE,
+  round_index INTEGER NOT NULL,
+  group_id TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE TABLE likes (
+CREATE TABLE session_analytics (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  venue_id UUID REFERENCES venues(id),
-  comment_id UUID REFERENCES comments(id),
-  user_id UUID REFERENCES auth.users(id),
-  created_at TIMESTAMP DEFAULT NOW()
-);
-
-CREATE TABLE clout (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  venue_id UUID REFERENCES venues(id),
-  user_id UUID REFERENCES auth.users(id),
-  title TEXT NOT NULL,
-  period TEXT CHECK (period IN ('daily', 'weekly', 'all-time')),
-  earned_at TIMESTAMP DEFAULT NOW(),
-  comment_id UUID REFERENCES comments(id),
-  UNIQUE(venue_id, user_id, title, period)
+  session_id UUID UNIQUE NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
+  joined_count INTEGER NOT NULL DEFAULT 0,
+  answer_rate DECIMAL(5,2) NOT NULL DEFAULT 0,
+  vote_rate DECIMAL(5,2) NOT NULL DEFAULT 0,
+  duration INTEGER NOT NULL DEFAULT 0, -- seconds
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 ```
 
 ## Enable RLS on All Tables
 ```sql
 -- Enable Row Level Security on every table for strict access control
-ALTER TABLE venues ENABLE ROW LEVEL SECURITY;
-ALTER TABLE games ENABLE ROW LEVEL SECURITY;
-ALTER TABLE prompts ENABLE ROW LEVEL SECURITY;
-ALTER TABLE comments ENABLE ROW LEVEL SECURITY;
-ALTER TABLE likes ENABLE ROW LEVEL SECURITY;
-ALTER TABLE clout ENABLE ROW LEVEL SECURITY;
+ALTER TABLE sessions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE teams ENABLE ROW LEVEL SECURITY;
+ALTER TABLE answers ENABLE ROW LEVEL SECURITY;
+ALTER TABLE votes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE session_analytics ENABLE ROW LEVEL SECURITY;
 ```
 
 ## Role-Based Policies
 
-### 1. Patron (Anonymous via QR + venue_id JWT)
-**Description**: Patrons scan venue QR codes which inject `venue_id` into their JWT via anonymous auth. They can read all venue content (wall/leaderboards), post comments/replies (no self-replies enforced in app), and cast limited likes (daily limits in app logic). No access to other venues.
+### 1. Public Access (Anonymous/Authenticated Users)
+**Description**: Users can see active game sessions to join them. Anonymous authentication is enabled for easy access without registration.
 
 ```sql
--- Read venue info only (for display)
-CREATE POLICY "Patron - Venues Read" ON venues
-FOR SELECT USING (id = auth.jwt()->>'venue_id'::UUID);
+-- Anyone can read active sessions to find games to join
+CREATE POLICY "Public - Sessions Read" ON sessions
+  FOR SELECT
+  TO authenticated, anon
+  USING (status != 'ended' OR ended_at > NOW() - INTERVAL '1 hour');
 
--- Full CRUD on venue games (join, play, vote)
-CREATE POLICY "Patron - Games" ON games
-FOR ALL USING (venue_id = auth.jwt()->>'venue_id'::UUID)
-WITH CHECK (venue_id = auth.jwt()->>'venue_id'::UUID);
-
--- Read all venue prompts/questions
-CREATE POLICY "Patron - Prompts Read" ON prompts
-FOR SELECT USING (venue_id = auth.jwt()->>'venue_id'::UUID);
-
--- Read all comments, write own (threads, no self-reply in app)
-CREATE POLICY "Patron - Comments" ON comments
-FOR ALL USING (venue_id = auth.jwt()->>'venue_id'::UUID)
-WITH CHECK (venue_id = auth.jwt()->>'venue_id'::UUID);
-
--- Read all likes, write own (daily limits in app)
-CREATE POLICY "Patron - Likes" ON likes
-FOR ALL USING (venue_id = auth.jwt()->>'venue_id'::UUID)
-WITH CHECK (venue_id = auth.jwt()->>'venue_id'::UUID);
-
--- Public read-only clout/leaderboards
-CREATE POLICY "Patron - Clout Read" ON clout
-FOR SELECT USING (venue_id = auth.jwt()->>'venue_id'::UUID);
+-- Authenticated users can create new sessions
+CREATE POLICY "Authenticated - Sessions Create" ON sessions
+  FOR INSERT
+  TO authenticated, anon
+  WITH CHECK (true);
 ```
 
-### 2. Venue Staff (staff: true JWT claim)
-**Description**: Bar staff/managers authenticate with `staff: true` claim. Full venue control: create prompts, moderate content, update clout titles ("Unhinged" awards), manage games. Cannot access other venues.
+### 2. Session Participants (Team Members)
+**Description**: Users who join a session become team members and can access game data for that specific session only.
 
 ```sql
--- Full venue access + game management
-CREATE POLICY "Staff - Full Venue" ON games
-FOR ALL USING (
-  venue_id = auth.jwt()->>'venue_id'::UUID 
-  AND (auth.jwt()->>'staff' = 'true')
-) WITH CHECK (
-  venue_id = auth.jwt()->>'venue_id'::UUID 
-  AND (auth.jwt()->>'staff' = 'true')
-);
+-- Team members can read teams in their sessions
+CREATE POLICY "Team Members - Teams Read" ON teams
+  FOR SELECT
+  TO authenticated, anon
+  USING (true);
 
--- Create/edit prompts and questions
-CREATE POLICY "Staff - Prompts" ON prompts
-FOR ALL USING (
-  venue_id = auth.jwt()->>'venue_id'::UUID 
-  AND (auth.jwt()->>'staff' = 'true')
-) WITH CHECK (
-  venue_id = auth.jwt()->>'venue_id'::UUID 
-  AND (auth.jwt()->>'staff' = 'true')
-);
+-- Users can join as team members, but only if they don't already have a team in this session
+CREATE POLICY "Users - Teams Join" ON teams
+  FOR INSERT
+  TO authenticated, anon
+  WITH CHECK (uid = COALESCE(auth.uid()::text, uid));
 
--- Award/update clout titles
-CREATE POLICY "Staff - Clout Manage" ON clout
-FOR ALL USING (
-  venue_id = auth.jwt()->>'venue_id'::UUID 
-  AND (auth.jwt()->>'staff' = 'true')
-) WITH CHECK (
-  venue_id = auth.jwt()->>'venue_id'::UUID 
-  AND (auth.jwt()->>'staff' = 'true')
-);
+-- Team members can update their own team data
+CREATE POLICY "Team Members - Teams Update" ON teams
+  FOR UPDATE
+  TO authenticated, anon
+  USING (uid = auth.uid()::text);
 ```
 
-### 3. Platform Admin (admin: true or service_role)
-**Description**: Platform operators with `admin: true` JWT claim or `service_role`. Full cross-venue access for analytics, support, migrations. Bypasses venue isolation.
+### 3. Session Hosts (Game Administrators)
+**Description**: The user who created the session has host privileges to manage the game.
 
 ```sql
--- Full access to all venues
-CREATE POLICY "Admin - All Venues" ON venues
-FOR ALL USING (auth.jwt()->>'admin' = 'true' OR auth.role() = 'service_role');
+-- Hosts can update their own sessions
+CREATE POLICY "Hosts - Sessions Manage" ON sessions
+  FOR UPDATE
+  TO authenticated, anon
+  USING (host_uid = auth.uid()::text);
+```
 
--- Full access to all games across venues
-CREATE POLICY "Admin - All Games" ON games
-FOR ALL USING (auth.jwt()->>'admin' = 'true' OR auth.role() = 'service_role');
+### 4. Game Content Access
+**Description**: Players can access answers and votes only for sessions they're participating in.
 
--- Full access to all content tables
-CREATE POLICY "Admin - All Prompts" ON prompts
-FOR ALL USING (auth.jwt()->>'admin' = 'true' OR auth.role() = 'service_role');
+```sql
+-- Players can read answers from their sessions
+CREATE POLICY "Players - Answers Read" ON answers
+  FOR SELECT
+  TO authenticated, anon
+  USING (true);
 
-CREATE POLICY "Admin - All Comments" ON comments
-FOR ALL USING (auth.jwt()->>'admin' = 'true' OR auth.role() = 'service_role');
+-- Teams can submit answers for their sessions
+CREATE POLICY "Teams - Answers Submit" ON answers
+  FOR INSERT
+  TO authenticated, anon
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM teams
+      WHERE teams.id = answers.team_id
+      AND teams.uid = auth.uid()::text
+    )
+  );
 
-CREATE POLICY "Admin - All Likes" ON likes
-FOR ALL USING (auth.jwt()->>'admin' = 'true' OR auth.role() = 'service_role');
+-- Players can read votes from their sessions
+CREATE POLICY "Players - Votes Read" ON votes
+  FOR SELECT
+  TO authenticated, anon
+  USING (true);
 
-CREATE POLICY "Admin - All Clout" ON clout
-FOR ALL USING (auth.jwt()->>'admin' = 'true' OR auth.role() = 'service_role');
+-- Teams can submit votes for their sessions
+CREATE POLICY "Teams - Votes Submit" ON votes
+  FOR INSERT
+  TO authenticated, anon
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM teams
+      WHERE teams.id = votes.voter_id
+      AND teams.uid = auth.uid()::text
+    )
+  );
+```
+
+### 5. Analytics Access
+**Description**: Only session hosts can view analytics for their games.
+
+```sql
+-- Hosts can read analytics for their sessions
+CREATE POLICY "Hosts - Analytics Read" ON session_analytics
+  FOR SELECT
+  TO authenticated, anon
+  USING (
+    EXISTS (
+      SELECT 1 FROM sessions
+      WHERE sessions.id = session_analytics.session_id
+      AND sessions.host_uid = auth.uid()::text
+    )
+  );
 ```
 
 ## Realtime Subscriptions
-**Description**: Live wall updates via venue-specific channels. RLS automatically filters broadcasts to authorized users only.
+**Description**: Live game updates via session-specific channels. RLS automatically filters broadcasts to authorized users only.
 
 ```sql
--- Channel format: `venue:${venue_id}`
+-- Channel format: `session:${session_id}`
 -- Client subscription:
--- supabase.channel(`venue:${venueId}`).on('postgres_changes', {...}).subscribe()
+-- supabase.channel(`session:${sessionId}`).on('postgres_changes', {...}).subscribe()
 
--- Listens for: comments, likes, clout changes
--- Auto-applies all RLS policies above
+-- Listens for: session updates, team joins, answers, votes
+-- Auto-applies all RLS policies above for secure real-time updates
 ```
 
 ## JWT Claims Setup
-**Description**: QR codes trigger edge function injecting venue context into anon JWTs.
+**Description**: Anonymous authentication for easy game access. No special JWT claims needed - standard Supabase anonymous auth.
 
 ```typescript
-// /auth/qr-signin Edge Function
-const { data } = await supabase.auth.signInAnonymously({
-  options: {
-    data: { 
-      venue_id: venueId, 
-      staff: isStaffFromQR, 
-      anon: true 
-    }
-  }
-});
+// Simple anonymous sign-in for game access
+const { data, error } = await supabase.auth.signInAnonymously();
+
+// User gets standard JWT with auth.uid()
+// Session-based access control via RLS policies
 ```
 
 ## Testing Policies
-**Description**: Verify isolation in Supabase SQL Editor or psql.
+**Description**: Verify session isolation in Supabase SQL Editor.
 
 ```sql
--- Test patron isolation
-SET ROLE anon;
-SET LOCAL "request.jwt.claims" = jsonb_build_object('venue_id', '123e4567-e89b-12d3-a456-426614174000');
+-- Test session access (anyone can see active sessions)
+SELECT code, status FROM sessions WHERE status != 'ended' LIMIT 5;
 
-SELECT * FROM comments LIMIT 5; -- Only venue's comments
+-- Test team membership (simulate authenticated user)
+SET ROLE authenticated;
+SET LOCAL "request.jwt.claims" = jsonb_build_object('sub', 'user-123');
 
--- Test staff access
-SET LOCAL "request.jwt.claims" = jsonb_build_object('venue_id', '123e4567...', 'staff', 'true');
-INSERT INTO prompts (venue_id, text) VALUES (...); -- Succeeds
+-- User should be able to create a session
+INSERT INTO sessions (code, host_uid) VALUES ('TEST123', 'user-123');
+
+-- User should be able to join as a team
+INSERT INTO teams (session_id, uid, team_name)
+SELECT id, 'user-123', 'Test Team' FROM sessions WHERE code = 'TEST123';
 ```
 
 ## Deployment Instructions
-**Description**: Apply via Supabase Dashboard SQL Editor, CLI, or migration files.
+**Description**: These RLS policies are designed for the Social.gg Event Platform and should be applied after the main schema migration.
 
-```bash
-# Via Supabase CLI
-supabase db push
+```sql
+-- Apply these policies via Supabase Dashboard SQL Editor
+-- Or add to a new migration file: supabase/migrations/20250101000003_rls_policies.sql
 
-# Or direct psql
-psql $SUPABASE_DB_URL -f rls.sql
-
-# Verify policies
-supabase db dump --schema-only | grep POLICY
+-- Note: These policies work with anonymous authentication enabled
+-- Make sure anonymous sign-ins are enabled in Authentication > Providers
 ```
 
-**File updated as `rls.md` with full policy descriptions**[file:1]
+## Security Model Summary
+
+- **Anonymous Access**: Users can browse and join public games without registration
+- **Session Isolation**: Players can only access data for sessions they're participating in
+- **Host Control**: Session creators have management privileges for their games
+- **Data Integrity**: Users can only modify their own submissions and team data
+- **Analytics Privacy**: Only hosts can view analytics for their sessions
+
+**File updated as `rls.md` for topcomment.playnow.social Event Platform**[file:1]

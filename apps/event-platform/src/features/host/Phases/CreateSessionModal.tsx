@@ -32,7 +32,7 @@ export function CreateSessionModal({
     <Modal
       open={open}
       onClose={onClose}
-      title="Create a Side Bets session"
+      title="Create a Söcial session"
       footer={
         <div className="flex w-full items-center justify-between">
           <Button variant="ghost" onClick={onClose}>
@@ -45,7 +45,7 @@ export function CreateSessionModal({
             disabled={!canCreateSession || isCreating}
             title={
               !canCreateSession
-                ? "Please wait for authentication to complete, or check that Firebase emulators are running"
+                ? "Please wait for authentication to complete"
                 : undefined
             }
           >
@@ -61,7 +61,7 @@ export function CreateSessionModal({
             <p className="mt-1">
               {isCreating
                 ? "Creating session..."
-                : "Please wait for authentication to complete. If this persists, ensure Firebase emulators are running."}
+                : "Please wait for authentication to complete."}
             </p>
           </div>
         )}

@@ -65,7 +65,61 @@ node_modules/
 # dotenv environment variables file
 .env
 .env.local
+.env.development.local
+.env.test.local
+.env.production.local
 
 
 # dataconnect generated files
 .dataconnect
+
+
+# Turborepo cache and logs
+.turbo/
+
+# Build outputs (Vite/React)
+dist/
+.next/
+.next
+build/
+out/
+
+# Testing
+test-results/
+playwright-report/
+playwright/.cache/
+coverage/
+.nyc_output/
+
+# IDE/Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Package manager files
+.pnpm-debug.log*
+.yarn/cache
+.yarn/install-state.gz
+
+# Supabase local development
+.supabase/
+
+# Firebase local emulator (if using)
+.firebase/
+
+# Temporary/debug files
+*.tmp
+*.temp
+database-debug.log
+firestore-debug.log

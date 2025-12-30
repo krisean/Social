@@ -106,7 +106,3 @@ export const darkTheme: Theme = {
     },
   },
 };
-
-// Explicit exports for better module resolution
-export type { Theme, ThemeColors };
-

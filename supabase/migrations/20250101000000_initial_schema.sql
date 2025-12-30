@@ -11,7 +11,7 @@ CREATE EXTENSION IF NOT EXISTS "pg_trgm"; -- For fuzzy text search
 
 -- Sessions: Main game sessions
 CREATE TABLE sessions (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   code TEXT UNIQUE NOT NULL, -- Join code like "ABC123"
   host_uid TEXT NOT NULL,
   status TEXT NOT NULL DEFAULT 'lobby', -- lobby, answer, vote, results, ended
@@ -33,7 +33,7 @@ CREATE TABLE sessions (
 
 -- Teams: Players in a session
 CREATE TABLE teams (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   session_id UUID NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
   uid TEXT NOT NULL, -- User's auth.uid
   team_name TEXT NOT NULL,
@@ -47,7 +47,7 @@ CREATE TABLE teams (
 
 -- Answers: Team submissions for prompts
 CREATE TABLE answers (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   session_id UUID NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
   team_id UUID NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
   round_index INTEGER NOT NULL,
@@ -59,7 +59,7 @@ CREATE TABLE answers (
 
 -- Votes: Team votes on answers
 CREATE TABLE votes (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   session_id UUID NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
   voter_id UUID NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
   answer_id UUID NOT NULL REFERENCES answers(id) ON DELETE CASCADE,
@@ -71,7 +71,7 @@ CREATE TABLE votes (
 
 -- Analytics: Session statistics
 CREATE TABLE session_analytics (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   session_id UUID UNIQUE NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
   joined_count INTEGER NOT NULL DEFAULT 0,
   answer_rate DECIMAL(5,2) NOT NULL DEFAULT 0,
@@ -183,9 +183,16 @@ CREATE POLICY "Hosts can read analytics"
 CREATE OR REPLACE FUNCTION update_team_activity()
 RETURNS TRIGGER AS $$
 BEGIN
-  UPDATE teams
-  SET last_active_at = NOW()
-  WHERE id = NEW.team_id OR id = NEW.voter_id;
+  -- Handle both answers and votes tables
+  IF TG_TABLE_NAME = 'answers' THEN
+    UPDATE teams
+    SET last_active_at = NOW()
+    WHERE id = NEW.team_id;
+  ELSIF TG_TABLE_NAME = 'votes' THEN
+    UPDATE teams
+    SET last_active_at = NOW()
+    WHERE id = NEW.voter_id;
+  END IF;
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
