@@ -1,4 +1,4 @@
-# Social.gg - Interactive Bar & Venue Games Platform
+# playnow.social - Interactive Bar & Venue Games Platform
 
 A **fully modular Turborepo monorepo** for interactive social games, built with Supabase, React, and TypeScript.
 
