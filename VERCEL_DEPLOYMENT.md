@@ -2,27 +2,34 @@
 
 ## Project Setup
 
-This monorepo contains 5 separate Vercel projects:
+This monorepo contains multiple Vercel projects:
 
-1. **event-platform** - Universal event host (Top Comment Event Mode)
-   - Deploy from: `apps/event-platform/`
-   - Domain: `events.social.gg` (or similar)
+### **Primary Projects** (Recommended)
 
-2. **topcomment-247** - Top Comment 24/7 Mode (Facebook wall)
-   - Deploy from: `apps/topcomment-247/`
-   - Domain: `topcomment.social.gg`
-
-3. **vibox-247** - VIBox 24/7 Jukebox
-   - Deploy from: `apps/vibox-247/`
-   - Domain: `vibox.social.gg`
-
-4. **web** - Landing page + admin panel
+1. **web** - Main site with subdomain routing
    - Deploy from: `apps/web/`
-   - Domain: `social.gg`
+   - Domains: 
+     - `playnow.social` (main landing page)
+     - `pub.playnow.social` (pub comment walls)
+   - Features subdomain-based routing for different experiences
 
-5. **dashboard** - Venue analytics dashboard
+2. **event-platform** - Live event hosting platform
+   - Deploy from: `apps/event-platform/`
+   - Domain: `events.playnow.social`
+
+3. **dashboard** - Venue analytics dashboard
    - Deploy from: `apps/dashboard/`
-   - Domain: `dashboard.social.gg`
+   - Domain: `dashboard.playnow.social`
+
+### **Optional Standalone Apps**
+
+4. **vibox-247** - VIBox 24/7 Jukebox (if deployed separately)
+   - Deploy from: `apps/vibox-247/`
+   - Domain: `vibox.playnow.social`
+
+5. **topcomment-247** - Deprecated (functionality moved to web app)
+   - ~~Deploy from: `apps/topcomment-247/`~~
+   - Use `pub.playnow.social` instead (routed via web app)
 
 ## Deployment Steps
 
@@ -81,11 +88,11 @@ This ensures:
 
 After deployment, configure custom domains:
 
-1. **social.gg** → apps/web
-2. **events.social.gg** → apps/event-platform
-3. **topcomment.social.gg** → apps/topcomment-247
-4. **vibox.social.gg** → apps/vibox-247
-5. **dashboard.social.gg** → apps/dashboard
+1. **playnow.social** → apps/web (main landing)
+2. **pub.playnow.social** → apps/web (pub walls - subdomain routing)
+3. **events.playnow.social** → apps/event-platform
+4. **dashboard.playnow.social** → apps/dashboard
+5. **vibox.playnow.social** → apps/vibox-247 (optional)
 
 ## Post-Deployment Checklist
 
