@@ -1,56 +1,86 @@
 import { useParams } from 'react-router-dom';
-import { useVenueSession } from './hooks/useVenueSession';
-import { CommentWall } from './components/CommentWall';
+import { useVenue } from './hooks';
+import { VenueFeed } from './components/VenueFeed';
+import { BackgroundAnimation } from './components/BackgroundAnimation';
+import { Card } from './components/Card';
+import { useTheme } from './shared/providers/ThemeProvider';
 
 export function VenuePage() {
   const { venueKey } = useParams();
-
-  const { venue, submissions, submitComment, loading } = useVenueSession(venueKey);
+  const { venue, loading, error } = useVenue(venueKey);
+  const { isDark } = useTheme();
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-lg text-gray-600">Loading venue...</p>
-        </div>
-      </div>
+      <>
+        <BackgroundAnimation show={true} />
+        <main className="relative min-h-screen px-4 py-10 sm:px-6">
+          <div className="relative z-10 mx-auto flex w-full max-w-2xl flex-col gap-6">
+            <Card className="text-center space-y-6 backdrop-blur">
+              <div className="animate-spin rounded-full h-16 w-16 border-4 mx-auto" style={{
+                borderColor: !isDark ? '#f59e0b' : '#06b6d4',
+                borderTopColor: 'transparent'
+              }}></div>
+              <div className="space-y-2">
+                <h2 className={`text-2xl font-bold ${!isDark ? 'text-slate-900' : 'text-pink-400'}`}>
+                  Loading Venue
+                </h2>
+                <p className={`text-base ${!isDark ? 'text-slate-700' : 'text-cyan-300'}`}>
+                  Please wait...
+                </p>
+              </div>
+            </Card>
+          </div>
+        </main>
+      </>
     );
   }
 
-  if (!venue) {
+  if (error || !venue) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-4xl font-bold mb-4 text-gray-900">Venue Not Found</h1>
-          <p className="text-xl text-gray-600 mb-8">The venue "{venueKey}" doesn't exist yet.</p>
-          <a
-            href="/"
-            className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 transition-colors"
-          >
-            Browse Venues
-          </a>
-        </div>
-      </div>
+      <>
+        <BackgroundAnimation show={true} />
+        <main className="relative min-h-screen px-4 py-10 sm:px-6">
+          <div className="relative z-10 mx-auto flex w-full max-w-2xl flex-col gap-6">
+            <Card className="text-center space-y-6 backdrop-blur">
+              <h2 className={`text-3xl font-bold ${!isDark ? 'text-slate-900' : 'text-pink-400'}`}>
+                Venue Not Found
+              </h2>
+              <p className={`text-base ${!isDark ? 'text-slate-700' : 'text-cyan-300'}`}>
+                {venueKey ? `The venue "${venueKey}" doesn't exist yet.` : 'No venue specified.'}
+              </p>
+              <a
+                href="/"
+                className={`inline-flex items-center justify-center rounded-2xl px-6 py-3 text-base font-semibold transition hover:scale-[1.02] ${
+                  !isDark
+                    ? 'bg-gradient-to-r from-amber-500 via-amber-400 to-yellow-300 text-slate-900 shadow-xl shadow-amber-500/30'
+                    : 'bg-gradient-to-r from-cyan-500 via-cyan-400 to-teal-300 text-slate-900 shadow-xl shadow-cyan-500/30'
+                }`}
+              >
+                Browse Venues
+              </a>
+            </Card>
+          </div>
+        </main>
+      </>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
-      <div className="container mx-auto px-4 py-8 max-w-4xl">
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">
-            {venue.name}
-          </h1>
-          <p className="text-lg text-gray-600">Share your funniest thoughts!</p>
+    <>
+      <BackgroundAnimation show={true} />
+      {/* Focus Band - Vertical gradient to calm center while allowing edge motion */}
+      <div className="fixed inset-0 z-5 pointer-events-none" style={{
+        background: !isDark
+          ? 'linear-gradient(to bottom, rgba(255,255,255,0.3) 0%, transparent 20%, transparent 80%, rgba(255,255,255,0.3) 100%)'
+          : 'linear-gradient(to bottom, rgba(15,23,42,0.4) 0%, transparent 20%, transparent 80%, rgba(15,23,42,0.4) 100%)'
+      }} />
+      <main className="relative min-h-screen px-4 py-10 sm:px-6">
+        <div className="relative z-10">
+          <VenueFeed venue={venue} />
         </div>
-
-        <CommentWall
-          submissions={submissions}
-          onSubmit={submitComment}
-          venueName={venue.name}
-        />
-      </div>
-    </div>
+      </main>
+    </>
   );
 }
+

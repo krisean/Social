@@ -12,13 +12,102 @@ export type Json =
 export interface Database {
   public: {
     Tables: {
+      feed_users: {
+        Row: {
+          id: string
+          auth_user_id: string | null
+          username: string
+          display_name: string | null
+          avatar_url: string | null
+          is_anonymous: boolean
+          created_at: string
+          last_active_at: string
+        }
+        Insert: {
+          id?: string
+          auth_user_id?: string | null
+          username: string
+          display_name?: string | null
+          avatar_url?: string | null
+          is_anonymous?: boolean
+          created_at?: string
+          last_active_at?: string
+        }
+        Update: {
+          id?: string
+          auth_user_id?: string | null
+          username?: string
+          display_name?: string | null
+          avatar_url?: string | null
+          is_anonymous?: boolean
+          created_at?: string
+          last_active_at?: string
+        }
+      }
+      feed_posts: {
+        Row: {
+          id: string
+          venue_id: string | null
+          author_id: string
+          content_type: string
+          content: string
+          metadata: Json
+          like_count: number
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          venue_id?: string | null
+          author_id: string
+          content_type?: string
+          content: string
+          metadata?: Json
+          like_count?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          venue_id?: string | null
+          author_id?: string
+          content_type?: string
+          content?: string
+          metadata?: Json
+          like_count?: number
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      feed_likes: {
+        Row: {
+          id: string
+          post_id: string
+          user_id: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          post_id: string
+          user_id: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          post_id?: string
+          user_id?: string
+          created_at?: string
+        }
+      }
       venues: {
         Row: {
           id: string
           name: string
           slug: string
+          description: string | null
+          features: Json
           owner_email: string | null
-          subscription_status: string
+          subscription_status: string | null
           trial_ends_at: string | null
           qr_code_url: string | null
           created_at: string
@@ -28,8 +117,10 @@ export interface Database {
           id?: string
           name: string
           slug: string
+          description?: string | null
+          features?: Json
           owner_email?: string | null
-          subscription_status?: string
+          subscription_status?: string | null
           trial_ends_at?: string | null
           qr_code_url?: string | null
           created_at?: string
@@ -39,8 +130,10 @@ export interface Database {
           id?: string
           name?: string
           slug?: string
+          description?: string | null
+          features?: Json
           owner_email?: string | null
-          subscription_status?: string
+          subscription_status?: string | null
           trial_ends_at?: string | null
           qr_code_url?: string | null
           created_at?: string
