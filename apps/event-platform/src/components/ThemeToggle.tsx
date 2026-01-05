@@ -11,12 +11,7 @@ export function ThemeToggle() {
   return (
     <button
       onClick={toggleTheme}
-      className="pointer-events-auto fixed right-4 top-4 z-50 p-3 rounded-full backdrop-blur-md transition-all hover:scale-110 active:scale-95"
-      style={{
-        background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0.1))',
-        border: '1px solid rgba(255, 255, 255, 0.4)',
-        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)',
-      }}
+      className="p-2 rounded-full transition-all hover:scale-110 active:scale-95"
       title={isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
       aria-label={isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
     >

@@ -1,1 +1,0 @@
-{"version":3,"file":"useCountdown.d.ts","sourceRoot":"","sources":["../../../src/shared/hooks/useCountdown.ts"],"names":[],"mappings":"AAIA,MAAM,WAAW,cAAc;IAC7B,OAAO,EAAE,MAAM,CAAC;IAChB,YAAY,EAAE,MAAM,CAAC;IACrB,SAAS,EAAE,OAAO,CAAC;CACpB;AAgBD,wBAAgB,YAAY,CAAC,OAAO,CAAC,EAAE,MAAM,EAAE,MAAM,SAAkB,kBAqBtE"}

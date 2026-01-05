@@ -1,55 +1,107 @@
 // Prompt libraries for the game
+// Now loaded from database instead of hardcoded arrays
+
+import { createServiceClient } from './utils.ts';
 
 export interface PromptLibrary {
   id: string;
   name: string;
   emoji: string;
+  description: string;
   prompts: string[];
 }
 
-export const DEFAULT_PROMPTS = [
-  "What's the most overrated thing?",
-  "What's a red flag in a person?",
-  "What's your biggest pet peeve?",
-  "What's the worst gift you've ever received?",
-  "What's an unpopular opinion you have?",
-  "What's something you're secretly proud of?",
-  "What's the weirdest thing you believed as a kid?",
-  "What's your most embarrassing moment?",
-  "What's a skill you wish you had?",
-  "What's the worst advice you've ever been given?"
+// Fallback prompts if database is unavailable
+const FALLBACK_PROMPTS = [
+  "What would you say if an alien landed in your backyard?",
+  "What is the quickest way to get fired from your job?",
+  "If you were to start a sports team, what would the mascot be?",
+  "What is the worst theme for a children's birthday party?",
+  "What would be the worst thing to hear from your doctor?",
+  "What is the most useless superpower you can think of?",
+  "If animals could talk, which one would be the rudest?",
+  "Pitch a new reality show that would get canceled immediately.",
+  "Name a terrible new cocktail people would still order.",
+  "Rename a classic drink to fit its true personality.",
+  "Write a pickup line one bar item would use on another.",
+  "What's the worst thing to say at a funeral?",
+  "If you had to rename a popular app, what would you call it?",
+  "What's the most embarrassing thing to happen at a job interview?",
+  "If you could make one law that everyone had to follow, what would it be?",
+  "What's the worst superpower to have at a party?",
+  "If you had to describe your last meal using only emojis, what would it be?",
+  "What's the most ridiculous thing you could put on a resume?",
+  "If you could make any animal the size of a house, which would be the most terrifying?",
+  "What's the most useless invention you can think of?",
 ];
 
-export const PROMPT_LIBRARIES: Record<string, PromptLibrary> = {
-  classic: {
-    id: 'classic',
-    name: 'Classic',
-    emoji: '🎯',
-    prompts: DEFAULT_PROMPTS,
-  },
-  bar: {
-    id: 'bar',
-    name: 'Bar Night',
-    emoji: '🍺',
-    prompts: [
-      "What's your go-to karaoke song?",
-      "What's your worst hangover story?",
-      "What's your signature drink?",
-      "What's the craziest thing you've done at a bar?",
-      "What's your favorite drinking game?",
-    ],
-  },
-  // Add more libraries as needed
-};
-
-export function getPromptLibrary(id?: string): PromptLibrary {
-  if (!id || !PROMPT_LIBRARIES[id]) {
-    return PROMPT_LIBRARIES.classic;
+// Load prompt library from database
+export async function getPromptLibrary(id?: string): Promise<PromptLibrary> {
+  const libraryId = id || 'classic';
+  const supabase = createServiceClient();
+  
+  try {
+    // Get library metadata
+    const { data: library, error: libraryError } = await supabase
+      .from('prompt_libraries')
+      .select('id, name, emoji, description')
+      .eq('id', libraryId)
+      .eq('is_active', true)
+      .single();
+    
+    if (libraryError || !library) {
+      console.error('Error loading library:', libraryError);
+      // Return fallback
+      return {
+        id: 'classic',
+        name: 'Classic Crowd',
+        emoji: '🔥',
+        description: 'Lighthearted pop-culture roasts for any crowd.',
+        prompts: FALLBACK_PROMPTS,
+      };
+    }
+    
+    // Get prompts for this library
+    const { data: prompts, error: promptsError } = await supabase
+      .from('prompts')
+      .select('text')
+      .eq('library_id', libraryId)
+      .eq('is_active', true)
+      .order('sort_order', { ascending: true });
+    
+    if (promptsError || !prompts || prompts.length === 0) {
+      console.error('Error loading prompts:', promptsError);
+      // Return fallback
+      return {
+        id: library.id,
+        name: library.name,
+        emoji: library.emoji,
+        description: library.description,
+        prompts: FALLBACK_PROMPTS,
+      };
+    }
+    
+    return {
+      id: library.id,
+      name: library.name,
+      emoji: library.emoji,
+      description: library.description,
+      prompts: prompts.map(p => p.text),
+    };
+  } catch (error) {
+    console.error('Exception loading library:', error);
+    // Return fallback
+    return {
+      id: 'classic',
+      name: 'Classic Crowd',
+      emoji: '🔥',
+      description: 'Lighthearted pop-culture roasts for any crowd.',
+      prompts: FALLBACK_PROMPTS,
+    };
   }
-  return PROMPT_LIBRARIES[id];
 }
+
+export const DEFAULT_PROMPTS = FALLBACK_PROMPTS;
 
 export const GROUP_SIZE = 8;
 export const TOTAL_ROUNDS = 3;
-
-

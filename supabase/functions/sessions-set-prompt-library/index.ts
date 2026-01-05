@@ -8,7 +8,7 @@ Deno.serve(async (req) => {
   if (corsRes) return corsRes;
 
   try {
-    const uid = getUserId(req);
+    const uid = await getUserId(req);
     const { sessionId, promptLibraryId } = await req.json();
     
     requireString(sessionId, 'sessionId');
@@ -38,7 +38,7 @@ Deno.serve(async (req) => {
     }
     
     // Get new prompt library and shuffle
-    const library = getPromptLibrary(promptLibraryId);
+    const library = await getPromptLibrary(promptLibraryId);
     const promptDeck = [...library.prompts].sort(() => Math.random() - 0.5);
     
     // Update session

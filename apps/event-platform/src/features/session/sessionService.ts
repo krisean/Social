@@ -348,36 +348,36 @@ export const joinSession = async (payload: JoinSessionRequest) => {
 };
 
 export const startGame = async (payload: StartGameRequest) => {
-  const { data, error } = await supabase.functions.invoke<{ session: Session }>(
+  const response = await supabase.functions.invoke<{ session: Session }>(
     "sessions-start",
     { body: payload }
   );
-  if (error) throw error;
-  return data;
+  
+  if (response.error) {
+    throw response.error;
+  }
+  
+  return response.data;
 };
 
 export const advancePhase = async (payload: TransitionPhaseRequest) => {
-  const { data, error } = await supabase.functions.invoke<{ session: Session }>(
+  const response = await supabase.functions.invoke<{ session: Session }>(
     "sessions-advance",
     { body: payload }
   );
-  if (error) throw error;
-  return data;
+  
+  if (response.error) {
+    throw response.error;
+  }
+  
+  return response.data;
 };
 
 export const submitAnswer = async (payload: SubmitAnswerRequest) => {
-  // #region agent log - Submit answer
-  fetch('http://127.0.0.1:7242/ingest/339ce828-5f9b-4ebe-8fc8-4666788034c5',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'sessionService.ts:368',message:'Submitting answer',data:{sessionId:payload.sessionId,textLength:payload.text?.length,timestamp:Date.now()},sessionId:'debug-session',runId:'submit-answer-debug'})}).catch(()=>{});
-  // #endregion
-
   const { data, error } = await supabase.functions.invoke<{ success: boolean }>(
     "answers-submit",
     { body: payload }
   );
-
-  // #region agent log - Submit answer result
-  fetch('http://127.0.0.1:7242/ingest/339ce828-5f9b-4ebe-8fc8-4666788034c5',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'sessionService.ts:372',message:'Submit answer result',data:{hasData:!!data,hasError:!!error,errorMessage:error?.message || error,status:error?.status,timestamp:Date.now()},sessionId:'debug-session',runId:'submit-answer-debug'})}).catch(()=>{});
-  // #endregion
 
   if (error) throw error;
   return data;

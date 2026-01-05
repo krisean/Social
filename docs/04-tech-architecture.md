@@ -105,7 +105,7 @@ Scoring: Real-time calc + Supabase triggers
 
 **Technical Flow:**
 ```
-vibe/custom → sunoapi.org/v1/generate → Firebase Storage
+vibe/custom → sunoapi.org/v1/generate → Supabase Storage
 Track metadata in Supabase (venue_id, vibe, generated_at)
 Realtime queue subscriptions for TV display
 Revenue tracking per song

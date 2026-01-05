@@ -84,6 +84,10 @@ dist/
 build/
 out/
 
+# Package build outputs
+packages/*/dist/
+packages/*/build/
+
 # Testing
 test-results/
 playwright-report/
@@ -123,3 +127,28 @@ Thumbs.db
 *.temp
 database-debug.log
 firestore-debug.log
+
+# Executables
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Build artifacts and caches
+.cache/
+.parcel-cache/
+.vite/
+.next/
+.nuxt/
+.output/
+
+# Local development files
+.env.local
+.env.*.local
+.vercel/
+
+# Database dumps
+*.sql.dump
+*.sqlite
+*.sqlite3

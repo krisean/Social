@@ -2,7 +2,7 @@
 
 ## Executive Summary
 
-Perfect timing: Suno v5 (2025) bar-quality AI music + no licensing moat = 6-12 month first-mover window. Hybrid pricing: CAD $129/mo base (200 songs included) + 40% revenue share songs 201+. Patrons scan QR, pay CAD $1.50–$3 (Helcim → venue keeps 100%), generate Suno songs → S3 library + Firebase queue → venue AUX speakers. 14-day free trial + library lock-in → 70% conversion. CAD $20k–$30k Y1 ARR (13 venues), 60–80% margins.
+Perfect timing: Suno v5 (2025) bar-quality AI music + no licensing moat = 6-12 month first-mover window. Hybrid pricing: CAD $129/mo base (200 songs included) + 40% revenue share songs 201+. Patrons scan QR, pay CAD $1.50–$3 (Helcim → venue keeps 100%), generate Suno songs → Supabase Storage + Supabase realtime → venue AUX speakers. 14-day free trial + library lock-in → 70% conversion. CAD $20k–$30k Y1 ARR (13 venues), 60–80% margins.
 
 ## Hybrid Model - Best of Both Worlds
 
@@ -14,16 +14,16 @@ Perfect timing: Suno v5 (2025) bar-quality AI music + no licensing moat = 6-12 m
 
 **Note:** Suno cost: CAD $0.015/song covered by 40% ($1.12 × 0.40 = CAD $0.45). Guaranteed floor + usage upside.
 
-## Technical Implementation (Your Firebase)
+## Technical Implementation (Supabase)
 
 ```
-QR → Firebase PWA → Helcim CAD $1.50–$3 → Suno API
+QR → Supabase PWA → Helcim CAD $1.50–$3 → Suno API
 ↓
-S3 music venues/{id}/songs/ + Firestore metadata
+Supabase Storage + Supabase metadata
 ↓
-Realtime DB queue → Venue AUX/Bluetooth → Bar speakers
+Supabase realtime queue → Venue AUX/Bluetooth → Bar speakers
 
-Tracking: Firebase counts songsGeneratedThisMonth[venueId]
+Tracking: Supabase counts songsGeneratedThisMonth[venueId]
 Month-end: Auto-invoice 40% overage
 ```
 
@@ -68,7 +68,7 @@ Söcial: CAD $631 venue (56%) → 40% better
 | Component | 200 Songs | 400 Songs |
 |-----------|-----------|-----------|
 | Suno | CAD $3 | CAD $6 |
-| Firebase/S3 | CAD $1 | CAD $2 |
+| Supabase Storage | CAD $1 | CAD $2 |
 | **Total COGS** | **CAD $4** | **CAD $8** |
 | **Your Margin** | **97%** | **98%** |
 
