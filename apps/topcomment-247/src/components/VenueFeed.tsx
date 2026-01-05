@@ -4,10 +4,11 @@ import { useState } from 'react';
 import { useFeed } from '../hooks';
 import { useAuth } from '../providers';
 import { ContentCard } from './content';
+import { CommentCard } from './content/CommentCard';
 import { Card } from './Card';
 import { AuthModal } from './auth/AuthModal';
 import { useTheme } from '../shared/providers/ThemeProvider';
-import type { Venue } from '../types';
+import type { Venue, Content } from '../types';
 
 interface VenueFeedProps {
   venue: Venue;
@@ -21,6 +22,7 @@ export function VenueFeed({ venue }: VenueFeedProps) {
   const [showPostModal, setShowPostModal] = useState(false);
   const [isClinking, setIsClinking] = useState(false);
   const [showToastSuccess, setShowToastSuccess] = useState(false);
+  const [openModalPost, setOpenModalPost] = useState<Content | null>(null);
 
   const handleFabClick = () => {
     setIsClinking(true);
@@ -84,7 +86,7 @@ export function VenueFeed({ venue }: VenueFeedProps) {
       </header>
 
       {/* Feed Surface - Semi-opaque overlay to isolate from background */}
-      <div className="relative z-10 backdrop-blur-sm pb-20" style={{
+      <div className={`relative z-10 backdrop-blur-sm pb-20 ${openModalPost ? 'opacity-0' : 'opacity-100'} transition-opacity duration-0`} style={{
         backgroundColor: !isDark ? 'rgba(255, 255, 255, 0.6)' : 'rgba(15, 23, 42, 0.7)'
       }}>
 
@@ -107,11 +109,37 @@ export function VenueFeed({ venue }: VenueFeedProps) {
               } ${index === 0 ? 'border-t' : ''} border-b`}
               style={{ borderWidth: '0.5px' }}
             >
-              <ContentCard content={post} />
+              <ContentCard content={post} onModalStateChange={setOpenModalPost} />
             </div>
           ))
         )}
       </div>
+
+      {/* Render modal outside of feed container */}
+      {openModalPost && (
+        <div className="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center p-4">
+          <div className="animate-slide-in-right">
+            <CommentCard content={openModalPost} onModalStateChange={setOpenModalPost} isModalOnly />
+          </div>
+          <style>
+            {`
+              @keyframes slide-in-right {
+                from {
+                  transform: translateX(100%);
+                  opacity: 0;
+                }
+                to {
+                  transform: translateX(0);
+                  opacity: 1;
+                }
+              }
+              .animate-slide-in-right {
+                animation: slide-in-right 0.3s ease-out;
+              }
+            `}
+          </style>
+        </div>
+      )}
 
       {/* Floating Action Button */}
       {venue.features.comments && (
@@ -286,71 +314,71 @@ export function VenueFeed({ venue }: VenueFeedProps) {
             ) : (
               <>
                 <div className="flex items-center justify-between mb-4">
-                  <h2 className={`text-xl font-semibold ${!isDark ? 'text-slate-900' : 'text-white'}`}>
-                    Create Toast
-                  </h2>
-                  <button
-                    onClick={() => setShowPostModal(false)}
-                    className={`w-8 h-8 rounded-full flex items-center justify-center transition hover:scale-110 ${
-                      !isDark ? 'text-slate-400 hover:text-slate-600 hover:bg-slate-100' : 'text-slate-500 hover:text-slate-300 hover:bg-slate-700'
-                    }`}
-                  >
-                    ×
-                  </button>
-                </div>
+              <h2 className={`text-xl font-semibold ${!isDark ? 'text-slate-900' : 'text-white'}`}>
+                Create Toast
+              </h2>
+              <button
+                onClick={() => setShowPostModal(false)}
+                className={`w-8 h-8 rounded-full flex items-center justify-center transition hover:scale-110 ${
+                  !isDark ? 'text-slate-400 hover:text-slate-600 hover:bg-slate-100' : 'text-slate-500 hover:text-slate-300 hover:bg-slate-700'
+                }`}
+              >
+                ×
+              </button>
+            </div>
 
-                <form onSubmit={async (e) => {
-                  e.preventDefault();
-                  const formData = new FormData(e.currentTarget);
-                  const content = formData.get('content') as string;
-                  if (content?.trim()) {
-                    await handleSubmit(content.trim());
-                    setShowToastSuccess(true);
-                    setTimeout(() => {
-                      setShowToastSuccess(false);
-                      setShowPostModal(false);
-                    }, 800);
-                  }
-                }}>
-                  <textarea
-                    name="content"
-                    placeholder="What's happening?"
-                    rows={4}
-                    className={`w-full rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-offset-2 resize-none ${
-                      !isDark
-                        ? 'border border-slate-300 bg-white text-slate-900 focus:ring-amber-500 focus:border-amber-500'
-                        : 'border border-slate-600 bg-slate-700 text-white focus:ring-cyan-500 focus:border-cyan-500'
-                    }`}
-                    required
-                  />
+            <form onSubmit={async (e) => {
+              e.preventDefault();
+              const formData = new FormData(e.currentTarget);
+              const content = formData.get('content') as string;
+              if (content?.trim()) {
+                await handleSubmit(content.trim());
+                setShowToastSuccess(true);
+                setTimeout(() => {
+                  setShowToastSuccess(false);
+                  setShowPostModal(false);
+                }, 800);
+              }
+            }}>
+              <textarea
+                name="content"
+                placeholder="What's happening?"
+                rows={4}
+                className={`w-full rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-offset-2 resize-none ${
+                  !isDark
+                    ? 'border border-slate-300 bg-white text-slate-900 focus:ring-amber-500 focus:border-amber-500'
+                    : 'border border-slate-600 bg-slate-700 text-white focus:ring-cyan-500 focus:border-cyan-500'
+                }`}
+                required
+              />
 
-                  <div className="flex justify-end gap-3 mt-4">
-                    <button
-                      type="button"
-                      onClick={() => setShowPostModal(false)}
-                      className={`px-4 py-2 rounded-lg transition ${
-                        !isDark ? 'text-slate-600 hover:bg-slate-100' : 'text-slate-400 hover:bg-slate-700'
-                      }`}
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      type="submit"
-                      className={`px-4 py-2 rounded-lg font-semibold transition focus:outline-none focus:ring-2 focus:ring-offset-2 ${
-                        !isDark
-                          ? 'bg-gradient-to-r from-amber-500 to-yellow-400 text-slate-900 shadow-lg hover:from-amber-600 hover:to-yellow-500 focus:ring-amber-500'
-                          : 'bg-gradient-to-r from-cyan-500 to-teal-400 text-white shadow-lg hover:from-cyan-600 hover:to-teal-500 focus:ring-cyan-500'
-                      }`}
-                    >
-                      Toast
-                    </button>
-                  </div>
-                </form>
+              <div className="flex justify-end gap-3 mt-4">
+                <button
+                  type="button"
+                  onClick={() => setShowPostModal(false)}
+                  className={`px-4 py-2 rounded-lg transition ${
+                    !isDark ? 'text-slate-600 hover:bg-slate-100' : 'text-slate-400 hover:bg-slate-700'
+                  }`}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className={`px-4 py-2 rounded-lg font-semibold transition focus:outline-none focus:ring-2 focus:ring-offset-2 ${
+                    !isDark
+                      ? 'bg-gradient-to-r from-amber-500 to-yellow-400 text-slate-900 shadow-lg hover:from-amber-600 hover:to-yellow-500 focus:ring-amber-500'
+                      : 'bg-gradient-to-r from-cyan-500 to-teal-400 text-white shadow-lg hover:from-cyan-600 hover:to-teal-500 focus:ring-cyan-500'
+                  }`}
+                >
+                  Toast
+                </button>
+              </div>
+            </form>
               </>
             )}
-          </div>
-        </div>
-      )}
+      </div>
+    </div>
+  )}
 
       {/* Auth Modal */}
       <AuthModal open={showAuthModal} onClose={() => setShowAuthModal(false)} />

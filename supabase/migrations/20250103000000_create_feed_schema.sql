@@ -73,6 +73,36 @@ CREATE INDEX idx_feed_likes_post_id ON feed_likes(post_id);
 CREATE INDEX idx_feed_likes_user_id ON feed_likes(user_id);
 
 -- =============================================================================
+-- TRIGGERS FOR LIKE COUNT MAINTENANCE
+-- =============================================================================
+
+-- Function to update like count
+CREATE OR REPLACE FUNCTION update_feed_post_like_count()
+RETURNS TRIGGER AS $$
+BEGIN
+  -- Update the like_count in feed_posts based on actual likes
+  UPDATE feed_posts
+  SET like_count = (
+    SELECT COUNT(*)
+    FROM feed_likes
+    WHERE post_id = COALESCE(NEW.post_id, OLD.post_id)
+  )
+  WHERE id = COALESCE(NEW.post_id, OLD.post_id);
+
+  RETURN COALESCE(NEW, OLD);
+END;
+$$ LANGUAGE plpgsql;
+
+-- Triggers to maintain like_count
+CREATE TRIGGER trigger_feed_likes_insert
+  AFTER INSERT ON feed_likes
+  FOR EACH ROW EXECUTE FUNCTION update_feed_post_like_count();
+
+CREATE TRIGGER trigger_feed_likes_delete
+  AFTER DELETE ON feed_likes
+  FOR EACH ROW EXECUTE FUNCTION update_feed_post_like_count();
+
+-- =============================================================================
 -- ROW LEVEL SECURITY (RLS)
 -- =============================================================================
 

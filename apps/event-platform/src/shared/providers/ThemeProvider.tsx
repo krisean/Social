@@ -3,23 +3,10 @@
  * Manages theme state and provides theme toggle functionality
  */
 
-// #region agent log - ThemeProvider imports
-fetch('http://127.0.0.1:7242/ingest/339ce828-5f9b-4ebe-8fc8-4666788034c5',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ThemeProvider.tsx:6',message:'Starting ThemeProvider import',data:{timestamp:Date.now()},sessionId:'debug-session',runId:'theme-import-debug'})}).catch(()=>{});
-// #endregion
-
 import { createContext, useContext, useState, useEffect } from 'react';
 import type { ReactNode } from 'react';
-
-// #region agent log - Theme import attempt
-fetch('http://127.0.0.1:7242/ingest/339ce828-5f9b-4ebe-8fc8-4666788034c5',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ThemeProvider.tsx:12',message:'About to import themes',data:{timestamp:Date.now()},sessionId:'debug-session',runId:'theme-import-debug'})}).catch(()=>{});
-// #endregion
-
 import { lightTheme, darkTheme } from '../theme';
 import type { Theme } from '../theme';
-
-// #region agent log - Theme import result
-fetch('http://127.0.0.1:7242/ingest/339ce828-5f9b-4ebe-8fc8-4666788034c5',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ThemeProvider.tsx:16',message:'Theme imports completed',data:{lightTheme:!!lightTheme,darkTheme:!!darkTheme,timestamp:Date.now()},sessionId:'debug-session',runId:'theme-import-debug'})}).catch(()=>{});
-// #endregion
 
 interface ThemeContextType {
   theme: Theme;
@@ -30,18 +17,10 @@ interface ThemeContextType {
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  // #region agent log - ThemeProvider initialization
-  fetch('http://127.0.0.1:7242/ingest/339ce828-5f9b-4ebe-8fc8-4666788034c5',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ThemeProvider.tsx:24',message:'ThemeProvider function called',data:{lightTheme:typeof lightTheme,darkTheme:typeof darkTheme,timestamp:Date.now()},sessionId:'debug-session',runId:'theme-import-debug'})}).catch(()=>{});
-  // #endregion
-
-  // Load theme from localStorage or default to light
+  // Load theme from localStorage or default to dark
   const [theme, setTheme] = useState<Theme>(() => {
-    // #region agent log - useState initializer
-    fetch('http://127.0.0.1:7242/ingest/339ce828-5f9b-4ebe-8fc8-4666788034c5',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ThemeProvider.tsx:29',message:'useState initializer called',data:{stored:localStorage.getItem('app-theme'),timestamp:Date.now()},sessionId:'debug-session',runId:'theme-import-debug'})}).catch(()=>{});
-    // #endregion
-
     const stored = localStorage.getItem('app-theme');
-    return stored === 'dark' ? darkTheme : lightTheme;
+    return stored === 'light' ? lightTheme : darkTheme;
   });
 
   const isDark = theme.name === 'dark';

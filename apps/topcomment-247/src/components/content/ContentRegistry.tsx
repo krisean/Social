@@ -14,15 +14,17 @@ const ContentCardRegistry = {
 
 interface ContentCardProps {
   content: Content;
+  onModalStateChange?: (post: Content | null) => void;
+  isModalOnly?: boolean;
 }
 
-export function ContentCard({ content }: ContentCardProps) {
+export function ContentCard({ content, onModalStateChange, isModalOnly = false }: ContentCardProps) {
   const CardComponent = ContentCardRegistry[content.contentType];
-  
+
   if (!CardComponent) {
     console.warn(`No card component for content type: ${content.contentType}`);
     return null;
   }
 
-  return <CardComponent content={content as any} />;
+  return <CardComponent content={content as any} onModalStateChange={onModalStateChange} isModalOnly={isModalOnly} />;
 }

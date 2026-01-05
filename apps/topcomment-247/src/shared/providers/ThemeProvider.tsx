@@ -17,10 +17,10 @@ interface ThemeContextType {
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  // Load theme from localStorage or default to light
+  // Load theme from localStorage or default to dark
   const [theme, setTheme] = useState<Theme>(() => {
     const stored = localStorage.getItem('app-theme');
-    return stored === 'dark' ? darkTheme : lightTheme;
+    return stored === 'light' ? lightTheme : darkTheme;
   });
 
   const isDark = theme.name === 'dark';

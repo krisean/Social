@@ -62,7 +62,7 @@ Successfully refactored the monolithic "Top Comment" application into a flexible
 
 - ✅ **Game Initialization** - Automatic game registration on startup
 - ✅ **Backward Compatibility** - Existing sessions continue to work
-- ✅ **Transaction Safety** - All operations use Firestore transactions
+- ✅ **Transaction Safety** - All operations use PostgreSQL transactions
 - ✅ **Input Validation** - Comprehensive validation and sanitization
 
 ### 6. Documentation
@@ -115,7 +115,7 @@ Game Engine with Multiple Games
 - Different games can have completely different mechanics
 
 ### 3. **Reusability**
-- Shared infrastructure (Firebase, auth, sessions)
+- Shared infrastructure (Supabase, auth, sessions)
 - Common UI components
 - Shared utilities and types
 
@@ -248,15 +248,15 @@ client/src/
 
 ## Performance Considerations
 
-- **Transactions**: All state changes use Firestore transactions
+- **Transactions**: All state changes use PostgreSQL transactions
 - **Validation**: Input validated and sanitized server-side
 - **Caching**: Frontend uses TanStack Query for caching
-- **Real-time**: Firestore listeners for live updates
+- **Real-time**: Supabase realtime subscriptions for live updates
 
 ## Security Considerations
 
-- **Authentication**: Firebase Anonymous Auth
-- **Authorization**: Session-scoped access via Firestore rules
+- **Authentication**: Supabase Anonymous Auth
+- **Authorization**: Session-scoped access via Row Level Security (RLS)
 - **Validation**: All inputs validated server-side
 - **Sanitization**: Bad words filtered, input cleaned
 
@@ -265,7 +265,7 @@ client/src/
 - **Type Safety**: Full TypeScript coverage
 - **Documentation**: Comprehensive inline comments
 - **Architecture**: Clear separation of concerns
-- **Best Practices**: Follows Firebase and React best practices
+- **Best Practices**: Follows Supabase and React best practices
 
 ## Metrics
 

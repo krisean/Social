@@ -9,6 +9,7 @@ export interface FeedUser {
   authUserId?: string;
   createdAt: string;
   lastActiveAt: string;
+  expiresAt?: string;
 }
 
 export interface AuthState {

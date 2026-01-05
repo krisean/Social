@@ -25,7 +25,7 @@ export function VenueSelector() {
         {/* Header */}
         <header className="text-center">
           <h1 className={`text-4xl font-black ${!isDark ? 'text-slate-900' : 'text-pink-400'}`}>
-            Top Comment 24/7
+            Pub Feed
           </h1>
           <p className={`mt-2 text-lg ${!isDark ? 'text-slate-700' : 'text-cyan-300'}`}>
             Join pub conversations, share your thoughts

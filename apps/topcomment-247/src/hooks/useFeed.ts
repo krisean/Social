@@ -46,7 +46,8 @@ export function useFeed(venueId: string): UseFeedResult {
       venueId: row.venue_id,
       createdAt: row.created_at,
       updatedAt: row.updated_at,
-      likeCount: row.like_count,
+      likeCount: row.feed_likes?.length || 0,
+      commentCount: row.comment_count || 0,
       isLikedByCurrentUser: currentUserId
         ? row.feed_likes?.some((like: any) => like.user_id === currentUserId)
         : false,
@@ -88,6 +89,9 @@ export function useFeed(venueId: string): UseFeedResult {
       fetchPosts();
     }
   }, [authLoading, user?.id, venueId, fetchPosts]);
+
+  // Temporary type assertion to bypass TypeScript resolution issues
+  const typedSupabase = supabase as any;
 
   // Real-time subscription - only after auth loading completes
   useEffect(() => {
@@ -151,6 +155,36 @@ export function useFeed(venueId: string): UseFeedResult {
           }
         }
       )
+      .on(
+        'postgres_changes',
+        {
+          event: '*', // INSERT, UPDATE, DELETE
+          schema: 'public',
+          table: 'feed_likes',
+        },
+        async (payload: any) => {
+          // When a like is added/removed, update the affected post
+          const postId = payload.new?.post_id || payload.old?.post_id;
+          if (postId) {
+            const currentUserId = userRef.current;
+
+            try {
+              const data = await supabaseFetch(
+                `/rest/v1/feed_posts?id=eq.${postId}&select=*,feed_users(*),feed_likes(user_id)`
+              );
+
+              if (data && data[0]) {
+                const updatedPost = transformPost(data[0], currentUserId);
+                setPosts((prev) =>
+                  prev.map((post) => (post.id === updatedPost.id ? updatedPost : post))
+                );
+              }
+            } catch (err) {
+              console.error('Failed to fetch updated post after like change:', err);
+            }
+          }
+        }
+      )
       .subscribe();
 
     return () => {
@@ -181,9 +215,6 @@ export function useFeed(venueId: string): UseFeedResult {
     },
     [venueId, user]
   );
-
-  // Temporary type assertion to bypass TypeScript resolution issues
-  const typedSupabase = supabase as any;
 
   return {
     posts,

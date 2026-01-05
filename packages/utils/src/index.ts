@@ -1,0 +1,1 @@
+export { generateAnonymousUsername } from './name-generator';

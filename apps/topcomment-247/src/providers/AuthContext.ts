@@ -11,6 +11,7 @@ export interface AuthContextValue {
   signUp: (email: string, password: string, username: string) => Promise<void>;
   signInAnonymously: () => Promise<void>;
   signOut: () => Promise<void>;
+  isGuest: boolean;
 }
 
 export const AuthContext = createContext<AuthContextValue | undefined>(undefined);

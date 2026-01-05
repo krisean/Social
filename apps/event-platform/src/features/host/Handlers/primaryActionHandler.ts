@@ -38,10 +38,23 @@ export const handlePrimaryAction = (deps: PrimaryActionDeps) => async () => {
       await advancePhase({ sessionId: session.id });
     }
   } catch (error: unknown) {
-    console.log(error);
+    console.error("Primary action error:", error);
+    
+    // Provide context-specific error messages
+    let errorMessage = "Please try again.";
+    
+    if (session?.status === "lobby") {
+      errorMessage = "Need at least one player to start. Share the room code with players first.";
+    } else if (error && typeof error === 'object' && 'message' in error && typeof error.message === 'string') {
+      // Use the error message if available and not generic
+      if (error.message !== 'Edge Function returned a non-2xx status code') {
+        errorMessage = error.message;
+      }
+    }
+    
     toast({
       title: "Action failed",
-      description: "Please try again.",
+      description: errorMessage,
       variant: "error",
     });
   } finally {

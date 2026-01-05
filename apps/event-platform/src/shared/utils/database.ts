@@ -1,4 +1,4 @@
-// Supabase utility functions (replacing Firestore utilities)
+// Database utility functions for Supabase
 
 type WithId<T> = T & { id: string };
 

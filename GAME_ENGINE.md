@@ -40,7 +40,7 @@ This application has been refactored from a single game ("Top Comment") into a f
 ┌────────────────────────────┴────────────────────────────────┐
 │                    Infrastructure Layer                      │
 │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐      │
-│  │   Firebase   │  │   Firestore  │  │    Auth      │      │
+│  │   Supabase   │  │ PostgreSQL   │  │    Auth      │      │
 │  │   Functions  │  │   Database   │  │              │      │
 │  └──────────────┘  └──────────────┘  └──────────────┘      │
 └─────────────────────────────────────────────────────────────┘
@@ -149,7 +149,7 @@ const TOP_COMMENT_EVENT_DESCRIPTOR: GameDescriptor = {
 
 ### 3. Game Sessions
 
-Sessions are stored in Firestore with a generic structure:
+Sessions are stored in PostgreSQL with a generic structure:
 
 ```typescript
 interface GameSessionDoc<TPhaseId, TSettings, TState> {
@@ -253,7 +253,7 @@ Update `client/src/app/router.tsx` to include your game's routes.
 - Multiple players join via QR code
 - Synchronized phases (lobby → answer → vote → results)
 - Presenter view for TV displays
-- Real-time updates via Firestore listeners
+- Real-time updates via Supabase realtime subscriptions
 - Host controls phase advancement
 
 ### Patron Mode Features
@@ -275,7 +275,7 @@ GameManager
   ↓ registry.get(gameId)
 TopCommentEventGame
   ↓ createSession()
-Firestore: sessions/{sessionId}
+PostgreSQL: sessions table (id = sessionId)
   ↓ real-time listener
 Client (All players)
 ```
@@ -289,32 +289,37 @@ GameManager
   ↓ handlePlayerAction()
 TopCommentEventGame
   ↓ saveAnswer()
-Firestore: sessions/{sessionId}/answers/{answerId}
+PostgreSQL: sessions table (id = sessionId)/answers/{answerId}
   ↓ auto-advance check
 advancePhase() [if all answered]
 ```
 
-## Firestore Collections
+## PostgreSQL Tables
 
 ### Event Mode
 
 ```
-sessions/{sessionId}
-  gameId: "top-comment-event"
+sessions (table)
+  id: sessionId
   code: "ABC123"
-  hostUid: "user123"
-  phase: { id: "answer", endsAt: Timestamp }
+  host_uid: "user123"
+  status: "answer"
+  ends_at: Timestamp
   settings: { answerSecs: 45, voteSecs: 25, ... }
-  state: { roundIndex: 0, rounds: [...], ... }
-  
-  players/{playerId}
-    uid, name, score, isHost, joinedAt, mascotId
-  
-  answers/{answerId}
-    teamId, roundIndex, groupId, text, createdAt
-  
-  votes/{voteId}
-    voterId, answerId, roundIndex, groupId, createdAt
+  prompt_deck: [...]
+  prompt_cursor: 0
+
+teams (table, session_id = sessionId)
+  id: teamId
+  team_name, uid, score, is_host, mascot_id, joined_at
+
+answers (table, session_id = sessionId)
+  id: answerId
+  team_id, round_index, group_id, text, created_at
+
+votes (table, session_id = sessionId)
+  id: voteId
+  voter_id, answer_id, round_index, group_id, created_at
 ```
 
 ### Patron Mode
@@ -338,7 +343,7 @@ historicalAnswers/{answerId}
 ## Best Practices
 
 ### 1. Use Transactions
-Always use Firestore transactions for operations that read and write:
+Always use database transactions for operations that read and write:
 
 ```typescript
 async handlePlayerAction(sessionId, playerId, action, tx) {

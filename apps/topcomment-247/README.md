@@ -1,4 +1,4 @@
-# Top Comment 24/7 - Twitter-Style Feed
+# Pub Feed - Twitter-Style Feed
 
 A modern, extensible Twitter-like feed system for venues built with React, TypeScript, and Supabase.
 

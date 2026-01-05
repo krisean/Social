@@ -14,7 +14,7 @@ export function BackgroundAnimation({ show, className }: BackgroundAnimationProp
 
   // Scroll detection for animation modulation
   useEffect(() => {
-    let scrollTimer: NodeJS.Timeout;
+    let scrollTimer: number;
 
     const handleScroll = () => {
       setIsScrolling(true);

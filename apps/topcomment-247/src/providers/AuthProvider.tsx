@@ -3,20 +3,14 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import type { PropsWithChildren } from 'react';
 import { supabase } from '../supabase/client';
-import { supabaseFetch, supabasePost } from '../utils/fetchHelpers';
+import { supabaseFetch, supabasePost, supabaseDelete } from '../utils/fetchHelpers';
 import { AuthContext } from './AuthContext';
 import type { FeedUser } from '../types';
 import type { User } from '@supabase/supabase-js';
+import { generateAnonymousUsername } from '@social/utils';
 
-// Helper to generate anonymous usernames
-function generateAnonymousUsername(): string {
-  const adjectives = ['Happy', 'Clever', 'Swift', 'Bright', 'Cool', 'Epic', 'Wild', 'Bold'];
-  const nouns = ['Panda', 'Fox', 'Eagle', 'Lion', 'Wolf', 'Bear', 'Tiger', 'Hawk'];
-  const adj = adjectives[Math.floor(Math.random() * adjectives.length)];
-  const noun = nouns[Math.floor(Math.random() * nouns.length)];
-  const num = Math.floor(Math.random() * 1000);
-  return `${adj}${noun}${num}`;
-}
+// Configuration for anonymous user lifespan
+const ANONYMOUS_LIFESPAN_HOURS = 24;
 
 export function AuthProvider({ children }: PropsWithChildren) {
   const [user, setUser] = useState<FeedUser | null>(null);
@@ -27,14 +21,55 @@ export function AuthProvider({ children }: PropsWithChildren) {
   // Load or create feed_user record for a Supabase auth user
   const loadFeedUser = useCallback(async (authUser: User): Promise<FeedUser | null> => {
     try {
-      // For anonymous users, always create a new profile since they don't persist
+      // For anonymous users, check if one already exists or create new
       if (authUser.is_anonymous) {
+        // First check if anonymous user already exists for this auth user
+        try {
+          const fetchData = await supabaseFetch(
+            `/rest/v1/feed_users?auth_user_id=eq.${authUser.id}`
+          );
+          const existingUser = fetchData[0];
+
+          if (existingUser) {
+            // Check if anonymous user has expired
+            if (existingUser.expires_at) {
+              const now = new Date();
+              const expiresAt = new Date(existingUser.expires_at);
+
+              if (now > expiresAt) {
+                // User has expired - clean up and create new one
+                await supabaseDelete(`/rest/v1/feed_users?id=eq.${existingUser.id}`);
+              } else {
+                // User still valid - return existing user
+                return {
+                  id: existingUser.id,
+                  username: existingUser.username,
+                  displayName: existingUser.display_name || undefined,
+                  avatarUrl: existingUser.avatar_url || undefined,
+                  isAnonymous: true,
+                  authUserId: existingUser.auth_user_id || undefined,
+                  createdAt: existingUser.created_at,
+                  lastActiveAt: existingUser.last_active_at,
+                  expiresAt: existingUser.expires_at,
+                };
+              }
+            }
+          }
+        } catch (fetchErr) {
+          // If fetch fails, continue to create new user
+          console.warn('Failed to check for existing anonymous user:', fetchErr);
+        }
+
+        // Create new anonymous user
         const username = generateAnonymousUsername();
+        const expiresAt = new Date();
+        expiresAt.setHours(expiresAt.getHours() + ANONYMOUS_LIFESPAN_HOURS);
         
         const data = await supabasePost('/rest/v1/feed_users', {
-          auth_user_id: null, // Anonymous users don't have persistent auth_user_id
+          auth_user_id: authUser.id, // Use actual auth_user_id for anonymous users
           username,
           is_anonymous: true,
+          expires_at: expiresAt.toISOString(),
         });
         
         const newUser = data[0];
@@ -45,9 +80,10 @@ export function AuthProvider({ children }: PropsWithChildren) {
           displayName: newUser.display_name || undefined,
           avatarUrl: newUser.avatar_url || undefined,
           isAnonymous: true,
-          authUserId: undefined,
+          authUserId: newUser.auth_user_id || undefined,
           createdAt: newUser.created_at,
           lastActiveAt: newUser.last_active_at,
+          expiresAt: newUser.expires_at,
         };
       }
 
@@ -59,6 +95,18 @@ export function AuthProvider({ children }: PropsWithChildren) {
         const existingUser = fetchData[0];
         
         if (existingUser) {
+          // Check if anonymous user has expired
+          if (existingUser.is_anonymous && existingUser.expires_at) {
+            const now = new Date();
+            const expiresAt = new Date(existingUser.expires_at);
+
+            if (now > expiresAt) {
+              // User has expired - clean up and return null to create new anonymous user
+              await supabaseDelete(`/rest/v1/feed_users?id=eq.${existingUser.id}`);
+              return null;
+            }
+          }
+
           return {
             id: existingUser.id,
             username: existingUser.username,
@@ -68,6 +116,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
             authUserId: existingUser.auth_user_id || undefined,
             createdAt: existingUser.created_at,
             lastActiveAt: existingUser.last_active_at,
+            expiresAt: existingUser.expires_at || undefined,
           };
         }
       } catch (err) {
@@ -94,6 +143,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
         authUserId: newUser.auth_user_id || undefined,
         createdAt: newUser.created_at,
         lastActiveAt: newUser.last_active_at,
+        expiresAt: undefined, // Authenticated users don't expire
       };
     } catch (err) {
       console.error('Error loading feed user:', err);
@@ -115,6 +165,20 @@ export function AuthProvider({ children }: PropsWithChildren) {
           if (session?.user) {
             const feedUser = await loadFeedUser(session.user);
             setUser(feedUser);
+          } else {
+            // No session - create anonymous user
+            try {
+              const { data, error } = await supabase.auth.signInAnonymously();
+              if (error) throw error;
+
+              if (data.user) {
+                const feedUser = await loadFeedUser(data.user);
+                setUser(feedUser);
+              }
+            } catch (anonError) {
+              console.error('Failed to create anonymous user:', anonError);
+              setError(anonError instanceof Error ? anonError : new Error('Failed to create anonymous user'));
+            }
           }
           setLoading(false);
         }
@@ -135,7 +199,19 @@ export function AuthProvider({ children }: PropsWithChildren) {
           const feedUser = await loadFeedUser(session.user);
           setUser(feedUser);
         } else {
+          // Session ended - create new anonymous user
+          try {
+            const { data, error } = await supabase.auth.signInAnonymously();
+            if (error) throw error;
+
+            if (data.user) {
+              const feedUser = await loadFeedUser(data.user);
+              setUser(feedUser);
+            }
+          } catch (anonError) {
+            console.error('Failed to create anonymous user:', anonError);
           setUser(null);
+          }
         }
         setLoading(false);
       }
@@ -260,6 +336,8 @@ export function AuthProvider({ children }: PropsWithChildren) {
     }
   }, []);
 
+  const isGuest = user?.isAnonymous ?? true;
+
   const value = useMemo(
     () => ({
       user,
@@ -269,8 +347,9 @@ export function AuthProvider({ children }: PropsWithChildren) {
       signUp,
       signInAnonymously,
       signOut,
+      isGuest,
     }),
-    [user, loading, error, signIn, signUp, signInAnonymously, signOut]
+    [user, loading, error, signIn, signUp, signInAnonymously, signOut, isGuest]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

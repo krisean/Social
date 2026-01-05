@@ -1,210 +1,164 @@
-# playnow.social - Interactive Bar & Venue Games Platform
+# Social Game Engine
 
-A **fully modular Turborepo monorepo** for interactive social games, built with Supabase, React, and TypeScript.
+**Host-less bar games powered by QR codes and AI.** Two games, one button, infinite revenue.
 
-## 🎯 Architecture
+[![Built with Supabase](https://img.shields.io/badge/Built%20with-Supabase-3ECF8E?style=for-the-badge&logo=supabase)](https://supabase.com)
 
-This monorepo uses a **plugin-based game engine** where games are self-contained modules that can be:
-- Combined in multi-game events
-- Deployed standalone for 24/7 mode
-- Shared across Event Mode and Patron Mode
+## 🎮 What We Build
 
-### Apps
+**Social** is a B2B SaaS platform ($299/month) powering host-less bar entertainment through QR codes, targeting Victoria, BC venues.
 
-```
-apps/
-├── event-platform/     # Universal event host (combines any games)
-├── topcomment-247/     # Top Comment 24/7 (Facebook wall)
-├── vibox-247/          # VIBox 24/7 (AI jukebox)
-├── web/                # Landing page + admin panel
-└── dashboard/          # Venue analytics dashboard
-```
+### Top Comment (Week 1)
+- Twitter-parody live voting game
+- QR scan → anonymous team → submit creative roasts → vote on favorites → live leaderboards
+- **$1.50 per play** = $60/night venue revenue
 
-### Packages
-
-```
-packages/
-├── game-engine/        # Core orchestration + plugin system
-├── games/
-│   ├── topcomment/     # Top Comment game (Event + Patron modes)
-│   └── vibox/          # VIBox game (Event + Patron modes)
-├── ui/                 # Shared React components
-├── db/                 # Supabase client + queries
-├── ai/                 # OpenAI moderation + Suno music
-└── payments/           # Helcim + Stripe integrations
-```
+### VIBox (Week 4)
+- AI jukebox powered by Suno API
+- QR scan → vibe picker (chill/hype/party) → AI generates track → plays to venue speakers
+- **$2.00 per song** = $40/night venue revenue
 
 ## 🚀 Quick Start
 
 ### Prerequisites
-
 - Node.js 20+
-- pnpm 10+
+- pnpm
+- Supabase account
 
-### Installation
-
+### Setup
 ```bash
+# Clone the repo
+git clone <repository-url>
+cd social
+
 # Install dependencies
 pnpm install
 
-# Start all apps in development
+# Start development
 pnpm dev
-
-# Build all apps
-pnpm build
-
-# Run linting
-pnpm lint
-
-# Type check all packages
-pnpm type-check
 ```
 
-### Running Individual Apps
-
+### Environment Setup
 ```bash
-# Event platform only
-pnpm --filter @social/event-platform dev
+# Copy environment file
+cp .env.example .env.local
 
-# Top Comment 24/7 only
-pnpm --filter @social/topcomment-247 dev
-
-# Web landing page only
-pnpm --filter @social/web dev
+# Add your Supabase keys
+SUPABASE_URL=your_supabase_url
+SUPABASE_ANON_KEY=your_anon_key
+OPENAI_API_KEY=your_openai_key
+SUNO_API_KEY=your_suno_key
+HELCIM_API_KEY=your_helcim_key
 ```
 
-## 🎮 Games
-
-### Top Comment
-**Twitter-parody comedy game**
-
-- **Event Mode**: Host-controlled rounds with live voting
-- **24/7 Mode**: Facebook-style wall for continuous play
-- **Features**: AI moderation, leaderboards, presenter view
-
-### VIBox (Coming Soon)
-**AI-powered jukebox**
-
-- **Event Mode**: Crowd-sourced music selection
-- **24/7 Mode**: Patron-requested songs via Suno AI
-- **Features**: Payment integration, queue management
-
-## 🏗️ Tech Stack
-
-- **Frontend**: React 18, Vite, TailwindCSS, TypeScript
-- **Backend**: Supabase (PostgreSQL + Realtime + Auth)
-- **Deployment**: Vercel (frontend), Supabase Edge Functions (backend)
-- **Monorepo**: Turborepo + pnpm workspaces
-- **AI**: OpenAI (moderation), Suno (music generation)
-- **Payments**: Stripe (subscriptions), Helcim (payment links)
-
-## 📦 Package Dependencies
-
-```mermaid
-graph TD
-    EventPlatform[apps/event-platform] --> GameEngine[packages/game-engine]
-    EventPlatform --> TopComment[packages/games/topcomment]
-    EventPlatform --> UI[packages/ui]
-    EventPlatform --> DB[packages/db]
-    
-    TopComment --> GameEngine
-    TopComment --> DB
-    TopComment --> UI
-    
-    TC247[apps/topcomment-247] --> TopComment
-    VB247[apps/vibox-247] --> VIBox[packages/games/vibox]
-    
-    VIBox --> GameEngine
-    VIBox --> AI[packages/ai]
-    
-    Dashboard[apps/dashboard] --> DB
-    Web[apps/web] --> Payments[packages/payments]
-```
-
-## 🗄️ Database
-
-Supabase PostgreSQL with:
-- **Tables**: sessions, players, submissions, votes, venues, event_rounds
-- **RLS**: Row Level Security for multi-tenancy
-- **Realtime**: Live game state synchronization
-- **Types**: Auto-generated TypeScript types
-
-See `supabase/migrations/` for schema.
-
-## 🚢 Deployment
-
-Each app deploys independently to Vercel:
-
-1. **social.gg** → `apps/web`
-2. **events.social.gg** → `apps/event-platform`
-3. **topcomment.social.gg** → `apps/topcomment-247`
-4. **vibox.social.gg** → `apps/vibox-247`
-5. **dashboard.social.gg** → `apps/dashboard`
-
-See [VERCEL_DEPLOYMENT.md](./VERCEL_DEPLOYMENT.md) for details.
-
-## 📚 Documentation
-
-- [Migration Status](./MIGRATION_STATUS.md) - Current migration progress
-- [Backend Migration](./BACKEND_MIGRATION.md) - Firebase → Supabase guide
-- [Vercel Deployment](./VERCEL_DEPLOYMENT.md) - Deployment instructions
-- [Game Engine](./GAME_ENGINE.md) - Original game engine design (Firebase)
-- [Tech Architecture](./docs/04-tech-architecture.md) - Planned architecture
-
-## 🔧 Development
-
-### Adding a New Game
-
-1. Create `packages/games/newgame/`
-2. Implement `EventMode.ts` and `PatronMode.ts`
-3. Export `GamePluginDefinition`
-4. Register in `GameRegistry`
-5. Create standalone app in `apps/newgame-247/` (optional)
-
-### Project Structure
+## 🏗️ Architecture
 
 ```
 social/
-├── apps/               # Deployable applications
-├── packages/           # Shared code
-├── supabase/           # Database migrations
-├── turbo.json          # Turborepo config
-├── pnpm-workspace.yaml # Workspace definition
-└── package.json        # Root package
+├── apps/
+│   ├── event-platform/    # Game host dashboard + player PWAs
+│   ├── topcomment-247/    # Top Comment game PWA
+│   ├── vibox-247/         # VIBox game PWA
+│   ├── dashboard/         # Venue analytics dashboard
+│   └── web/               # Marketing site
+├── packages/
+│   ├── ui/                # Shared React components
+│   ├── db/                # Supabase types + queries
+│   ├── ai/                # OpenAI + Suno integrations
+│   └── payments/          # Helcim/Stripe webhooks
+├── supabase/
+│   ├── migrations/        # Database schema
+│   └── functions/         # Edge functions
+└── docs/                  # Product docs
 ```
 
-## 📝 Scripts
+## 🛠️ Tech Stack
 
+- **Framework:** Turborepo monorepo + React/TypeScript
+- **Database:** Supabase (PostgreSQL + realtime)
+- **Hosting:** Vercel
+- **Payments:** Helcim/Stripe
+- **AI:** OpenAI (moderation) + Suno (music generation)
+- **Styling:** Tailwind CSS
+
+## 📊 Business Model
+
+- **Venue Subscription:** $299/month (Pro plan)
+- **Venue Revenue:** 100% of patron payments ($1.50–$2.00 per play)
+- **Trial:** 14-day free trial with library lock-in
+- **Target:** $44k MRR from 59 Victoria venues by Week 12
+
+## 🏃‍♂️ Development
+
+### Available Scripts
 ```bash
-# Development
-pnpm dev                 # Start all apps
-pnpm build               # Build all apps
-pnpm lint                # Lint all packages
-pnpm type-check          # Type check all packages
-pnpm test                # Run all tests
-
-# Turborepo
-pnpm turbo run build     # Build with caching
-pnpm turbo run dev --parallel  # Run all in parallel
-
-# Supabase
-supabase start           # Start local Supabase
-supabase db push         # Push migrations
-supabase gen types typescript --local > supabase/types.ts
+pnpm dev          # Start all apps in development
+pnpm build        # Build all packages and apps
+pnpm lint         # Run ESLint
+pnpm type-check   # Run TypeScript checks
+pnpm test         # Run tests
 ```
 
-## 🎯 Modularity Benefits
+### Database
+```bash
+# Start local Supabase
+pnpm supabase:start
 
-- ✅ **Add games without touching platform code**
-- ✅ **Events can combine multiple games** (TC → VIBox → TC)
-- ✅ **Shared logic** between Event and 24/7 modes
-- ✅ **Independent deployments** for each app
-- ✅ **Type-safe** across the entire stack
+# Run migrations
+pnpm supabase:db:push
+
+# Generate types
+pnpm supabase:gen-types
+```
+
+## 📁 Project Structure
+
+### Apps
+- **event-platform:** Host controls + shared game engine
+- **topcomment-247:** Top Comment voting game
+- **vibox-247:** VIBox AI jukebox
+- **dashboard:** Venue analytics
+- **web:** Marketing site
+
+### Packages
+- **ui:** Shared React components + Tailwind config
+- **db:** Supabase client + type definitions
+- **ai:** OpenAI moderation + Suno API wrapper
+- **payments:** Payment processing integrations
+
+## 📚 Documentation
+
+- [Product Vision](docs/01-product-vision.md)
+- [Technical Architecture](docs/04-tech-architecture.md)
+- [Feature Roadmap](docs/05-feature-roadmap.md)
+- [API Endpoints](docs/04-tech-architecture.md#api-architecture)
+- [Database Schema](docs/04-tech-architecture.md#supabase-schema-shared-across-games)
+
+## 🎯 Validation
+
+**Pilot Results (Christie's Carriage House Pub):**
+- 35 participants, 2-hour engagement
+- Immediate pricing interest from venue
+- 15-25% dwell time increase validated
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Run tests: `pnpm test`
+5. Submit a pull request
 
 ## 📄 License
 
-Proprietary - All rights reserved
+MIT License - see [LICENSE](LICENSE) file for details.
 
-## 👥 Team
+## 📞 Contact
 
-Social.gg - Interactive games for bars and venues
+- **Website:** [playnow.social](https://playnow.social)
+- **Email:** team@playnow.social
+- **Demo:** [topcomment.playnow.social](https://topcomment.playnow.social)
+
+---
+
+*"Two games. One button. Infinite revenue."*

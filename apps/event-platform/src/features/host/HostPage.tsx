@@ -473,6 +473,23 @@ export function HostPage() {
             {currentPromptLibrary.description}
           </p>
         </div>
+        {currentPromptLibrary.prompts.length > 0 && (
+          <div className="space-y-2">
+            <p className={`text-xs font-semibold uppercase tracking-wide ${!isDark ? 'text-slate-500' : 'text-cyan-400'}`}>
+              Sample prompts
+            </p>
+            <div className="space-y-2">
+              {currentPromptLibrary.prompts.slice(0, 3).map((prompt, index) => (
+                <div
+                  key={index}
+                  className={`rounded-lg border px-3 py-2 text-sm ${!isDark ? 'border-slate-200 bg-slate-50 text-slate-700' : 'border-slate-600 bg-slate-700 text-cyan-100'}`}
+                >
+                  {prompt}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
         <div className="flex flex-wrap items-center justify-between gap-3">
           <p className={`text-xs ${!isDark ? 'text-slate-500' : 'text-cyan-300'}`}>
             Pick a deck for tonight before you start the first round.
@@ -627,6 +644,7 @@ export function HostPage() {
                 disabled={
                   session
                     ? isPerformingAction ||
+                      isUpdatingPromptLibrary ||
                       session.status === "ended" ||
                       (session.status === "lobby" && teams.length === 0)
                     : false

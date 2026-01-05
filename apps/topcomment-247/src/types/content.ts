@@ -17,6 +17,7 @@ export interface BaseContent {
   updatedAt: string;
   likeCount: number;
   isLikedByCurrentUser: boolean;
+  commentCount?: number;
   metadata?: Record<string, unknown>;
 }
 
@@ -68,4 +69,29 @@ export interface CreateContentInput {
   content: string;
   venueId: string;
   metadata?: Record<string, unknown>;
+}
+
+// =============================================================================
+// COMMENTS
+// =============================================================================
+
+// Comment type - for comments on posts
+export interface Comment {
+  id: string;
+  postId: string;
+  author: FeedUser;
+  parentCommentId?: string;
+  content: string;
+  likeCount: number;
+  isLikedByCurrentUser: boolean;
+  createdAt: string;
+  updatedAt: string;
+  replies?: Comment[]; // For nested comments
+}
+
+// Helper type for creating comments
+export interface CreateCommentData {
+  postId: string;
+  content: string;
+  parentCommentId?: string;
 }

@@ -8,7 +8,7 @@ Deno.serve(async (req) => {
   if (corsRes) return corsRes;
 
   try {
-    const uid = getUserId(req);
+    const uid = await getUserId(req);
     const { teamName, venueName, promptLibraryId } = await req.json();
     
     const cleanedTeamName = cleanTeamName(requireString(teamName, 'teamName'));
@@ -24,7 +24,7 @@ Deno.serve(async (req) => {
     }
     
     // Get prompts for this library
-    const library = getPromptLibrary(libraryId);
+    const library = await getPromptLibrary(libraryId);
     const promptDeck = [...library.prompts].sort(() => Math.random() - 0.5);
     
     // Create session
