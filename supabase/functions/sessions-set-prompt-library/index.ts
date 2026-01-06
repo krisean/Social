@@ -1,38 +1,22 @@
 // Set the prompt library for a session
-import { createServiceClient, requireString, handleError, handleCors, corsResponse, getUserId, AppError } from '../_shared/utils.ts';
+import { createHandler, requireString, corsResponse, getSession, AppError } from '../_shared/utils.ts';
 import { getPromptLibrary } from '../_shared/prompts.ts';
 import type { Session } from '../_shared/types.ts';
 
-Deno.serve(async (req) => {
-  const corsRes = handleCors(req);
-  if (corsRes) return corsRes;
-
-  try {
-    const uid = await getUserId(req);
+async function handleSetPromptLibrary(req: Request, uid: string, supabase: any): Promise<Response> {
     const { sessionId, promptLibraryId } = await req.json();
     
     requireString(sessionId, 'sessionId');
     requireString(promptLibraryId, 'promptLibraryId');
     
-    const supabase = createServiceClient();
+  // Get and validate session (also checks host permissions)
+  const session = await getSession(supabase, sessionId);
     
-    // Get session
-    const { data: session, error: sessionError } = await supabase
-      .from('sessions')
-      .select('*')
-      .eq('id', sessionId)
-      .single();
-    
-    if (sessionError || !session) {
-      throw new AppError(404, 'Session not found', 'not-found');
-    }
-    
-    // Verify host
     if (session.host_uid !== uid) {
       throw new AppError(403, 'Only the host can change settings', 'permission-denied');
     }
     
-    // Can only change in lobby
+  // Validate session is in lobby phase
     if (session.status !== 'lobby') {
       throw new AppError(400, 'Can only change prompt library in lobby', 'failed-precondition');
     }
@@ -56,9 +40,7 @@ Deno.serve(async (req) => {
     if (updateError) throw updateError;
     
     return corsResponse({ session: updatedSession as Session });
-  } catch (error) {
-    return handleError(error);
   }
-});
 
-
+// @ts-ignore - Deno global is available in Supabase Edge Functions runtime
+Deno.serve(createHandler(handleSetPromptLibrary));

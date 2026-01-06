@@ -1,31 +1,15 @@
 // Kick a player from a session
-import { createServiceClient, requireString, handleError, handleCors, corsResponse, getUserId, AppError } from '../_shared/utils.ts';
+import { createHandler, requireString, corsResponse, getSession, AppError } from '../_shared/utils.ts';
 
-Deno.serve(async (req) => {
-  const corsRes = handleCors(req);
-  if (corsRes) return corsRes;
-
-  try {
-    const uid = getUserId(req);
+async function handleKickPlayer(req: Request, uid: string, supabase: any): Promise<Response> {
     const { sessionId, teamId } = await req.json();
     
     requireString(sessionId, 'sessionId');
     requireString(teamId, 'teamId');
     
-    const supabase = createServiceClient();
+  // Get and validate session + host permissions
+  const session = await getSession(supabase, sessionId);
     
-    // Get session
-    const { data: session, error: sessionError } = await supabase
-      .from('sessions')
-      .select('host_uid')
-      .eq('id', sessionId)
-      .single();
-    
-    if (sessionError || !session) {
-      throw new AppError(404, 'Session not found', 'not-found');
-    }
-    
-    // Verify host
     if (session.host_uid !== uid) {
       throw new AppError(403, 'Only the host can kick players', 'permission-denied');
     }
@@ -56,9 +40,7 @@ Deno.serve(async (req) => {
     if (deleteError) throw deleteError;
     
     return corsResponse({ success: true });
-  } catch (error) {
-    return handleError(error);
   }
-});
 
-
+// @ts-ignore - Deno global is available in Supabase Edge Functions runtime
+Deno.serve(createHandler(handleKickPlayer));

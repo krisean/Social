@@ -1,33 +1,17 @@
 // End a game session
-import { createServiceClient, requireString, handleError, handleCors, corsResponse, getUserId, AppError } from '../_shared/utils.ts';
+import { createHandler, requireString, corsResponse, getSession, AppError } from '../_shared/utils.ts';
 import type { Session } from '../_shared/types.ts';
 
-Deno.serve(async (req) => {
-  const corsRes = handleCors(req);
-  if (corsRes) return corsRes;
-
-  try {
-    const uid = getUserId(req);
+async function handleEndSession(req: Request, uid: string, supabase: any): Promise<Response> {
     const { sessionId } = await req.json();
     
     requireString(sessionId, 'sessionId');
     
-    const supabase = createServiceClient();
+  // Get and validate session + host permissions
+  const session = await getSession(supabase, sessionId);
     
-    // Get session
-    const { data: session, error: sessionError } = await supabase
-      .from('sessions')
-      .select('*')
-      .eq('id', sessionId)
-      .single();
-    
-    if (sessionError || !session) {
-      throw new AppError(404, 'Session not found', 'not-found');
-    }
-    
-    // Verify host
     if (session.host_uid !== uid) {
-      throw new AppError(403, 'Only the host can end the game', 'permission-denied');
+    throw new AppError(403, 'Only the host can end the session', 'permission-denied');
     }
     
     // Update session to ended
@@ -85,9 +69,7 @@ Deno.serve(async (req) => {
       .eq('session_id', sessionId);
     
     return corsResponse({ session: updatedSession as Session });
-  } catch (error) {
-    return handleError(error);
   }
-});
 
-
+// @ts-ignore - Deno global is available in Supabase Edge Functions runtime
+Deno.serve(createHandler(handleEndSession));

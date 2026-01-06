@@ -1,19 +1,12 @@
 // Get analytics for a session
-import { createServiceClient, requireString, handleError, handleCors, corsResponse, getUserId, AppError } from '../_shared/utils.ts';
+import { createHandler, requireString, corsResponse, AppError } from '../_shared/utils.ts';
 
-Deno.serve(async (req) => {
-  const corsRes = handleCors(req);
-  if (corsRes) return corsRes;
-
-  try {
-    const uid = getUserId(req);
+async function handleGetAnalytics(req: Request, uid: string, supabase: any): Promise<Response> {
     const { sessionId } = await req.json();
     
     requireString(sessionId, 'sessionId');
     
-    const supabase = createServiceClient();
-    
-    // Get session
+  // Verify user is host
     const { data: session, error: sessionError } = await supabase
       .from('sessions')
       .select('host_uid')
@@ -24,7 +17,6 @@ Deno.serve(async (req) => {
       throw new AppError(404, 'Session not found', 'not-found');
     }
     
-    // Verify host
     if (session.host_uid !== uid) {
       throw new AppError(403, 'Only the host can view analytics', 'permission-denied');
     }
@@ -56,9 +48,7 @@ Deno.serve(async (req) => {
         duration: analytics.duration,
       },
     });
-  } catch (error) {
-    return handleError(error);
   }
-});
 
-
+// @ts-ignore - Deno global is available in Supabase Edge Functions runtime
+Deno.serve(createHandler(handleGetAnalytics));
