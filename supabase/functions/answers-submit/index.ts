@@ -1,41 +1,21 @@
 // Submit an answer for a prompt
-import { createServiceClient, requireString, handleError, handleCors, corsResponse, getUserId, AppError } from '../_shared/utils.ts';
+import { createHandler, requireString, corsResponse, getSession, validateSessionPhase, AppError } from '../_shared/utils.ts';
 
-Deno.serve(async (req) => {
-  const corsRes = handleCors(req);
-  if (corsRes) return corsRes;
+async function handleSubmitAnswer(req: Request, uid: string, supabase: any): Promise<Response> {
+  const { sessionId, text } = await req.json();
 
-  try {
-    const uid = getUserId(req);
-    const { sessionId, text } = await req.json();
+  console.log('answers-submit: Received request', { uid, sessionId, textLength: text?.length });
 
-    console.log('answers-submit: Received request', { uid, sessionId, textLength: text?.length });
-    
-    requireString(sessionId, 'sessionId');
-    const cleanedText = requireString(text, 'text').slice(0, 200);
+  requireString(sessionId, 'sessionId');
+  const cleanedText = requireString(text, 'text').slice(0, 200);
 
-    console.log('answers-submit: Validation passed', { sessionId, cleanedTextLength: cleanedText.length });
+  console.log('answers-submit: Validation passed', { sessionId, cleanedTextLength: cleanedText.length });
 
-    const supabase = createServiceClient();
-    
-    // Get session
-    console.log('answers-submit: Fetching session', { sessionId });
-    const { data: session, error: sessionError } = await supabase
-      .from('sessions')
-      .select('*')
-      .eq('id', sessionId)
-      .single();
+  // Get and validate session
+  const session = await getSession(supabase, sessionId);
+  validateSessionPhase(session, 'answer');
 
-    console.log('answers-submit: Session fetch result', { hasSession: !!session, hasError: !!sessionError, error: sessionError?.message });
-
-    if (sessionError || !session) {
-      throw new AppError(404, 'Session not found', 'not-found');
-    }
-    
-    // Check if in answer phase
-    if (session.status !== 'answer') {
-      throw new AppError(400, 'Not in answer phase', 'failed-precondition');
-    }
+  console.log('answers-submit: Session validated', { sessionId, phase: session.status });
     
     // Get user's team
     console.log('answers-submit: Looking up team', { sessionId, uid });
@@ -125,12 +105,9 @@ Deno.serve(async (req) => {
 
     if (insertError) throw insertError;
 
-    console.log('answers-submit: Success');
-    return corsResponse({ success: true });
-  } catch (error) {
-    return handleError(error);
-  }
-});
+  console.log('answers-submit: Success');
+  return corsResponse({ success: true });
+}
 
 function containsProfanity(text: string): boolean {
   // Basic profanity check - enhance with a proper library in production
@@ -138,5 +115,8 @@ function containsProfanity(text: string): boolean {
   const lowerText = text.toLowerCase();
   return badWords.some(word => lowerText.includes(word));
 }
+
+
+Deno.serve(createHandler(handleSubmitAnswer));
 
 

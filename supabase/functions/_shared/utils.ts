@@ -32,21 +32,60 @@ export function createServiceClient() {
   );
 }
 
-export function getUserId(req: Request): string {
+// Helper function to decode base64url
+function base64UrlDecode(str: string): string {
+  let output = str.replace(/-/g, '+').replace(/_/g, '/');
+  switch (output.length % 4) {
+    case 0:
+      break;
+    case 2:
+      output += '==';
+      break;
+    case 3:
+      output += '=';
+      break;
+    default:
+      throw new Error('Invalid base64url string');
+  }
+  return atob(output);
+}
+
+export async function getUserId(req: Request): Promise<string> {
+  console.log('getUserId: Starting authentication check');
   const authHeader = req.headers.get('Authorization');
+  console.log('getUserId: Auth header present:', !!authHeader);
+
   if (!authHeader) {
+    console.log('getUserId: No auth header found');
     throw new AppError(401, 'Authentication required', 'unauthenticated');
   }
-  
-  // Extract JWT and decode (simplified - in production, validate properly)
+
   const token = authHeader.replace('Bearer ', '');
+  console.log('getUserId: Token extracted, length:', token.length);
+
   try {
-    const payload = JSON.parse(atob(token.split('.')[1]));
-    if (!payload.sub) {
-      throw new AppError(401, 'Invalid token', 'unauthenticated');
+    // Decode JWT payload (second part)
+    const parts = token.split('.');
+    if (parts.length !== 3) {
+      throw new Error('Invalid JWT format');
     }
+
+    const payload = JSON.parse(base64UrlDecode(parts[1]));
+    console.log('getUserId: Decoded payload - sub:', payload.sub, 'exp:', payload.exp);
+
+    if (!payload.sub) {
+      throw new Error('No user ID in token');
+    }
+
+    // Check if token is expired
+    if (payload.exp && payload.exp * 1000 < Date.now()) {
+      throw new Error('Token expired');
+    }
+
+    console.log('getUserId: Authentication successful, user ID:', payload.sub);
     return payload.sub;
-  } catch {
+  } catch (error) {
+    console.log('getUserId: Token decode/validation failed:', error);
     throw new AppError(401, 'Invalid token', 'unauthenticated');
   }
 }
@@ -121,6 +160,69 @@ export function handleCors(req: Request): Response | null {
     });
   }
   return null;
+}
+
+// Base handler that wraps common patterns for Edge Functions
+export function createHandler(
+  handlerFn: (req: Request, uid: string, supabase: any) => Promise<Response>
+) {
+  return async (req: Request): Promise<Response> => {
+    // Handle CORS preflight
+    const corsRes = handleCors(req);
+    if (corsRes) return corsRes;
+
+    try {
+      // Authenticate user
+      const uid = await getUserId(req);
+      const supabase = createServiceClient();
+
+      // Call the specific handler logic
+      return await handlerFn(req, uid, supabase);
+    } catch (error) {
+      return handleError(error);
+    }
+  };
+}
+
+// Handler for functions that don't require authentication (like session creation)
+export function createPublicHandler(
+  handlerFn: (req: Request, supabase: any) => Promise<Response>
+) {
+  return async (req: Request): Promise<Response> => {
+    // Handle CORS preflight
+    const corsRes = handleCors(req);
+    if (corsRes) return corsRes;
+
+    try {
+      const supabase = createServiceClient();
+
+      // Call the specific handler logic (no auth required)
+      return await handlerFn(req, supabase);
+    } catch (error) {
+      return handleError(error);
+    }
+  };
+}
+
+// Shared utility functions for common database operations
+export async function getSession(supabase: any, sessionId: string) {
+  const { data: session, error } = await supabase
+    .from('sessions')
+    .select('*')
+    .eq('id', sessionId)
+    .single();
+
+  if (error || !session) {
+    throw new AppError(404, 'Session not found', 'not-found');
+  }
+
+  return session;
+}
+
+export async function validateSessionPhase(session: any, requiredPhase: string) {
+  if (session.status !== requiredPhase) {
+    throw new AppError(400, `Session must be in ${requiredPhase} phase`, 'failed-precondition');
+  }
 }
 
 

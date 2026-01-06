@@ -16,7 +16,7 @@ export default defineConfig({
     viewport: { width: 390, height: 844 },
   },
   webServer: {
-    command: `npm run dev -- --host ${HOST} --port ${PORT}`,
+    command: `pnpm run dev`,
     port: PORT,
     reuseExistingServer: !process.env.CI,
     env: {

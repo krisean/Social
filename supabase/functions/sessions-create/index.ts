@@ -1,21 +1,15 @@
 // Create a new game session
-import { createServiceClient, requireString, cleanTeamName, handleError, handleCors, corsResponse, getUserId } from '../_shared/utils.ts';
+import { createPublicHandler, requireString, cleanTeamName, corsResponse, getUserId } from '../_shared/utils.ts';
 import { getPromptLibrary, DEFAULT_PROMPTS, GROUP_SIZE, TOTAL_ROUNDS } from '../_shared/prompts.ts';
 import type { Session, Team } from '../_shared/types.ts';
 
-Deno.serve(async (req) => {
-  const corsRes = handleCors(req);
-  if (corsRes) return corsRes;
-
-  try {
-    const uid = await getUserId(req);
+async function handleCreateSession(req: Request, supabase: any): Promise<Response> {
+  const uid = await getUserId(req); // Still need auth for creating (to be host)
     const { teamName, venueName, promptLibraryId } = await req.json();
     
     const cleanedTeamName = cleanTeamName(requireString(teamName, 'teamName'));
     const cleanedVenueName = venueName ? cleanTeamName(venueName) : undefined;
     const libraryId = promptLibraryId || 'classic';
-    
-    const supabase = createServiceClient();
     
     // Generate unique room code
     const code = await supabase.rpc('ensure_unique_code');
@@ -82,9 +76,7 @@ Deno.serve(async (req) => {
       session: session as Session,
       team: team as Team,
     });
-  } catch (error) {
-    return handleError(error);
   }
-});
 
-
+// @ts-ignore - Deno global is available in Supabase Edge Functions runtime
+Deno.serve(createPublicHandler(handleCreateSession));

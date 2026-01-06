@@ -1,34 +1,15 @@
 // Submit a vote for an answer
-import { createServiceClient, requireString, handleError, handleCors, corsResponse, getUserId, AppError } from '../_shared/utils.ts';
+import { createHandler, requireString, corsResponse, getSession, validateSessionPhase, AppError } from '../_shared/utils.ts';
 
-Deno.serve(async (req) => {
-  const corsRes = handleCors(req);
-  if (corsRes) return corsRes;
-
-  try {
-    const uid = getUserId(req);
+async function handleSubmitVote(req: Request, uid: string, supabase: any): Promise<Response> {
     const { sessionId, answerId } = await req.json();
     
     requireString(sessionId, 'sessionId');
     requireString(answerId, 'answerId');
     
-    const supabase = createServiceClient();
-    
-    // Get session
-    const { data: session, error: sessionError } = await supabase
-      .from('sessions')
-      .select('*')
-      .eq('id', sessionId)
-      .single();
-    
-    if (sessionError || !session) {
-      throw new AppError(404, 'Session not found', 'not-found');
-    }
-    
-    // Check if in vote phase
-    if (session.status !== 'vote') {
-      throw new AppError(400, 'Not in vote phase', 'failed-precondition');
-    }
+  // Get and validate session
+  const session = await getSession(supabase, sessionId);
+  validateSessionPhase(session, 'vote');
     
     // Get user's team
     const { data: team, error: teamError } = await supabase
@@ -106,9 +87,7 @@ Deno.serve(async (req) => {
     }
     
     return corsResponse({ success: true });
-  } catch (error) {
-    return handleError(error);
   }
-});
 
-
+// @ts-ignore - Deno global is available in Supabase Edge Functions runtime
+Deno.serve(createHandler(handleSubmitVote));

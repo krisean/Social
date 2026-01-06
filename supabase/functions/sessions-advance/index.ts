@@ -1,29 +1,14 @@
 // Advance session to next phase
-import { createServiceClient, requireString, handleError, handleCors, corsResponse, getUserId, AppError } from '../_shared/utils.ts';
+import { createHandler, requireString, corsResponse, getSession, AppError } from '../_shared/utils.ts';
 import type { Session } from '../_shared/types.ts';
 
-Deno.serve(async (req) => {
-  const corsRes = handleCors(req);
-  if (corsRes) return corsRes;
+async function handleAdvanceSession(req: Request, uid: string, supabase: any): Promise<Response> {
+  const { sessionId } = await req.json();
 
-  try {
-    const uid = getUserId(req);
-    const { sessionId } = await req.json();
-    
-    requireString(sessionId, 'sessionId');
-    
-    const supabase = createServiceClient();
-    
-    // Get session
-    const { data: session, error: sessionError } = await supabase
-      .from('sessions')
-      .select('*')
-      .eq('id', sessionId)
-      .single();
-    
-    if (sessionError || !session) {
-      throw new AppError(404, 'Session not found', 'not-found');
-    }
+  requireString(sessionId, 'sessionId');
+
+  // Get session
+  const session = await getSession(supabase, sessionId);
     
     // Verify host
     if (session.host_uid !== uid) {
@@ -106,11 +91,10 @@ Deno.serve(async (req) => {
     
     if (updateError) throw updateError;
     
-    return corsResponse({ session: updatedSession as Session });
-  } catch (error) {
-    return handleError(error);
-  }
-});
+  return corsResponse({ session: updatedSession as Session });
+}
+
+Deno.serve(createHandler(handleAdvanceSession));
 
 async function calculateRoundScores(supabase: any, sessionId: string, roundIndex: number) {
   // Get all votes for this round

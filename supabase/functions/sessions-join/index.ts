@@ -1,19 +1,12 @@
 // Join an existing game session
-import { createServiceClient, requireString, cleanTeamName, handleError, handleCors, corsResponse, getUserId, AppError } from '../_shared/utils.ts';
+import { createHandler, requireString, cleanTeamName, corsResponse, AppError } from '../_shared/utils.ts';
 import type { Session, Team } from '../_shared/types.ts';
 
-Deno.serve(async (req) => {
-  const corsRes = handleCors(req);
-  if (corsRes) return corsRes;
-
-  try {
-    const uid = getUserId(req);
+async function handleJoinSession(req: Request, uid: string, supabase: any): Promise<Response> {
     const { code, teamName } = await req.json();
     
     const cleanedCode = requireString(code, 'code').toUpperCase();
     const cleanedTeamName = cleanTeamName(requireString(teamName, 'teamName'));
-    
-    const supabase = createServiceClient();
     
     // Find session by code
     const { data: session, error: sessionError } = await supabase
@@ -91,9 +84,7 @@ Deno.serve(async (req) => {
       session: session as Session,
       team: team as Team,
     });
-  } catch (error) {
-    return handleError(error);
   }
-});
 
-
+// @ts-ignore - Deno global is available in Supabase Edge Functions runtime
+Deno.serve(createHandler(handleJoinSession));
