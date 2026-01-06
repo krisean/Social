@@ -1,6 +1,4 @@
-import { Card } from "../../../components/Card";
-import { Timer } from "../../../components/Timer";
-import { ProgressBar } from "../../../components/ProgressBar";
+import { Card, Timer, ProgressBar } from "@social/ui";
 import { getMascotById } from "../../../shared/mascots";
 import type { Session, RoundGroup, Answer, Vote, Team } from "../../../shared/types";
 import { statusHeadline } from "../../../shared/constants";
@@ -65,25 +63,25 @@ export function VotePhase({
     : "No groups";
 
   return (
-    <Card className={`space-y-3 p-3 sm:space-y-5 sm:p-5 ${!isDark ? 'text-slate-900' : 'text-pink-400'}`}>
+    <Card className="space-y-3 p-3 sm:space-y-5 sm:p-5" isDark={isDark}>
       <div className="space-y-1.5 text-center sm:space-y-2">
-        <h2 className="text-xl font-bold text-slate-900 sm:text-2xl">
+        <h2 className={`text-xl font-bold sm:text-2xl ${!isDark ? 'text-slate-900' : 'text-white'}`}>
           {statusHeadline[session.status]}
         </h2>
-        <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-700 sm:text-xs">
+        <p className={`text-[11px] font-semibold uppercase tracking-wide sm:text-xs ${!isDark ? 'text-slate-700' : 'text-slate-300'}`}>
           {groupLabel}
         </p>
-        <p className="text-base font-semibold text-slate-900 sm:text-lg">
+        <p className={`text-base font-semibold sm:text-lg ${!isDark ? 'text-slate-900' : 'text-white'}`}>
           {promptValue}
         </p>
-        <p className="text-xs font-semibold text-brand-primary sm:text-sm">
+        <p className={`text-xs font-semibold sm:text-sm ${!isDark ? 'text-brand-primary' : 'text-cyan-400'}`}>
           {isVotingOnOwnGroup
             ? "Viewing your group's answers — you cannot vote in your own group."
             : "Tap your favorite answer — everyone can vote."}
         </p>
       </div>
       <Timer endTime={session.endsAt} label="Voting ends" size="md" />
-      <div className="rounded-full bg-white/80 p-0.5 shadow-inner shadow-slate-300">
+      <div className={`rounded-full p-0.5 shadow-inner ${!isDark ? 'bg-white/80 shadow-slate-300' : 'bg-slate-700/80 shadow-slate-600'}`}>
         <ProgressBar endTime={session.endsAt} totalSeconds={totalSeconds} />
       </div>
       <div className="space-y-3">
@@ -98,17 +96,19 @@ export function VotePhase({
             return (
               <article
                 key={answer.id}
-                className={`bg-white flex gap-3 rounded-2xl p-4 transition-all duration-200 cursor-pointer shadow-md ${
+                className={`flex gap-3 rounded-2xl p-4 transition-all duration-200 cursor-pointer shadow-md ${
+                  !isDark ? 'bg-white' : 'bg-slate-800'
+                } ${
                   isSelected
-                    ? "ring-4 ring-amber-400 bg-amber-50/30 shadow-lg"
-                    : "hover:bg-white/5"
+                    ? `${!isDark ? 'ring-4 ring-amber-400 bg-amber-50/30' : 'ring-4 ring-cyan-400 bg-cyan-900/30'} shadow-lg`
+                    : `hover:${!isDark ? 'bg-white/5' : 'bg-slate-700/50'}`
                 } ${isSubmittingVote || voteSummaryActive || isVotingOnOwnGroup ? "opacity-70 cursor-not-allowed" : ""}`}
                 onClick={() => !isSubmittingVote && !voteSummaryActive && !isVotingOnOwnGroup && handleVote(answer.id)}
               >
                 {/* Avatar/Mascot */}
                 <div className="flex-shrink-0">
                   {mascot ? (
-                    <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center text-lg">
+                    <div className={`w-12 h-12 rounded-full flex items-center justify-center text-lg ${!isDark ? 'bg-slate-100' : 'bg-slate-700'}`}>
                       <img
                         src={mascot.path}
                         alt={mascot.name}
@@ -118,13 +118,13 @@ export function VotePhase({
                           const parent = e.currentTarget.parentElement;
                           if (parent) {
                             parent.textContent = authorName.charAt(0).toUpperCase();
-                            parent.className = "w-12 h-12 rounded-full bg-slate-200 flex items-center justify-center text-lg font-bold text-slate-600";
+                            parent.className = `w-12 h-12 rounded-full flex items-center justify-center text-lg font-bold ${!isDark ? 'bg-slate-200 text-slate-600' : 'bg-slate-600 text-slate-300'}`;
                           }
                         }}
                       />
                     </div>
                   ) : (
-                    <div className="w-12 h-12 rounded-full bg-slate-200 flex items-center justify-center text-lg font-bold text-slate-600">
+                    <div className={`w-12 h-12 rounded-full flex items-center justify-center text-lg font-bold ${!isDark ? 'bg-slate-200 text-slate-600' : 'bg-slate-600 text-slate-300'}`}>
                       {authorName.charAt(0).toUpperCase()}
                     </div>
                   )}
@@ -134,13 +134,13 @@ export function VotePhase({
                 <div className="flex-1 min-w-0">
                   {/* Team name and timestamp */}
                   <div className="flex items-center gap-2 mb-2">
-                    <span className="font-semibold text-slate-900 text-sm">{authorName}</span>
-                    <span className="text-xs text-slate-500">•</span>
-                    <span className="text-xs text-slate-500">{timeAgo}</span>
+                    <span className={`font-semibold text-sm ${!isDark ? 'text-slate-900' : 'text-white'}`}>{authorName}</span>
+                    <span className={`text-xs ${!isDark ? 'text-slate-500' : 'text-slate-400'}`}>•</span>
+                    <span className={`text-xs ${!isDark ? 'text-slate-500' : 'text-slate-400'}`}>{timeAgo}</span>
                   </div>
 
                   {/* Answer text */}
-                  <p className="text-slate-800 leading-relaxed">{answer.text}</p>
+                  <p className={`leading-relaxed ${!isDark ? 'text-slate-800' : 'text-slate-200'}`}>{answer.text}</p>
                 </div>
 
                 {/* Vote button */}
@@ -168,7 +168,7 @@ export function VotePhase({
             );
           })
         ) : (
-          <Card className="text-center">
+          <Card className="text-center" isDark={isDark}>
             <p className="text-slate-600">
               Waiting for answers from this group...
             </p>

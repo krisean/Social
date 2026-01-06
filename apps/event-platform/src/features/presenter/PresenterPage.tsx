@@ -1,8 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useParams, Link } from "react-router-dom";
-import { Timer } from "../../components/Timer";
+import { Timer, Card } from "@social/ui";
 import { BackgroundAnimation } from "../../components/BackgroundAnimation";
-import { Card } from "../../components/Card";
 import { useSession, useTeams, useAnswers, useVotes } from "../session/hooks";
 import { useTheme } from "../../shared/providers/ThemeProvider";
 import { phaseSubtitle, prompts, phaseHeadline } from "../../shared/constants";
@@ -289,7 +288,7 @@ export function PresenterPage() {
       <main className={`relative min-h-screen px-6 py-10 ${!isDark ? 'text-slate-900' : 'text-white'}`}>
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-8">
         <header className="flex flex-col items-center justify-between gap-6 lg:flex-row">
-          <Card className="text-center lg:text-left">
+          <Card className="text-center lg:text-left" isDark={isDark}>
             <h1 className={`text-4xl font-black tracking-tight ${!isDark ? 'text-slate-900' : 'text-pink-400'}`}>
               {phaseHeadline[session.status]}
             </h1>
@@ -298,27 +297,29 @@ export function PresenterPage() {
             </p>
           </Card>
           <div className="flex items-center gap-6">
-            <div className={`flex flex-col items-center rounded-3xl px-6 py-4 shadow-md ${!isDark ? 'bg-white' : 'bg-slate-700'}`}>
-              <span className={`text-xs uppercase tracking-[0.4em] ${!isDark ? 'text-slate-600' : 'text-cyan-400'}`}>
-                Room
+            <div className={`flex flex-col items-center gap-2 rounded-2xl px-6 py-4 border ${!isDark ? 'bg-slate-100 border-slate-200' : 'bg-cyan-900/30 border-cyan-400/50'}`}>
+              <span className={`text-xs uppercase tracking-wider ${!isDark ? 'text-slate-600' : 'text-cyan-300'}`}>
+                Room code
               </span>
-              <span className={`mt-2 text-5xl font-black tracking-[0.2em] ${!isDark ? 'text-slate-900' : 'text-pink-400'}`}>
+              <span className={`text-3xl font-black tracking-widest ${!isDark ? 'text-slate-900' : 'text-pink-400'}`}>
                 {session.code}
               </span>
-              <span className={`mt-3 text-sm ${!isDark ? 'text-slate-600' : 'text-cyan-300'}`}>
-                {teams.length} team{teams.length === 1 ? "" : "s"} active
-              </span>
+              {teams.length > 0 ? (
+                <span className={`text-xs ${!isDark ? 'text-slate-500' : 'text-cyan-400'}`}>
+                  {teams.length} team{teams.length === 1 ? "" : "s"} online
+                </span>
+              ) : null}
             </div>
             {session.status === "lobby" && (
               <div className="mt-4 flex flex-col items-center">
-                <QRCodeBlock value={inviteLink || ""} />
+                <QRCodeBlock value={inviteLink || ""} isDark={isDark} />
               </div>
             )}
             <Timer
               endTime={session.endsAt}
-              variant="light"
               size="lg"
               label="Time"
+              isDark={isDark}
             />
           </div>
         </header>

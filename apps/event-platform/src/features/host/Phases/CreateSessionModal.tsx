@@ -1,7 +1,5 @@
 import React from "react";
-import { Button } from "../../../components/Button";
-import { FormField } from "../../../components/FormField";
-import { Modal } from "../../../components/Modal";
+import { Button, FormField, Modal } from "@social/ui";
 import { useTheme } from "../../../shared/providers/ThemeProvider";
 
 interface CreateSessionModalProps {
@@ -33,6 +31,7 @@ export function CreateSessionModal({
       open={open}
       onClose={onClose}
       title="Create a Söcial session"
+      isDark={isDark}
       footer={
         <div className="flex w-full items-center justify-between">
           <Button variant="ghost" onClick={onClose}>
@@ -75,6 +74,7 @@ export function CreateSessionModal({
             setCreateForm((prev) => ({ ...prev, teamName: e.target.value }))
           }
           error={createErrors.teamName}
+          isDark={isDark}
         />
         <FormField
           label="Venue name (optional)"
@@ -87,6 +87,7 @@ export function CreateSessionModal({
           }
           hint="Shown to teams in the lobby"
           error={createErrors.venueName}
+          isDark={isDark}
         />
         <p className={`text-xs ${!isDark ? 'text-slate-500' : 'text-cyan-400'}`}>
           You'll get a 6-character room code and QR to share with teams.

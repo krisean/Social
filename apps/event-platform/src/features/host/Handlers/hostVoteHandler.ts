@@ -1,5 +1,5 @@
 import type { Session, RoundGroup } from "../../../shared/types";
-import type { Toast } from "../../../shared/hooks/useToast";
+import type { Toast } from "@social/ui";
 import { submitVote } from "../../session/sessionService";
 import { getErrorMessage } from "../../../shared/utils/errors";
 
@@ -36,13 +36,9 @@ export const handleHostVote =
     try {
       await submitVote({ sessionId: session.id, answerId });
       setHostGroupVotes((prev) => ({ ...prev, [activeGroup.id]: answerId }));
-      toast({ title: "Vote cast", variant: "success" });
+      toast("Vote cast", "success");
     } catch (error: unknown) {
-      toast({
-        title: "Could not record vote",
-        description: getErrorMessage(error, "Try again while voting is open."),
-        variant: "error",
-      });
+      toast(getErrorMessage(error, "Could not record vote. Try again while voting is open."), "error");
     } finally {
       setIsSubmittingVote(false);
     }

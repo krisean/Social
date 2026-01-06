@@ -10,7 +10,6 @@ export interface CreateSessionResponse {
   sessionId: string;
   code: string;
   session: Session;
-  team: Team;
 }
 
 export interface JoinSessionRequest {

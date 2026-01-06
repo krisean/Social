@@ -1,14 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Button } from "../../components/Button";
-import { QRCodeBlock } from "../../components/QRCodeBlock";
-import { Card } from "../../components/Card";
-import { Modal } from "../../components/Modal";
+import { Button, QRCodeBlock, Card, Modal, useToast } from "@social/ui";
 import { useAuth } from "../../shared/providers/AuthContext";
 import { useCurrentPhase } from "../../shared/providers/CurrentPhaseContext";
 import { useTheme } from "../../shared/providers/ThemeProvider";
 import { useHostSession } from "./useHostSession";
-import { useToast } from "../../shared/hooks/useToast";
 import {
   advancePhase,
   fetchAnalytics,
@@ -51,7 +47,7 @@ import type {
 
 export function HostPage() {
   const { user, loading: authLoading } = useAuth();
-  const { toast } = useToast();
+  const { addToast } = useToast();
   const { isDark } = useTheme();
   const {
     sessionId: storedSessionId,
@@ -125,12 +121,10 @@ export function HostPage() {
   // Validate session existence and setup on load/update
   useEffect(() => {
     if (!session && sessionId && sessionSnapshotReady) {
-      toast({
-        title: "Session not found",
-        description:
-          "It may have expired. Create a new one to continue hosting.",
-        variant: "error",
-      });
+      addToast(
+        "Session not found. It may have expired. Create a new one to continue hosting.",
+        "error"
+      );
       clearHostSession();
       setSessionId(null);
       setShowCreateModal(true);
@@ -159,7 +153,7 @@ export function HostPage() {
     sessionSnapshotReady,
     setHostSession,
     clearHostSession,
-    toast,
+    addToast,
   ]);
 
   // Update current phase in context for HowToPlayModal
@@ -236,14 +230,13 @@ export function HostPage() {
       setIsPerformingAction(true);
       advancePhase({ sessionId: current.id })
         .catch((error: unknown) => {
-          toast({
-            title: "Auto-advance failed",
-            description: getErrorMessage(
+          addToast(
+            getErrorMessage(
               error,
-              "Please tap the phase button manually.",
+              "Auto-advance failed. Please tap the phase button manually."
             ),
-            variant: "error",
-          });
+            "error"
+          );
         })
         .finally(() => {
           isPerformingActionRef.current = false;
@@ -266,7 +259,7 @@ export function HostPage() {
         autoAdvanceRetryRef.current = null;
       }
     };
-  }, [session, toast]);
+  }, [session, addToast]);
 
   const inviteLink = useMemo(() => {
     if (!session?.code) return "";
@@ -363,7 +356,7 @@ export function HostPage() {
   const createSessionHandler = handleCreateSession({
     user,
     authLoading,
-    toast,
+    toast: addToast,
     setCreateErrors,
     isCreating, // Added this prop
     setIsCreating,
@@ -377,7 +370,7 @@ export function HostPage() {
     session,
     isPerformingAction,
     triggerPerformingAction,
-    toast,
+    toast: addToast,
     setShowCreateModal,
   });
 
@@ -385,7 +378,7 @@ export function HostPage() {
     session,
     isEndingSession,
     setIsEndingSession,
-    toast,
+    toast: addToast,
     setAnalytics,
     setHostGroupVotes,
   });
@@ -396,11 +389,11 @@ export function HostPage() {
 
   const kickTeamHandler = handleKickTeam({
     session,
-    toast,
+    toast: addToast,
     setKickingTeamId,
   });
 
-  const copyLinkHandler = handleCopyLink({ toast });
+  const copyLinkHandler = handleCopyLink({ toast: addToast });
 
   const handleReturnHome = useCallback(() => {
     clearHostSession();
@@ -429,31 +422,29 @@ export function HostPage() {
       setIsUpdatingPromptLibrary(true);
       setPromptLibrary({ sessionId: session.id, promptLibraryId: libraryId })
         .then(() => {
-          toast({
-            title: "Prompt library updated",
-            description: "New prompts will be used next round.",
-            variant: "success",
-          });
+          addToast(
+            "Prompt library updated! New prompts will be used next round.",
+            "success"
+          );
         })
         .catch((error: unknown) => {
-          toast({
-            title: "Could not update prompts",
-            description: getErrorMessage(error, "Please try again."),
-            variant: "error",
-          });
+          addToast(
+            getErrorMessage(error, "Could not update prompts. Please try again."),
+            "error"
+          );
         })
         .finally(() => {
           setIsUpdatingPromptLibrary(false);
         });
     },
-    [session, isUpdatingPromptLibrary, toast],
+    [session, isUpdatingPromptLibrary, addToast],
   );
 
   const hostVoteHandler = handleHostVote({
     session,
     activeGroup,
     activeGroupVote,
-    toast,
+    toast: addToast,
     setIsSubmittingVote,
     setHostGroupVotes,
     isSubmittingVote,
@@ -461,7 +452,7 @@ export function HostPage() {
 
   const promptLibraryCard =
     session && session.status === "lobby" ? (
-      <Card className="flex flex-col gap-4">
+      <Card className="flex flex-col gap-4" isDark={isDark}>
         <div className={`flex flex-col gap-1 ${!isDark ? 'text-slate-700' : 'text-cyan-100'}`}>
           <span className={`text-xs font-semibold uppercase tracking-wide ${!isDark ? 'text-slate-500' : 'text-cyan-400'}`}>
             Prompt library
@@ -509,7 +500,7 @@ export function HostPage() {
   const renderPhaseContent = () => {
     if (!session) {
       return (
-        <Card className="min-h-[360px]">
+        <Card className="min-h-[360px]" isDark={isDark}>
           <p className={`text-lg ${!isDark ? 'text-slate-600' : 'text-cyan-300'}`}>
             Create a session to unlock the host controls.
           </p>
@@ -594,9 +585,9 @@ export function HostPage() {
   ) : null;
 
   return (
-    <main className={`min-h-screen px-4 py-8 ${!isDark ? 'bg-slate-50' : 'bg-slate-950'}`}>
+    <main className={`min-h-screen px-4 py-8 ${!isDark ? 'bg-amber-50' : 'bg-slate-950'}`}>
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-8">
-        <header className={`flex flex-col items-start gap-4 rounded-3xl p-6 shadow-lg sm:flex-row sm:items-center sm:justify-between ${!isDark ? 'bg-white shadow-slate-300/40' : 'bg-slate-800 shadow-fuchsia-500/20'}`}>
+        <Card className="flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between" isDark={isDark}>
           <div className="space-y-3">
             <div className="flex items-center gap-3">
               <Link to="/" className={`text-sm font-semibold ${!isDark ? 'text-brand-primary' : 'text-cyan-400 hover:text-cyan-300'}`}>
@@ -619,20 +610,20 @@ export function HostPage() {
               )}
             </div>
           </div>
-          <div className={`flex flex-col items-center gap-2 rounded-2xl px-6 py-4 ${!isDark ? 'bg-slate-900 text-white' : 'bg-cyan-600 text-slate-900'}`}>
-            <span className={`text-xs uppercase tracking-wider ${!isDark ? 'text-white/60' : 'text-slate-900/70'}`}>
+          <div className={`flex flex-col items-center gap-2 rounded-2xl px-6 py-4 border ${!isDark ? 'bg-slate-100 border-slate-200' : 'bg-cyan-900/30 border-cyan-400/50'}`}>
+            <span className={`text-xs uppercase tracking-wider ${!isDark ? 'text-slate-600' : 'text-cyan-300'}`}>
               Room code
             </span>
-            <span className="text-3xl font-black tracking-widest">
+            <span className={`text-3xl font-black tracking-widest ${!isDark ? 'text-slate-900' : 'text-pink-400'}`}>
               {session?.code ?? storedCode ?? "---"}
             </span>
             {session ? (
-              <span className={`text-xs ${!isDark ? 'text-white/70' : 'text-slate-900/80'}`}>
+              <span className={`text-xs ${!isDark ? 'text-slate-500' : 'text-cyan-400'}`}>
                 {teams.length} team{teams.length === 1 ? "" : "s"} online
               </span>
             ) : null}
           </div>
-        </header>
+        </Card>
 
         <section className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,_2fr)_minmax(0,_1fr)]">
           <div className="flex flex-col gap-6">
@@ -680,14 +671,14 @@ export function HostPage() {
 
           <aside className="flex flex-col gap-6">
             {session ? (
-              <QRCodeBlock value={inviteLink || ""} caption="Scan to join" />
+              <QRCodeBlock value={inviteLink || ""} caption="Scan to join" isDark={isDark} />
             ) : (
-              <div className={`rounded-3xl p-6 text-center text-sm shadow ${!isDark ? 'bg-white text-slate-500' : 'bg-slate-800 text-cyan-300'}`}>
+              <div className={`rounded-3xl p-6 text-center text-sm shadow-lg ${!isDark ? 'bg-white text-slate-500 shadow-slate-300/40' : 'bg-slate-800 text-cyan-300 shadow-fuchsia-500/20'}`}>
                 Start a session to generate a QR code for your guests.
               </div>
             )}
             {session ? (
-              <div className={`space-y-4 rounded-3xl p-5 shadow ${!isDark ? 'bg-white' : 'bg-slate-800'}`}>
+              <div className={`space-y-4 rounded-3xl p-5 shadow-lg ${!isDark ? 'bg-white shadow-slate-300/40' : 'bg-slate-800 shadow-fuchsia-500/20'}`}>
                 <div className="flex items-center justify-between">
                   <h3 className={`text-lg font-semibold ${!isDark ? 'text-slate-900' : 'text-pink-400'}`}>
                     Lobby ({teams.length})
@@ -745,6 +736,7 @@ export function HostPage() {
         open={showPromptLibraryModal && Boolean(session)}
         onClose={() => setShowPromptLibraryModal(false)}
         title="Choose a prompt library"
+        isDark={isDark}
         footer={
           <Button variant="ghost" onClick={() => setShowPromptLibraryModal(false)}>
             Done
@@ -758,12 +750,12 @@ export function HostPage() {
               onSelect={handlePromptLibrarySelect}
               disabled={isUpdatingPromptLibrary || session.status !== "lobby"}
             />
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-slate-500 dark:text-slate-400">
               You can switch decks any time before the first round begins.
             </p>
           </div>
         ) : (
-          <p className="text-sm text-slate-600">
+          <p className="text-sm text-slate-600 dark:text-slate-300">
             Start a session to choose your prompt library.
           </p>
         )}
@@ -772,6 +764,7 @@ export function HostPage() {
         open={showEndSessionModal}
         onClose={() => setShowEndSessionModal(false)}
         title="End Session"
+        isDark={isDark}
         footer={
           <div className="flex w-full items-center justify-between">
             <Button variant="ghost" onClick={() => setShowEndSessionModal(false)}>
@@ -791,7 +784,7 @@ export function HostPage() {
           </div>
         }
       >
-        <p className="text-sm text-slate-600">
+        <p className="text-sm text-slate-600 dark:text-slate-300">
           Are you sure you want to end this session? This action cannot be undone
           and all teams will be disconnected.
         </p>

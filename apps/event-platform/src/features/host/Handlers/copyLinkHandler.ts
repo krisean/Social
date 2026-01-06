@@ -1,6 +1,6 @@
 import { copyToClipboard } from "../../../shared/utils/clipboard";
 import { getErrorMessage } from "../../../shared/utils/errors";
-import type { Toast } from "../../../shared/hooks/useToast";
+import type { Toast } from "@social/ui";
 
 interface CopyLinkDeps {
   toast: Toast;
@@ -11,12 +11,8 @@ export const handleCopyLink = (deps: CopyLinkDeps) => async (link: string) => {
 
   try {
     await copyToClipboard(link);
-    toast({ title: "Invite link copied", variant: "success" });
+    toast("Invite link copied", "success");
   } catch (error: unknown) {
-    toast({
-      title: "Copy failed",
-      description: getErrorMessage(error, "Copy this link manually instead."),
-      variant: "error",
-    });
+    toast(getErrorMessage(error, "Copy failed. Copy this link manually instead."), "error");
   }
 };

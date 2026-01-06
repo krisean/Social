@@ -1,12 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
-import { Button } from "../../components/Button";
-import { Card } from "../../components/Card";
-import { Modal } from "../../components/Modal";
+import { Button, Card, Modal, useToast } from "@social/ui";
 import { BackgroundAnimation } from "../../components/BackgroundAnimation";
 import { HowToPlayModal } from "../howToPlay/HowToPlayModal";
-import { useToast } from "../../shared/hooks/useToast";
 import {
   joinSession,
   submitAnswer,
@@ -980,7 +977,7 @@ export function TeamPage() {
     );
   } else if (!sessionSnapshotReady) {
     mainContent = (
-      <Card className="space-y-3 text-center">
+      <Card className="space-y-3 text-center" isDark={isDark}>
         <h2 className={`text-xl font-semibold ${!isDark ? 'text-slate-900' : 'text-pink-400'}`}>Connecting...</h2>
         <p className={`text-sm ${!isDark ? 'text-slate-600' : 'text-cyan-300'}`}>Pulling the latest game state.</p>
       </Card>
@@ -1032,7 +1029,7 @@ export function TeamPage() {
 
   const mainClassName = showBackground
     ? "relative z-10 flex min-h-screen items-center justify-center px-3 py-10 sm:px-4"
-    : "relative min-h-screen bg-white px-4 py-8";
+    : `relative min-h-screen px-4 py-8 ${!isDark ? 'bg-amber-50' : 'bg-slate-950'}`;
 
   const contentWrapperClassName = showBackground
     ? "relative z-10 mx-auto flex w-[88vw] max-w-sm flex-col gap-4 sm:w-full sm:max-w-lg sm:gap-6"
@@ -1190,6 +1187,7 @@ export function TeamPage() {
         <canvas ref={canvasRef} style={{ display: "none" }} />
         <Modal
           open={showKickedModal}
+          isDark={isDark}
           onClose={() => {
             // Redirect when modal is closed (X button or ESC)
             setShowKickedModal(false);
@@ -1219,6 +1217,7 @@ export function TeamPage() {
         </Modal>
         <Modal
           open={showSessionEndedModal}
+          isDark={isDark}
           onClose={() => {
             // Redirect when modal is closed (X button or ESC)
             setShowSessionEndedModal(false);

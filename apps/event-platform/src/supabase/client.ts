@@ -1,23 +1,8 @@
-import { createClient } from '@supabase/supabase-js';
-import type { Database } from '@social/db';
+import { getSupabaseClient } from '@social/db';
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+const supabase = getSupabaseClient();
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error(
-    'Missing Supabase configuration. Please set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY environment variables.'
-  );
-}
-
-// Supabase client is properly configured
-
-export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    persistSession: true,
-    autoRefreshToken: true,
-  },
-});
+export { supabase };
 
 export async function ensureAnonymousAuth() {
   const { data: { session } } = await supabase.auth.getSession();

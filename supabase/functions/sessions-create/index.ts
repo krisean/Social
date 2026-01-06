@@ -46,25 +46,6 @@ async function handleCreateSession(req: Request, supabase: any): Promise<Respons
     
     if (sessionError) throw sessionError;
     
-    // Get next mascot ID (simple rotation)
-    const mascotId = Math.floor(Math.random() * 6) + 1;
-    
-    // Create host team
-    const { data: team, error: teamError } = await supabase
-      .from('teams')
-      .insert({
-        session_id: session.id,
-        uid,
-        team_name: cleanedTeamName,
-        is_host: true,
-        score: 0,
-        mascot_id: mascotId,
-      })
-      .select()
-      .single();
-    
-    if (teamError) throw teamError;
-    
     // Create analytics record
     await supabase
       .from('session_analytics')
@@ -74,7 +55,6 @@ async function handleCreateSession(req: Request, supabase: any): Promise<Respons
       sessionId: session.id,
       code: session.code,
       session: session as Session,
-      team: team as Team,
     });
   }
 

@@ -1,5 +1,5 @@
 import type { Session } from "../../../shared/types";
-import type { Toast } from "../../../shared/hooks/useToast";
+import type { Toast } from "@social/ui";
 import { kickPlayer } from "../../session/sessionService";
 
 interface KickTeamDeps {
@@ -17,14 +17,10 @@ export const handleKickTeam =
     setKickingTeamId(teamId);
     try {
       await kickPlayer({ sessionId: session.id, teamId });
-      toast({ title: "Team removed", variant: "info" });
+      toast("Team removed", "info");
     } catch (error: unknown) {
       console.log(error);
-      toast({
-        title: "Could not kick team",
-        description: "Please try again.",
-        variant: "error",
-      });
+      toast("Could not kick team. Please try again.", "error");
     } finally {
       setKickingTeamId(null);
     }

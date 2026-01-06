@@ -1,11 +1,11 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../shared/providers/AuthContext";
-import { Button } from "../../components/Button";
-import { FormField } from "../../components/FormField";
-import { Card } from "../../components/Card";
+import { useTheme } from "../../shared/providers/ThemeProvider";
+import { Button, FormField, Card } from "@social/ui";
 
 export function AuthPage() {
+  const { isDark } = useTheme();
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -163,6 +163,7 @@ export function AuthPage() {
                 onChange={(e) => setDisplayName(e.target.value)}
                 placeholder="Enter your display name"
                 required
+                isDark={isDark}
               />
             )}
 
@@ -173,6 +174,7 @@ export function AuthPage() {
               onChange={(e) => setEmail(e.target.value)}
               placeholder="Enter your email"
               required
+              isDark={isDark}
             />
 
             <FormField
@@ -182,6 +184,7 @@ export function AuthPage() {
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Enter your password"
               required
+              isDark={isDark}
             />
 
             {!isLogin && (
@@ -192,6 +195,7 @@ export function AuthPage() {
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 placeholder="Confirm your password"
                 required
+                isDark={isDark}
               />
             )}
 

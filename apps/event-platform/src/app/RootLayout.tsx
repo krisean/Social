@@ -2,9 +2,11 @@ import { useState, useEffect } from "react";
 import { Outlet, Link } from "react-router-dom";
 import { ThemeToggle } from "../components/ThemeToggle";
 import { useAuth } from "../shared/providers/AuthContext";
+import { useTheme } from "../shared/providers/ThemeProvider";
 
 export function RootLayout() {
   const { user, isGuest } = useAuth();
+  const { isDark } = useTheme();
 
   const [headerTransform, setHeaderTransform] = useState(0);
   const [lastScrollY, setLastScrollY] = useState(0);
@@ -77,7 +79,7 @@ export function RootLayout() {
           <div className="flex justify-between items-center h-16">
             {/* Left side - User Avatar */}
             <div className="flex-shrink-0">
-              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-200 dark:bg-slate-700 text-sm font-semibold">
+              <div className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-semibold ${!isDark ? 'bg-slate-200' : 'bg-slate-700'}`}>
                 {user ? (
                   isGuest ? (
                     // Guest mode icon
@@ -87,7 +89,7 @@ export function RootLayout() {
                       viewBox="0 0 24 24"
                       strokeWidth={2}
                       stroke="currentColor"
-                      className="w-4 h-4 text-slate-600 dark:text-slate-300"
+                      className={`w-4 h-4 ${!isDark ? 'text-slate-600' : 'text-slate-300'}`}
                     >
                       <path
                         strokeLinecap="round"
@@ -109,7 +111,7 @@ export function RootLayout() {
                     viewBox="0 0 24 24"
                     strokeWidth={2}
                     stroke="currentColor"
-                    className="w-4 h-4 text-slate-600 dark:text-slate-300"
+                    className={`w-4 h-4 ${!isDark ? 'text-slate-600' : 'text-slate-300'}`}
                   >
                     <path
                       strokeLinecap="round"

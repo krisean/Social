@@ -8,8 +8,8 @@
   ],
   "scripts": {
     "build": "turbo run build",
-    "dev": "cmd /c \"pnpm run dev:kill && turbo run dev\"",
-    "dev:kill": "(taskkill /F /FI \"IMAGENAME eq node.exe\" 2>nul || echo No processes to kill) && echo Process cleanup complete",
+    "dev": "turbo run dev",
+    "dev:kill": "taskkill /F /FI \"IMAGENAME eq node.exe\" /T >nul 2>&1 && echo Process cleanup complete || echo No processes to kill",
     "lint": "turbo run lint",
     "test": "turbo run test",
     "type-check": "turbo run type-check",

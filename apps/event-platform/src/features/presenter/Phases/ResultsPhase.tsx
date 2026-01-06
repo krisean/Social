@@ -1,7 +1,6 @@
-import { Leaderboard } from "../../../components/phases/Leaderboard";
-import { RoundSummaryCard } from "../../../components/phases/RoundSummaryCard";
-import { Card } from "../../../components/Card";
+import { Leaderboard, RoundSummaryCard, Card } from "@social/ui";
 import type { Answer, RoundGroup, Team } from "../../../shared/types";
+import { useTheme } from "../../../shared/providers/ThemeProvider";
 
 interface RoundSummary {
   group: RoundGroup;
@@ -21,10 +20,11 @@ export function ResultsPhase({
   roundSummaries,
   voteCounts,
 }: ResultsPhaseProps) {
+  const { isDark } = useTheme();
   return (
     <>
-      <Card>
-        <p className="text-sm font-semibold uppercase tracking-[0.3em] text-slate-600">
+      <Card isDark={isDark}>
+        <p className={`text-sm font-semibold uppercase tracking-[0.3em] ${!isDark ? 'text-slate-600' : 'text-slate-300'}`}>
           Leaderboard
         </p>
         <div className="mt-4">
@@ -48,7 +48,7 @@ export function ResultsPhase({
             />
           ))
         ) : (
-          <p className="text-center text-white/60">
+          <p className={`text-center ${!isDark ? 'text-slate-500' : 'text-white/60'}`}>
             No answers submitted this round.
           </p>
         )}

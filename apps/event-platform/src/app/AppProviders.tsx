@@ -3,10 +3,9 @@ import type { PropsWithChildren } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { AuthProvider } from "../shared/providers/AuthProvider";
-import { ToastProvider } from "../shared/providers/ToastProvider";
+import { ToastProvider, Toaster } from "@social/ui";
 import { ThemeProvider } from "../shared/providers/ThemeProvider";
 import { CurrentPhaseProvider } from "../shared/providers/CurrentPhaseContext";
-import { Toaster } from "../components/Toaster";
 
 const createQueryClient = () =>
   new QueryClient({

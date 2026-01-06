@@ -348,16 +348,29 @@ export const joinSession = async (payload: JoinSessionRequest) => {
 };
 
 export const startGame = async (payload: StartGameRequest) => {
-  const response = await supabase.functions.invoke<{ session: Session }>(
-    "sessions-start",
-    { body: payload }
-  );
-  
-  if (response.error) {
-    throw response.error;
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+  const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+  // Get current session for auth token
+  const { data: { session } } = await supabase.auth.getSession();
+  const authToken = session?.access_token || supabaseKey;
+
+  const response = await fetch(`${supabaseUrl}/functions/v1/sessions-start`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${authToken}`,
+      'apikey': supabaseKey,
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({ message: 'Failed to start game' }));
+    throw new Error(errorData.message || errorData.error || 'Failed to start game');
   }
-  
-  return response.data;
+
+  return response.json();
 };
 
 export const advancePhase = async (payload: TransitionPhaseRequest) => {

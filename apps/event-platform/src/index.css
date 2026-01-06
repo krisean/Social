@@ -9,6 +9,7 @@
     --color-brand-primary: #ec9f05;
     --color-brand-dark: #BF3100;
     --color-brand-light: #DDC9B4;
+    --color-bg-primary: #fffbeb; /* Amber-50 */
 }
 
 [data-theme="dark"] {
@@ -17,11 +18,12 @@
     --color-brand-primary: #06b6d4;
     --color-brand-dark: #0891b2;
     --color-brand-light: #cffafe;
+    --color-bg-primary: #020617;
 }
 
 html,
 body {
-    @apply bg-black font-sans antialiased;
+    @apply font-sans antialiased;
     color: var(--color-text-primary);
     margin: 0;
     padding: 0;
@@ -29,6 +31,7 @@ body {
     min-height: 100vh;
     min-height: 100svh;
     min-height: 100dvh;
+    background: var(--color-bg-primary, #000000);
 }
 
 #root {

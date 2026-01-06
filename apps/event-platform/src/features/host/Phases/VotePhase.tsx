@@ -1,7 +1,5 @@
-import { Card } from "../../../components/Card";
-import { Timer } from "../../../components/Timer";
-import { ProgressBar } from "../../../components/ProgressBar";
-import { AnswerCard } from "../../../components/phases/AnswerCard";
+import { Card, Timer, ProgressBar, AnswerCard } from "@social/ui";
+import { useTheme } from "../../../shared/providers/ThemeProvider";
 import type { Answer, RoundGroup } from "../../../shared/types";
 
 interface VotePhaseProps {
@@ -42,23 +40,24 @@ export function VotePhase({
   prompts,
   sessionRoundIndex,
 }: VotePhaseProps) {
+  const { isDark } = useTheme();
   return (
-    <Card className="space-y-6">
+    <Card className="space-y-6" isDark={isDark}>
       <div className="flex flex-col gap-2">
         <span className="text-xs font-semibold uppercase tracking-wide text-brand-primary">
           Voting phase
         </span>
-        <p className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+        <p className={`text-sm font-semibold uppercase tracking-wide ${!isDark ? 'text-slate-500' : 'text-slate-400'}`}>
           {totalGroups
             ? `Group ${activeGroupIndex + 1} of ${totalGroups}`
             : "Waiting for groups"}
         </p>
-        <h3 className="text-2xl font-bold text-slate-900">
+        <h3 className={`text-2xl font-bold ${!isDark ? 'text-slate-900' : 'text-white'}`}>
           {activeGroup?.prompt ??
             roundGroups[activeGroupIndex]?.prompt ??
             prompts[sessionRoundIndex % prompts.length]}
         </h3>
-        <p className="text-sm text-slate-600">
+        <p className={`text-sm ${!isDark ? 'text-slate-600' : 'text-slate-300'}`}>
           Everyone votes on the answers from this group.
         </p>
       </div>
@@ -82,13 +81,13 @@ export function VotePhase({
             );
           })
         ) : (
-          <p className="text-sm text-slate-500">
+          <p className={`text-sm ${!isDark ? 'text-slate-500' : 'text-slate-400'}`}>
             Waiting for answers from this group...
           </p>
         )}
       </div>
-      <div className="rounded-3xl bg-white p-4 shadow-inner">
-        <h4 className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+      <div className={`rounded-3xl p-4 shadow-inner ${!isDark ? 'bg-white' : 'bg-slate-800'}`}>
+        <h4 className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
           Group progress
         </h4>
         <ul className="mt-3 space-y-2 text-sm">
@@ -105,7 +104,7 @@ export function VotePhase({
                 className={`flex items-center justify-between rounded-2xl px-4 py-3 ${
                   isCurrent
                     ? "bg-brand-light text-brand-primary"
-                    : "bg-slate-100 text-slate-600"
+                    : `${!isDark ? 'bg-slate-100 text-slate-600' : 'bg-slate-700 text-slate-300'}`
                 }`}
               >
                 <span>

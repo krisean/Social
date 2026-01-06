@@ -1,4 +1,4 @@
-import { Card } from "../../../components/Card";
+import { Card } from "@social/ui";
 import { useTheme } from "../../../shared/providers/ThemeProvider";
 import { DrinkTank } from "../../../components/DrinkTank";
 import type { Team } from "../../../shared/types";
@@ -12,7 +12,7 @@ export function LobbyPhase({ teams }: LobbyPhaseProps) {
   const { isDark } = useTheme();
   return (
     <>
-      <Card className="space-y-5">
+      <Card className="space-y-5" isDark={isDark}>
         <div className="text-center">
           <h2 className={`text-2xl font-bold ${!isDark ? 'text-slate-900' : 'text-pink-400'}`}>You're in!</h2>
           <p className={`text-sm ${!isDark ? 'text-slate-600' : 'text-cyan-300'}`}>

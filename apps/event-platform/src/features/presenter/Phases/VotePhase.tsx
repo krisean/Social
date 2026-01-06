@@ -1,6 +1,6 @@
-import { AnswerCard } from "../../../components/phases/AnswerCard";
-import { Card } from "../../../components/Card";
+import { AnswerCard, Card } from "@social/ui";
 import type { Answer } from "../../../shared/types";
+import { useTheme } from "../../../shared/providers/ThemeProvider";
 
 interface VotePhaseProps {
   activeGroupAnswers: Answer[];
@@ -17,6 +17,7 @@ export function VotePhase({
   voteSummaryActive,
   teamLookup,
 }: VotePhaseProps) {
+  const { isDark } = useTheme();
   return (
     <div className="space-y-4">
       <div className="grid gap-4 lg:grid-cols-2">
@@ -38,16 +39,16 @@ export function VotePhase({
             );
           })
         ) : (
-          <Card className="col-span-full text-center">
-            <p className="text-slate-600">
+          <Card className="col-span-full text-center" isDark={isDark}>
+            <p className={`${!isDark ? 'text-slate-600' : 'text-slate-300'}`}>
               Waiting for answers from this group...
             </p>
           </Card>
         )}
       </div>
       {voteSummaryActive ? (
-        <Card className="text-center">
-          <p className="text-sm font-medium text-slate-700">
+        <Card className="text-center" isDark={isDark}>
+          <p className={`text-sm font-medium ${!isDark ? 'text-slate-700' : 'text-slate-300'}`}>
             Votes locked in! Tally displayed before the next prompt.
           </p>
         </Card>

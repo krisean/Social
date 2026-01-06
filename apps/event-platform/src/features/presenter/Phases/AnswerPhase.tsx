@@ -1,4 +1,4 @@
-import { GroupCard } from "../../../components/phases/GroupCard";
+import { GroupCard } from "@social/ui";
 import type { RoundGroup } from "../../../shared/types";
 
 interface AnswerPhaseProps {

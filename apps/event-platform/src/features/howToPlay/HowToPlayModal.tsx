@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
-import { Modal } from "../../components/Modal";
+import { Modal } from "@social/ui";
+import { useTheme } from "../../shared/providers/ThemeProvider";
 import type { SessionStatus } from "../../shared/types";
 
 const steps = [
@@ -103,6 +104,7 @@ function getStepIndexForPhase(phase: SessionStatus | null | undefined): number |
 }
 
 export function HowToPlayModal({ open, onClose, initialPhase }: HowToPlayModalProps) {
+  const { isDark } = useTheme();
   const [openSteps, setOpenSteps] = useState<Set<number>>(new Set());
   const [showScrollIndicator, setShowScrollIndicator] = useState(true);
   const contentRef = useRef<HTMLDivElement>(null);
@@ -166,6 +168,7 @@ export function HowToPlayModal({ open, onClose, initialPhase }: HowToPlayModalPr
       open={open}
       onClose={onClose}
       title="HOW TO PLAY"
+      isDark={isDark}
       footer={
         <button
           type="button"

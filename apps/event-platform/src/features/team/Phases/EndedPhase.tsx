@@ -1,7 +1,5 @@
-import { Card } from "../../../components/Card";
-import { Button } from "../../../components/Button";
+import { Card, Button, Leaderboard } from "@social/ui";
 import { useTheme } from "../../../shared/providers/ThemeProvider";
-import { Leaderboard } from "../../../components/phases/Leaderboard";
 import type { Team } from "../../../shared/types";
 
 interface LeaderboardTeam extends Team {
@@ -37,7 +35,7 @@ export function EndedPhase({
 }: EndedPhaseProps) {
   const { isDark } = useTheme();
   return (
-    <Card className="space-y-5">
+    <Card className="space-y-5" isDark={isDark}>
       <div className="flex items-center justify-between">
         <div>
           <h2 className={`text-2xl font-bold ${!isDark ? 'text-slate-900' : 'text-pink-400'}`}>

@@ -1,5 +1,5 @@
 import type { FormEvent } from "react";
-import type { Toast } from "../../../shared/hooks/useToast";
+import type { Toast } from "@social/ui";
 import { createSession } from "../../session/sessionService";
 import { createSessionSchema } from "../../../shared/schemas";
 import { maskProfanity } from "../../../shared/utils/profanity";
@@ -43,19 +43,11 @@ export const handleCreateSession =
     }
 
     if (authLoading) {
-      toast({
-        title: "Hang tight",
-        description: "We are finishing sign-in before creating your room.",
-        variant: "info",
-      });
+      toast("Hang tight - finishing sign-in before creating your room", "info");
       return;
     }
     if (!user) {
-      toast({
-        title: "Sign-in failed",
-        description: "Refresh the page and try again once connected.",
-        variant: "error",
-      });
+      toast("Sign-in failed - refresh the page and try again once connected", "error");
       return;
     }
 
@@ -92,18 +84,10 @@ export const handleCreateSession =
         setHostSession({ sessionId: response.sessionId, code: response.code });
         setShowCreateModal(false);
         onSessionCreated();
-        toast({
-          title: "Game room ready",
-          description: `Share code ${response.session.code} to invite teams.`,
-          variant: "success",
-        });
+        toast(`Game room ready! Share code ${response.session.code} to invite teams`, "success");
       }
     } catch (error: unknown) {
-      toast({
-        title: "Could not create session",
-        description: getErrorMessage(error, "Please try again in a moment."),
-        variant: "error",
-      });
+      toast(getErrorMessage(error, "Could not create session. Please try again in a moment."), "error");
     } finally {
       setIsCreating(false);
     }

@@ -4,9 +4,7 @@
  */
 
 import { useState } from "react";
-import { Button } from "../../../components/Button";
-import { Card } from "../../../components/Card";
-import { TextAreaField } from "../../../components/TextAreaField";
+import { Button, Card, TextAreaField } from "@social/ui";
 import { AnswerCard } from "../components/AnswerCard";
 
 interface SoloGameState {
