@@ -190,17 +190,17 @@ export function HowToPlayModal({ open, onClose, initialPhase }: HowToPlayModalPr
             return (
               <div
                 key={step.title}
-                className="rounded-xl border border-slate-200 bg-slate-50 overflow-hidden transition-all"
+                className={`elevated-card overflow-hidden transition-all ${!isDark ? '' : 'bg-slate-700/50'}`}
               >
                 <button
                   type="button"
                   onClick={() => toggleStep(index)}
-                  className="w-full flex items-center gap-3 p-4 sm:p-5 text-left hover:bg-slate-100 transition-colors"
+                  className={`w-full flex items-center gap-3 p-4 sm:p-5 text-left transition-colors ${!isDark ? 'hover:bg-slate-100/50' : 'hover:bg-cyan-500/10'}`}
                 >
                   <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full border-2 border-brand-primary bg-brand-primary/10 text-2xl sm:h-12 sm:w-12">
                     {step.emoji}
                   </div>
-                  <h2 className="flex-1 text-base font-black uppercase tracking-wide text-slate-900 sm:text-lg">
+                  <h2 className={`flex-1 text-base font-black uppercase tracking-wide sm:text-lg ${!isDark ? 'text-slate-900' : 'text-white'}`}>
                     {step.title}
                   </h2>
                   <svg
@@ -221,7 +221,7 @@ export function HowToPlayModal({ open, onClose, initialPhase }: HowToPlayModalPr
                 </button>
                 {isOpen && (
                   <div className="px-4 pb-4 sm:px-5 sm:pb-5 sm:pl-20">
-                    <ul className="list-disc space-y-2 pl-5 text-sm font-medium text-slate-600 sm:text-base">
+                    <ul className={`list-disc space-y-2 pl-5 text-sm font-medium sm:text-base ${!isDark ? 'text-slate-700' : 'text-slate-300'}`}>
                       {step.description.map((item, idx) => (
                         <li key={idx}>{item}</li>
                       ))}
@@ -233,7 +233,7 @@ export function HowToPlayModal({ open, onClose, initialPhase }: HowToPlayModalPr
           })}
         </div>
         {showScrollIndicator && (
-          <div className="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-white to-transparent pointer-events-none flex items-end justify-center pb-2">
+          <div className={`absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t pointer-events-none flex items-end justify-center pb-2 ${!isDark ? 'from-white to-transparent' : 'from-slate-800 to-transparent'}`}>
             <svg
               className="h-6 w-6 text-slate-400 animate-bounce"
               fill="none"

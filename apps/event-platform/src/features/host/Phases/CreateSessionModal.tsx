@@ -89,7 +89,7 @@ export function CreateSessionModal({
           error={createErrors.venueName}
           isDark={isDark}
         />
-        <p className={`text-xs ${!isDark ? 'text-slate-500' : 'text-cyan-400'}`}>
+        <p className={`text-xs ${!isDark ? 'text-slate-600' : 'text-slate-400'}`}>
           You'll get a 6-character room code and QR to share with teams.
           Anonymous sign-in keeps things lightweight.
         </p>

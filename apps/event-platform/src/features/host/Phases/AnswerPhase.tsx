@@ -1,4 +1,4 @@
-import { Card, Timer, ProgressBar, GroupCard } from "@social/ui";
+import { Card, SessionTimer, GroupCard } from "@social/ui";
 import { useTheme } from "../../../shared/providers/ThemeProvider";
 import type { RoundGroup } from "../../../shared/types";
 
@@ -9,6 +9,7 @@ interface AnswerPhaseProps {
   teamLookup: Map<string, string>;
   sessionEndsAt: string | undefined;
   answerSecs: number;
+  sessionPaused?: boolean;
 }
 
 export function AnswerPhase({
@@ -18,6 +19,7 @@ export function AnswerPhase({
   teamLookup,
   sessionEndsAt,
   answerSecs,
+  sessionPaused = false,
 }: AnswerPhaseProps) {
   const { isDark } = useTheme();
   return (
@@ -32,8 +34,14 @@ export function AnswerPhase({
             : "Grouping teams..."}
         </p>
       </div>
-      <Timer endTime={sessionEndsAt} label="Answer time" />
-      <ProgressBar endTime={sessionEndsAt} totalSeconds={answerSecs} />
+      <SessionTimer
+        endTime={sessionEndsAt}
+        totalSeconds={answerSecs}
+        paused={sessionPaused}
+        label="Answer time"
+        size="lg"
+        isDark={isDark}
+      />
       <div className="space-y-4">
         {roundGroups.length ? (
           roundGroups.map((group, index) => (
@@ -43,6 +51,7 @@ export function AnswerPhase({
               index={index}
               teamLookup={teamLookup}
               variant="host"
+              isDark={isDark}
             />
           ))
         ) : (

@@ -9,6 +9,7 @@ import {
   advancePhase,
   fetchAnalytics,
   setPromptLibrary,
+  pauseSession,
 } from "../session/sessionService";
 import { useAnswers, useTeams, useSession, useVotes } from "../session/hooks";
 import type { Session, Answer } from "../../shared/types";
@@ -72,6 +73,7 @@ export function HostPage() {
   const [analytics, setAnalytics] = useState<SessionAnalytics | null>(null);
   const [isPerformingAction, setIsPerformingAction] = useState(false);
   const [isEndingSession, setIsEndingSession] = useState(false);
+  const [isPausingSession, setIsPausingSession] = useState(false);
   const [showEndSessionModal, setShowEndSessionModal] = useState(false);
   const [kickingTeamId, setKickingTeamId] = useState<string | null>(null);
   const sessionRef = useRef<Session | null>(null);
@@ -187,6 +189,10 @@ export function HostPage() {
   useEffect(() => {
     if (!session) return;
     if (!session.endsAt) {
+      autoAdvanceKeyRef.current = null;
+      return;
+    }
+    if (session.paused) {
       autoAdvanceKeyRef.current = null;
       return;
     }
@@ -395,6 +401,29 @@ export function HostPage() {
 
   const copyLinkHandler = handleCopyLink({ toast: addToast });
 
+  const handlePauseToggle = useCallback(async () => {
+    if (!session || isPausingSession) return;
+
+    setIsPausingSession(true);
+    try {
+      await pauseSession({
+        sessionId: session.id,
+        pause: !session.paused
+      });
+      addToast(
+        session.paused ? "Session resumed" : "Session paused",
+        "success"
+      );
+    } catch (error: unknown) {
+      addToast(
+        getErrorMessage(error, "Failed to pause/resume session"),
+        "error"
+      );
+    } finally {
+      setIsPausingSession(false);
+    }
+  }, [session, isPausingSession, addToast]);
+
   const handleReturnHome = useCallback(() => {
     clearHostSession();
     setSessionId(null);
@@ -530,6 +559,7 @@ export function HostPage() {
             teamLookup={teamLookup}
             sessionEndsAt={session.endsAt}
             answerSecs={session.settings.answerSecs ?? 90}
+            sessionPaused={session.paused}
           />
         );
 
@@ -550,6 +580,7 @@ export function HostPage() {
             voteSecs={session.settings.voteSecs ?? 90}
             prompts={prompts}
             sessionRoundIndex={session.roundIndex}
+            sessionPaused={session.paused}
           />
         );
 
@@ -561,6 +592,7 @@ export function HostPage() {
             voteCounts={voteCounts}
             sessionEndsAt={session.endsAt}
             resultsSecs={session.settings.resultsSecs ?? 12}
+            sessionPaused={session.paused}
           />
         );
 
@@ -644,6 +676,73 @@ export function HostPage() {
               >
                 {session ? actionLabel[session.status] : "Create game"}
               </Button>
+              {session && session.status !== "lobby" && session.status !== "ended" && (
+                <Button
+                  variant="secondary"
+                  onClick={handlePauseToggle}
+                  disabled={isPausingSession}
+                  isLoading={isPausingSession}
+                >
+                  {isPausingSession ? (
+                    // Loading spinner
+                    <svg
+                      className="animate-spin w-4 h-4"
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                    >
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                      />
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="m4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                      />
+                    </svg>
+                  ) : session.paused ? (
+                    // Play icon for resume
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      strokeWidth={2}
+                      stroke="currentColor"
+                      className="w-4 h-4"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.348a1.125 1.125 0 010 1.971l-11.54 6.347a1.125 1.125 0 01-1.667-.985V5.653z"
+                      />
+                    </svg>
+                  ) : (
+                    // Pause icon for pause
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      strokeWidth={2}
+                      stroke="currentColor"
+                      className="w-4 h-4"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M15.75 5.25v13.5m-7.5-13.5v13.5"
+                      />
+                    </svg>
+                  )}
+                  <span className="ml-2">
+                    {isPausingSession ? "Loading..." : session.paused ? "Resume" : "Pause"}
+                  </span>
+                </Button>
+              )}
               {session ? (
                 session.status === "ended" ? (
                   <Button variant="secondary" onClick={handleReturnHome}>

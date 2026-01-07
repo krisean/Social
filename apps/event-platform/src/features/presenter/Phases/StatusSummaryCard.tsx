@@ -17,6 +17,7 @@ export function StatusSummaryCard({
   totalSeconds,
 }: StatusSummaryCardProps) {
   const { isDark } = useTheme();
+
   return (
     <Card className="space-y-4" isDark={isDark}>
       <div className="flex flex-col gap-4">
@@ -30,11 +31,15 @@ export function StatusSummaryCard({
           </p>
         ) : null}
         {session.status !== "lobby" ? (
-          <ProgressBar
-            endTime={session.endsAt}
-            totalSeconds={totalSeconds}
-            variant="brand"
-          />
+          <div className="space-y-3">
+            <ProgressBar
+              endTime={session.endsAt}
+              totalSeconds={totalSeconds}
+              variant="brand"
+              isDark={isDark}
+              paused={session.paused}
+            />
+          </div>
         ) : null}
       </div>
     </Card>

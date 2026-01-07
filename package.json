@@ -9,7 +9,7 @@
   "scripts": {
     "build": "turbo run build",
     "dev": "turbo run dev",
-    "dev:kill": "taskkill /F /FI \"IMAGENAME eq node.exe\" /T >nul 2>&1 && echo Process cleanup complete || echo No processes to kill",
+    "dev:kill": "powershell -NoProfile -ExecutionPolicy Bypass -File ../scripts/dev-kill.ps1",
     "lint": "turbo run lint",
     "test": "turbo run test",
     "type-check": "turbo run type-check",

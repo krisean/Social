@@ -1,4 +1,4 @@
-import { Card, RoundSummaryCard, ProgressBar, Timer } from "@social/ui";
+import { Card, RoundSummaryCard, SessionTimer } from "@social/ui";
 import { useTheme } from "../../../shared/providers/ThemeProvider";
 import type { RoundGroup, Answer } from "../../../shared/types";
 
@@ -13,6 +13,7 @@ interface ResultsPhaseProps {
   voteCounts: Map<string, number>;
   sessionEndsAt: string | undefined;
   resultsSecs: number;
+  sessionPaused?: boolean;
 }
 
 export function ResultsPhase({
@@ -21,6 +22,7 @@ export function ResultsPhase({
   voteCounts,
   sessionEndsAt,
   resultsSecs,
+  sessionPaused = false,
 }: ResultsPhaseProps) {
   const { isDark } = useTheme();
   return (
@@ -29,22 +31,26 @@ export function ResultsPhase({
         <span className="text-xs font-semibold uppercase tracking-wide text-brand-primary">
           Round results
         </span>
-        <h3 className={`text-2xl font-bold ${!isDark ? 'text-slate-900' : 'text-white'}`}>
+        <h3 className={`text-2xl font-bold text-brand-primary`}>
           Recap for round {sessionRoundIndex + 1}
         </h3>
         <p className={`text-sm ${!isDark ? 'text-slate-600' : 'text-slate-300'}`}>
           Highlight the winning answers from each group below.
         </p>
         
-        <Timer endTime={sessionEndsAt} 
+        <SessionTimer
+          endTime={sessionEndsAt}
+          totalSeconds={resultsSecs}
+          paused={sessionPaused}
           label={
             <span className="flex items-center">
               Next round starts soon
               <span className="ml-1 dots" />
             </span>
           }
+          size="md"
+          isDark={isDark}
         />
-      <ProgressBar endTime={sessionEndsAt} totalSeconds={resultsSecs} />
       </div>
       <div className="space-y-4">
         {roundSummaries.length ? (
@@ -54,6 +60,7 @@ export function ResultsPhase({
               summary={summary}
               voteCounts={voteCounts}
               variant="host"
+              isDark={isDark}
             />
           ))
         ) : (

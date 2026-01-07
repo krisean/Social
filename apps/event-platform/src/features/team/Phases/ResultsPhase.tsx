@@ -33,8 +33,8 @@ export function ResultsPhase({
           Round {session.roundIndex + 1} recap & leaderboard.
         </p>
       </div>
-      <div className={`rounded-3xl p-5 shadow-2xl ${!isDark ? 'bg-white' : 'bg-slate-800'}`}>
-        <h3 className={`text-sm font-semibold uppercase tracking-wide ${!isDark ? 'text-slate-500' : 'text-slate-400'}`}>
+      <div className={`elevated-card p-5`}>
+        <h3 className={`text-sm font-semibold uppercase tracking-wide transition-all duration-200 ${!isDark ? 'text-slate-700' : 'text-cyan-400 drop-shadow-sm'}`}>
           Current leaderboard
         </h3>
         <div className="mt-3">
@@ -42,7 +42,9 @@ export function ResultsPhase({
             leaderboard={finalLeaderboard}
             highlightTeamId={currentTeam?.id}
             maxItems={6}
-            variant="team"
+            variant="presenter"
+            className="grid gap-3 text-lg font-semibold lg:grid-cols-2"
+            isDark={isDark}
           />
         </div>
       </div>

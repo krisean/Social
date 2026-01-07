@@ -37,22 +37,6 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
   ) => {
     const { isDark } = useTheme();
 
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/a69819e8-9d71-41d5-9eff-d29002c337af', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        location: 'Button.tsx:39',
-        message: 'Button rendered with theme',
-        data: { isDark, variant },
-        timestamp: Date.now(),
-        sessionId: 'debug-session',
-        runId: 'brand-colors-test',
-        hypothesisId: 'brand-colors-themed'
-      })
-    }).catch(() => {});
-    // #endregion
-
     const variantStyles: Record<ButtonVariant, string> = {
       primary:
         "bg-brand-primary text-white shadow-lg hover:bg-brand-dark focus-visible:outline-brand-primary",

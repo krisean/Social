@@ -2,7 +2,7 @@
 
 ## Overview
 
-This application has been refactored from a single game ("Top Comment") into a flexible **Game Engine** that supports multiple games, each with two modes:
+This application has been refactored from a single Firebase-based game ("Top Comment") into a flexible **Game Engine** that supports multiple games, each with two modes. The backend has been migrated from Firebase to **Supabase** with **PostgreSQL** database and **Edge Functions**.
 
 - **Event Mode**: Host-controlled multiplayer sessions with QR codes, presenter views, and synchronized phases
 - **Patron Mode**: Self-service solo play for patrons who want to play anytime without a host
@@ -24,6 +24,8 @@ This application has been refactored from a single game ("Top Comment") into a f
 │  │              Game Registry                         │     │
 │  │  - TopCommentEventGame                             │     │
 │  │  - TopCommentSoloGame                              │     │
+│  │  - ViBoxEventGame                                   │     │
+│  │  - ViBoxSoloGame                                    │     │
 │  │  - [Future games...]                               │     │
 │  └────────────────────────────────────────────────────┘     │
 │                                                              │
@@ -40,65 +42,84 @@ This application has been refactored from a single game ("Top Comment") into a f
 ┌────────────────────────────┴────────────────────────────────┐
 │                    Infrastructure Layer                      │
 │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐      │
-│  │   Supabase   │  │ PostgreSQL   │  │    Auth      │      │
-│  │   Functions  │  │   Database   │  │              │      │
+│  │   Supabase   │  │ PostgreSQL   │  │  Auth/Token  │      │
+│  │ Edge Functions│  │   Database   │  │              │      │
 │  └──────────────┘  └──────────────┘  └──────────────┘      │
 └─────────────────────────────────────────────────────────────┘
 ```
 
 ## Directory Structure
 
-### Backend (`functions/src/`)
+### Backend (`supabase/functions/`)
 
 ```
-functions/src/
-├── engine/                      # Core game engine
-│   ├── types.ts                # Engine type definitions
-│   ├── GameEngine.ts           # GameEngine interface & base class
-│   ├── GameRegistry.ts         # Game registration system
-│   └── GameManager.ts          # Routes requests to games
+supabase/functions/
+├── _shared/                     # Shared utilities
+│   ├── prompts.ts              # Prompt management
+│   ├── types.ts                # Shared type definitions
+│   └── utils.ts                # Utility functions
+├── [game-functions]/           # Game-specific Edge Functions
+│   ├── answers-submit/
+│   ├── sessions-advance/
+│   ├── sessions-analytics/
+│   ├── sessions-create/
+│   ├── sessions-end/
+│   ├── sessions-join/
+│   ├── sessions-kick-player/
+│   ├── sessions-set-prompt-library/
+│   ├── sessions-start/
+│   └── votes-submit/
+└── types.d.ts                  # Generated Supabase types
+```
+
+### Game Engine Packages (`packages/`)
+
+```
+packages/
+├── game-engine/                 # Core game engine
+│   ├── src/
+│   │   ├── GameEngine.ts       # GameEngine interface & base class
+│   │   ├── GameRegistry.ts     # Game registration system
+│   │   ├── EventManager.ts     # Event coordination
+│   │   ├── types.ts            # Engine type definitions
+│   │   └── index.ts
+│   └── package.json
 ├── games/                       # Game implementations
-│   ├── index.ts                # Game initialization
-│   └── topComment/             # Top Comment game
-│       ├── types.ts            # Game-specific types
-│       ├── sharedLogic.ts      # Common game logic
-│       ├── TopCommentEventGame.ts  # Event mode implementation
-│       └── TopCommentSoloGame.ts   # Patron mode implementation
-├── shared/                      # Shared utilities
-│   ├── promptLibraries.ts
-│   └── mascots.ts
-└── index.ts                     # Cloud Functions entry point
+│   ├── topcomment/
+│   │   ├── src/
+│   │   │   ├── EventMode.ts    # Event mode game logic
+│   │   │   ├── PatronMode.ts   # Patron mode game logic
+│   │   │   ├── components.ts   # Game UI components
+│   │   │   ├── logic.ts        # Shared game logic
+│   │   │   ├── types.ts        # Game-specific types
+│   │   │   └── index.ts
+│   │   └── package.json
+│   └── vibox/                  # ViBox game implementation
+└── ui/                          # Shared UI components
+    ├── src/components/
+    │   ├── Card.tsx
+    │   ├── Timer.tsx
+    │   ├── QRCodeBlock.tsx
+    │   └── ...
+    └── package.json
 ```
 
-### Frontend (`client/src/`)
+### Frontend Applications (`apps/`)
 
 ```
-client/src/
-├── engine/                      # Core engine types (frontend)
-│   ├── types.ts
-│   ├── GameEngine.ts
-│   └── GameRegistry.ts
-├── games/                       # Game implementations
-│   └── topComment/
-│       ├── types.ts            # Game-specific types
-│       ├── components/         # Shared components
-│       │   ├── AnswerCard.tsx
-│       │   ├── GroupCard.tsx
-│       │   ├── Leaderboard.tsx
-│       │   └── RoundSummaryCard.tsx
-│       ├── event/              # Event mode UI
-│       │   ├── host/
-│       │   ├── team/
-│       │   └── presenter/
-│       └── patron/             # Patron mode UI
-│           └── SoloPage.tsx
-├── features/                    # Legacy structure (to be migrated)
-│   ├── host/
-│   ├── team/
-│   └── presenter/
-└── shared/                      # Shared utilities
-    ├── types.ts
-    └── utils/
+apps/
+├── event-platform/              # Main event platform
+│   ├── src/
+│   │   ├── features/
+│   │   │   ├── host/           # Host interface
+│   │   │   ├── team/           # Team/player interface
+│   │   │   └── presenter/      # Presenter display
+│   │   ├── shared/             # Shared utilities
+│   │   └── components/         # App-specific components
+│   └── package.json
+├── dashboard/                   # Admin dashboard
+├── topcomment-247/             # Legacy TopComment app
+└── vibox-247/                  # Legacy ViBox app
 ```
 
 ## Key Concepts
@@ -186,15 +207,15 @@ GameManager.handlePlayerAction(sessionId, playerId, {
 
 ## Adding a New Game
 
-### Step 1: Create Game Implementation
+### Step 1: Create Game Package
 
-Create a new directory in `functions/src/games/[game-name]/`:
+Create a new game package in `packages/games/[game-name]/`:
 
 ```typescript
-// functions/src/games/myGame/MyGameEventGame.ts
-import { BaseGameEngine } from "../../engine/GameEngine";
+// packages/games/myGame/src/EventMode.ts
+import { GameEngine } from "@social/game-engine";
 
-export class MyGameEventGame extends BaseGameEngine {
+export class MyGameEventMode implements GameEngine {
   descriptor = {
     id: "my-game-event",
     name: "My Game (Event)",
@@ -203,14 +224,14 @@ export class MyGameEventGame extends BaseGameEngine {
   };
 
   async createSession(sessionId, creator, settings, tx) {
-    // Initialize game state
+    // Initialize game state in PostgreSQL
     const state = { /* ... */ };
     return {
       gameId: this.descriptor.id,
       phase: { id: "lobby" },
       settings: this.validateSettings(settings),
       state,
-      createdAt: this.now(),
+      createdAt: new Date(),
     };
   }
 
@@ -221,30 +242,49 @@ export class MyGameEventGame extends BaseGameEngine {
 ### Step 2: Register the Game
 
 ```typescript
-// functions/src/games/index.ts
-import { MyGameEventGame } from "./myGame/MyGameEventGame";
+// packages/games/myGame/src/index.ts
+import { MyGameEventMode } from "./EventMode";
 
-export function initializeGames(): void {
-  GameRegistry.register(new TopCommentEventGame());
-  GameRegistry.register(new TopCommentSoloGame());
-  GameRegistry.register(new MyGameEventGame()); // Add here
-}
+export const myGameEventMode = new MyGameEventMode();
+export const myGamePatronMode = new MyGamePatronMode();
 ```
 
-### Step 3: Create Frontend UI
-
-Create UI components in `client/src/games/[game-name]/`:
+Update the main game registry:
 
 ```typescript
-// client/src/games/myGame/event/host/HostPage.tsx
-export function MyGameHostPage() {
-  // Implement host interface
-}
+// packages/games/index.ts
+import { myGameEventMode, myGamePatronMode } from "./myGame";
+
+export const games = [
+  // ... existing games
+  myGameEventMode,
+  myGamePatronMode,
+];
 ```
 
-### Step 4: Add Routes
+### Step 3: Create UI Components
 
-Update `client/src/app/router.tsx` to include your game's routes.
+Add game-specific components:
+
+```typescript
+// packages/games/myGame/src/components.ts
+export const MyGameComponents = {
+  AnswerCard: MyGameAnswerCard,
+  GroupCard: MyGameGroupCard,
+  // ... other components
+};
+```
+
+### Step 4: Integrate with Apps
+
+Update the event platform to support your game:
+
+```typescript
+// apps/event-platform/src/features/host/HostPage.tsx
+import { games } from "@social/games";
+
+// Use game-specific logic and components
+```
 
 ## Event Mode vs Patron Mode
 
@@ -271,12 +311,11 @@ Update `client/src/app/router.tsx` to include your game's routes.
 ```
 Client (Host)
   ↓ createSession({ gameId, teamName })
-GameManager
-  ↓ registry.get(gameId)
-TopCommentEventGame
-  ↓ createSession()
-PostgreSQL: sessions table (id = sessionId)
-  ↓ real-time listener
+Supabase Edge Function
+  ↓ sessions-create
+GameEngine.createSession()
+  ↓ PostgreSQL: sessions table (id = sessionId)
+  ↓ Real-time subscription
 Client (All players)
 ```
 
@@ -285,12 +324,11 @@ Client (All players)
 ```
 Client (Player)
   ↓ submitAnswer({ text })
-GameManager
-  ↓ handlePlayerAction()
-TopCommentEventGame
-  ↓ saveAnswer()
-PostgreSQL: sessions table (id = sessionId)/answers/{answerId}
-  ↓ auto-advance check
+Supabase Edge Function
+  ↓ answers-submit
+GameEngine.handlePlayerAction()
+  ↓ PostgreSQL: sessions/answers tables
+  ↓ Auto-advance check
 advancePhase() [if all answered]
 ```
 
@@ -385,15 +423,19 @@ describe("TopCommentEventGame", () => {
   it("should create session with correct initial state", async () => {
     const game = new TopCommentEventGame();
     const session = await game.createSession(/* ... */);
-    expect(session.state.roundIndex).toBe(0);
+    expect(session.roundIndex).toBe(0);
   });
 });
 ```
 
 ### Integration Tests
-Test full flows with Firebase emulators:
+Test with Supabase local development:
 
 ```bash
+# Start Supabase locally
+supabase start
+
+# Run tests
 npm run test:integration
 ```
 
@@ -404,24 +446,33 @@ Use Playwright to test complete user flows:
 npm run test:e2e
 ```
 
-## Migration Guide
+## Migration Status
 
-### Migrating Existing Sessions
+### Firebase → Supabase Migration (✅ Complete)
 
-When deploying the new architecture, existing sessions should continue to work. The current implementation maintains backward compatibility by:
+The application has been successfully migrated from Firebase/Firestore to Supabase/PostgreSQL:
 
-1. Keeping existing Cloud Functions as wrappers
-2. Using the same Firestore collections
-3. Maintaining the same data structures
-4. Supporting legacy routes
+1. **✅ Database Migration**: Firestore collections → PostgreSQL tables
+2. **✅ Function Migration**: Firebase Cloud Functions → Supabase Edge Functions
+3. **✅ Authentication**: Firebase Auth → Supabase Auth
+4. **✅ Real-time**: Firestore listeners → Supabase realtime subscriptions
+5. **✅ Architecture**: Monorepo with shared packages
 
-### Gradual Migration
+### Current Architecture
 
-1. **Phase 1**: Deploy engine with Top Comment Event (✅ Complete)
-2. **Phase 2**: Add Top Comment Patron mode (✅ Complete)
-3. **Phase 3**: Add new games using the engine
-4. **Phase 4**: Migrate legacy frontend code to new structure
-5. **Phase 5**: Remove deprecated legacy functions
+1. **✅ Top Comment Event Mode**: Host-controlled multiplayer sessions
+2. **✅ Top Comment Patron Mode**: Self-service solo play
+3. **✅ ViBox Event Mode**: Chart-based music game
+4. **✅ ViBox Patron Mode**: Solo music quiz
+5. **🔄 Multiple Apps**: event-platform, dashboard, legacy apps
+6. **📦 Shared Packages**: game-engine, games, ui, db, auth
+
+### Future Enhancements
+
+- Add new games using the engine
+- Expand patron mode features
+- Enhanced analytics and reporting
+- Tournament and competition modes
 
 ## Future Enhancements
 
@@ -438,9 +489,11 @@ When deploying the new architecture, existing sessions should continue to work. 
 ## Support
 
 For questions or issues:
-- See `architecture.md` for system overview
+- See `docs/04-tech-architecture.md` for system overview
 - Check `README.md` for setup instructions
-- Review game implementations in `functions/src/games/` for examples
+- Review game implementations in `packages/games/` for examples
+- Check `SUPABASE_MIGRATION.md` for migration details
+- See `MIGRATION_STATUS.md` for current status
 
 
 

@@ -64,6 +64,9 @@ function mapSession(data: any): Session | null {
     },
     venueName: data.venue_name,
     promptLibraryId: typeof data.prompt_library_id === "string" ? data.prompt_library_id : undefined,
+    paused: data.paused ?? false,
+    pausedAt: data.paused_at,
+    totalPausedMs: data.total_paused_ms ?? 0,
   };
 }
 
@@ -433,4 +436,13 @@ export const fetchAnalytics = async (
   if (error) throw error;
   if (!data) return null;
   return data.analytics;
+};
+
+export const pauseSession = async (payload: { sessionId: string; pause: boolean }) => {
+  const { data, error } = await supabase.functions.invoke<{ session: Session }>(
+    "sessions-pause",
+    { body: payload }
+  );
+  if (error) throw error;
+  return data;
 };

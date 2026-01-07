@@ -1,4 +1,4 @@
-import { Card, Timer, ProgressBar, AnswerCard } from "@social/ui";
+import { Card, SessionTimer, AnswerCard } from "@social/ui";
 import { useTheme } from "../../../shared/providers/ThemeProvider";
 import type { Answer, RoundGroup } from "../../../shared/types";
 
@@ -22,6 +22,7 @@ interface VotePhaseProps {
   voteSecs: number;
   prompts: string[];
   sessionRoundIndex: number;
+  sessionPaused?: boolean;
 }
 
 export function VotePhase({
@@ -39,6 +40,7 @@ export function VotePhase({
   voteSecs,
   prompts,
   sessionRoundIndex,
+  sessionPaused = false,
 }: VotePhaseProps) {
   const { isDark } = useTheme();
   return (
@@ -52,17 +54,23 @@ export function VotePhase({
             ? `Group ${activeGroupIndex + 1} of ${totalGroups}`
             : "Waiting for groups"}
         </p>
-        <h3 className={`text-2xl font-bold ${!isDark ? 'text-slate-900' : 'text-white'}`}>
+        <h3 className={`text-2xl font-bold text-brand-primary`}>
           {activeGroup?.prompt ??
             roundGroups[activeGroupIndex]?.prompt ??
             prompts[sessionRoundIndex % prompts.length]}
         </h3>
-        <p className={`text-sm ${!isDark ? 'text-slate-600' : 'text-slate-300'}`}>
+        <p className={`text-sm ${!isDark ? 'text-slate-600' : 'text-brand-primary'}`}>
           Everyone votes on the answers from this group.
         </p>
       </div>
-      <Timer endTime={sessionEndsAt} label="Voting ends" />
-      <ProgressBar endTime={sessionEndsAt} totalSeconds={voteSecs} />
+      <SessionTimer
+        endTime={sessionEndsAt}
+        totalSeconds={voteSecs}
+        paused={sessionPaused}
+        label="Voting ends"
+        size="md"
+        isDark={isDark}
+      />
       <div className="grid gap-4">
         {activeGroupAnswers.length ? (
           activeGroupAnswers.map((answer) => {
@@ -77,17 +85,18 @@ export function VotePhase({
                 onClick={() => handleHostVote(answer.id)}
                 disabled={isSubmittingVote}
                 variant="host"
+                isDark={isDark}
               />
             );
           })
         ) : (
-          <p className={`text-sm ${!isDark ? 'text-slate-500' : 'text-slate-400'}`}>
+          <p className={`text-sm font-medium ${!isDark ? 'text-slate-600' : 'text-slate-300'}`}>
             Waiting for answers from this group...
           </p>
         )}
       </div>
-      <div className={`rounded-3xl p-4 shadow-inner ${!isDark ? 'bg-white' : 'bg-slate-800'}`}>
-        <h4 className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+      <div className="elevated-card p-4">
+        <h4 className={`text-xs font-semibold uppercase tracking-wide ${!isDark ? 'text-slate-700' : 'text-brand-primary'}`}>
           Group progress
         </h4>
         <ul className="mt-3 space-y-2 text-sm">
@@ -101,10 +110,10 @@ export function VotePhase({
             return (
               <li
                 key={summary.group.id}
-                className={`flex items-center justify-between rounded-2xl px-4 py-3 ${
+                className={`timer-elevated flex items-center justify-between px-4 py-3 ${
                   isCurrent
-                    ? "bg-brand-light text-brand-primary"
-                    : `${!isDark ? 'bg-slate-100 text-slate-600' : 'bg-slate-700 text-slate-300'}`
+                    ? `${!isDark ? 'text-brand-primary' : 'text-cyan-400 neon-glow-cyan'}`
+                    : `${!isDark ? 'text-slate-800' : 'text-slate-200'}`
                 }`}
               >
                 <span>

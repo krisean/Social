@@ -110,7 +110,7 @@ export function AuthPage() {
   };
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-br from-brand-light via-white to-white px-6 py-10">
+    <main className={`flex min-h-screen flex-col items-center justify-center px-6 py-10 ${!isDark ? 'bg-amber-50' : 'bg-slate-950'}`}>
       {/* Notification Popup */}
       {notification && (
         <div className="fixed bottom-4 right-4 z-50 max-w-sm">
@@ -146,14 +146,14 @@ export function AuthPage() {
           <h1 className="text-3xl font-black text-brand-primary sm:text-4xl">
             {isLogin ? "Welcome Back" : "Join Söcial"}
           </h1>
-          <p className="mt-2 text-slate-600">
+          <p className={`mt-2 ${!isDark ? 'text-slate-600' : 'text-slate-400'}`}>
             {isLogin
               ? "Sign in to save your game history"
               : "Create an account to track your wins"}
           </p>
         </header>
 
-        <Card className="p-6">
+        <Card className="p-6" isDark={isDark}>
           <form onSubmit={handleSubmit} className="space-y-4">
             {!isLogin && (
               <FormField
@@ -207,10 +207,10 @@ export function AuthPage() {
           <div className="mt-6 space-y-3">
             <div className="relative">
               <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-slate-300" />
+                <div className={`w-full border-t ${!isDark ? 'border-slate-300' : 'border-slate-600'}`} />
               </div>
               <div className="relative flex justify-center text-sm">
-                <span className="bg-white px-2 text-slate-500">Or</span>
+                <span className={`px-2 ${!isDark ? 'bg-white text-slate-500' : 'bg-slate-800 text-slate-400'}`}>Or</span>
               </div>
             </div>
 
@@ -220,6 +220,7 @@ export function AuthPage() {
               className="w-full"
               onClick={handleGuestMode}
               disabled={loading}
+              isDark={isDark}
             >
               Continue as Guest
             </Button>
@@ -229,7 +230,7 @@ export function AuthPage() {
             <button
               type="button"
               onClick={() => setIsLogin(!isLogin)}
-              className="text-sm text-brand-primary hover:text-brand-dark underline"
+              className={`text-sm underline ${!isDark ? 'text-brand-primary hover:text-brand-dark' : 'text-cyan-400 hover:text-cyan-300'}`}
             >
               {isLogin
                 ? "Don't have an account? Sign up"
@@ -238,7 +239,7 @@ export function AuthPage() {
           </div>
         </Card>
 
-        <div className="mt-6 text-center text-sm text-slate-500">
+        <div className={`mt-6 text-center text-sm ${!isDark ? 'text-slate-500' : 'text-slate-400'}`}>
           <p>
             Guest mode allows you to play without an account, but your progress
             won't be saved.

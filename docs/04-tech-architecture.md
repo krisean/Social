@@ -9,7 +9,7 @@
 ```
 social/
 ├── apps/
-│   ├── web/          # social.gg landing + admin panel
+│   ├── web/          # playnow.social landing + admin panel
 │   ├── topcomment/   # Game 1: Twitter parody PWA
 │   ├── vibox/        # Game 2: AI jukebox PWA
 │   └── dashboard/    # Venue staff analytics dashboard
@@ -158,7 +158,7 @@ Revenue tracking per song
 - Apps: Vercel (Pro tier, $20/month)
 - Database: Supabase (Pro tier, $25/month)
 - AI: OpenAI ($5/month), Suno credits ($10 startup)
-- Domain: social.gg ($100/year)
+- Domain: playnow.social ($100/year)
 - Trademark: CIPO intent-to-use ($250)
 
 **Total Startup:** $485
@@ -170,6 +170,6 @@ Revenue tracking per song
 - [ ] Add dependencies: Supabase, OpenAI, React, Tailwind
 - [ ] Implement Supabase schema + RLS policies
 - [ ] Build Top Comment QR join screen
-- [ ] Deploy PWA to Vercel: `social.gg/topcomment`
+- [ ] Deploy PWA to Vercel: `playnow.social/topcomment`
 - [ ] Generate 10 test QR codes
 - [ ] Pilot at Felicita's/Christie's

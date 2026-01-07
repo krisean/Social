@@ -4,11 +4,13 @@ import type { RoundGroup } from "../../../shared/types";
 interface AnswerPhaseProps {
   roundGroups: RoundGroup[];
   teamLookup: Map<string, string>;
+  isDark?: boolean;
 }
 
 export function AnswerPhase({
   roundGroups,
   teamLookup,
+  isDark = false,
 }: AnswerPhaseProps) {
   return (
     <>
@@ -21,6 +23,7 @@ export function AnswerPhase({
               index={index}
               teamLookup={teamLookup}
               variant="presenter"
+              isDark={isDark}
             />
           ))}
         </section>

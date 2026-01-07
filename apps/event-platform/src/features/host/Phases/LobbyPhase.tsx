@@ -66,7 +66,7 @@ export function LobbyPhase({
               return (
                 <li
                   key={team.id}
-                  className={`flex items-center gap-3 rounded-2xl px-4 py-3 shadow-sm ${!isDark ? 'bg-white' : 'bg-slate-800'}`}
+                  className="elevated-card flex items-center gap-3 px-4 py-3"
                 >
                   {mascot ? (
                     <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full ${!isDark ? 'bg-slate-100' : 'bg-slate-700'}">
@@ -90,8 +90,8 @@ export function LobbyPhase({
                     </div>
                   )}
                   <div className="flex-1 min-w-0">
-                    <span className="text-sm font-medium ${!isDark ? 'text-slate-700' : 'text-slate-300'} truncate">{team.teamName}</span>
-                    <span className="text-xs ${!isDark ? 'text-slate-500' : 'text-slate-400'} ml-2">Score: {team.score}</span>
+                    <span className={`text-sm font-medium ${!isDark ? 'text-slate-800' : 'text-slate-200'} truncate`}>{team.teamName}</span>
+                    <span className={`text-xs ${!isDark ? 'text-slate-600' : 'text-cyan-300'} ml-2`}>Score: {team.score}</span>
                   </div>
                 </li>
               );

@@ -11,7 +11,7 @@ export function SpotlightPhase({ sessionEndsAt }: SpotlightPhaseProps) {
     <Card className="space-y-6" isDark={isDark}>
       <div className="flex flex-col items-center justify-center space-y-6 py-12">
         <h2 className={`text-6xl font-black ${!isDark ? 'text-slate-900' : 'text-white'}`}>Spotlight</h2>
-        <Timer endTime={sessionEndsAt} label="Time left" />
+        <Timer endTime={sessionEndsAt} label="Time left" isDark={isDark} />
         <ProgressBar endTime={sessionEndsAt} totalSeconds={30} />
       </div>
     </Card>

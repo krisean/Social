@@ -19,6 +19,7 @@ export function EndedPhase({ leaderboard }: EndedPhaseProps) {
           maxItems={8}
           variant="presenter"
           className="space-y-3 text-2xl font-semibold"
+          isDark={isDark}
         />
       </div>
     </Card>

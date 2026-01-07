@@ -35,12 +35,13 @@ export function VotePhase({
                 authorName={author}
                 showSummary={voteSummaryActive}
                 variant="presenter"
+                isDark={isDark}
               />
             );
           })
         ) : (
-          <Card className="col-span-full text-center" isDark={isDark}>
-            <p className={`${!isDark ? 'text-slate-600' : 'text-slate-300'}`}>
+          <Card className="elevated-card col-span-full text-center" isDark={isDark}>
+            <p className={`text-sm font-medium ${!isDark ? 'text-slate-700' : 'text-slate-300'}`}>
               Waiting for answers from this group...
             </p>
           </Card>

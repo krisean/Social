@@ -1,4 +1,4 @@
-import { Card, Button, Timer, ProgressBar } from "@social/ui";
+import { Card, Button, SessionTimer, ProgressBar } from "@social/ui";
 import { useTheme } from "../../../shared/providers/ThemeProvider";
 import { clsx } from "clsx";
 import type { Session, RoundGroup, Answer } from "../../../shared/types";
@@ -40,11 +40,19 @@ export function AnswerPhase({
   return (
     <Card className="space-y-3 p-3 sm:space-y-5 sm:p-5" isDark={isDark}>
       <div className="space-y-2 text-center">
-        <div className={`rounded-2xl px-3 py-2 shadow-2xl text-xs font-semibold ${!isDark ? 'bg-slate-900/95 text-white' : 'bg-slate-800 text-cyan-100'}`}>
-          <Timer endTime={session.endsAt} label="Time left" size="md" />
+        <div className={`rounded-2xl px-3 py-2 shadow-2xl text-xs font-semibold ${!isDark ? 'bg-slate-100 text-slate-900 border border-slate-200' : 'bg-slate-800 text-cyan-100'}`}>
+          <SessionTimer
+            endTime={session.endsAt}
+            totalSeconds={totalSeconds}
+            paused={session.paused}
+            label="Time left"
+            size="sm"
+            showProgressBar={false}
+            isDark={isDark}
+          />
         </div>
         <div className={`rounded-full p-0.5 shadow-inner ${!isDark ? 'bg-white/80 shadow-slate-300' : 'bg-slate-700/80 shadow-slate-600'}`}>
-          <ProgressBar endTime={session.endsAt} totalSeconds={totalSeconds} />
+          <ProgressBar endTime={session.endsAt} totalSeconds={totalSeconds} paused={session.paused} />
         </div>
       </div>
       <p className={`text-center text-xs font-semibold uppercase tracking-wide sm:text-sm ${!isDark ? 'text-slate-800' : 'text-cyan-200'}`}>
@@ -52,7 +60,7 @@ export function AnswerPhase({
       </p>
       {myAnswer ? (
         <div className={`rounded-3xl p-5 text-center ${!isDark ? 'bg-brand-light' : 'bg-cyan-900/30'}`}>
-          <p className={`text-sm font-semibold ${!isDark ? 'text-brand-primary' : 'text-cyan-400'}`}>
+          <p className={`text-sm font-semibold text-brand-primary`}>
             Answer submitted!
           </p>
           <p className={`mt-2 ${!isDark ? 'text-slate-700' : 'text-slate-300'}`}>{myAnswer.text}</p>
@@ -60,12 +68,12 @@ export function AnswerPhase({
       ) : (
         <>
           <div className="space-y-2 sm:space-y-3">
-            <div className={`rounded-3xl px-3 py-3 text-center sm:px-4 sm:py-4 shadow-md ${!isDark ? 'bg-white text-slate-900' : 'bg-slate-800 text-white'}`}>
-              <p className={`text-2xl font-black tracking-tight drop-shadow-lg sm:text-3xl ${!isDark ? 'text-slate-900' : 'text-pink-400'}`}>
+            <div className={`rounded-3xl px-3 py-3 text-center sm:px-4 sm:py-4 shadow-xl border-2 ${!isDark ? 'bg-white border-slate-200 text-slate-900' : 'bg-gradient-to-br from-cyan-900/40 to-blue-900/40 border-cyan-400/50 text-cyan-100'}`}>
+              <p className={`text-2xl font-black tracking-tight drop-shadow-lg sm:text-3xl ${!isDark ? 'text-slate-900' : 'text-pink-300'}`}>
                 {promptFallback}
               </p>
             </div>
-            <div className={`flex items-center justify-between text-[11px] sm:text-xs ${!isDark ? 'text-brand-primary' : 'text-cyan-400'}`}>
+            <div className={`flex items-center justify-between text-[11px] sm:text-xs text-brand-primary`}>
               <span>Type your answer below</span>
               <span
                 className={clsx(

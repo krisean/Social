@@ -8,6 +8,7 @@ interface GroupCardProps {
   teamLookup: Map<string, string>;
   variant?: GroupCardVariant;
   className?: string;
+  isDark?: boolean;
 }
 
 export function GroupCard({
@@ -16,6 +17,7 @@ export function GroupCard({
   teamLookup,
   variant = "host",
   className = "",
+  isDark = false,
 }: GroupCardProps) {
   const members = group.teamIds
     .map((id) => teamLookup.get(id) ?? "Unknown team")
@@ -24,30 +26,30 @@ export function GroupCard({
   if (variant === "presenter") {
     return (
       <div
-        className={`rounded-3xl bg-white p-6 shadow-md ${className}`}
+        className={`elevated-card p-6 ${className}`}
       >
-        <p className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-600">
+        <p className={`text-xs font-semibold uppercase tracking-[0.3em] ${!isDark ? 'text-slate-600' : 'text-brand-primary'}`}>
           Group {index + 1}
         </p>
-        <p className="mt-2 text-xl font-semibold text-slate-900">{group.prompt}</p>
-        <p className="mt-3 text-sm text-slate-600">{members}</p>
+        <p className={`mt-2 text-xl font-semibold ${!isDark ? 'text-slate-900' : 'text-white'}`}>{group.prompt}</p>
+        <p className={`mt-3 text-sm ${!isDark ? 'text-slate-600' : 'text-slate-300'}`}>{members}</p>
       </div>
     );
   }
 
   // Host variant (default)
   return (
-    <div className={`rounded-3xl bg-white p-5 shadow-inner ${className}`}>
+    <div className={`elevated-card p-5 ${className}`}>
       <div className="flex items-center justify-between gap-3">
-        <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+        <span className={`text-xs font-semibold uppercase tracking-wide ${!isDark ? 'text-slate-500' : 'text-brand-primary'}`}>
           Group {index + 1}
         </span>
-        <span className="text-xs font-medium text-slate-400">
+        <span className={`text-xs font-medium ${!isDark ? 'text-slate-400' : 'text-slate-300'}`}>
           {group.teamIds.length} team{group.teamIds.length === 1 ? "" : "s"}
         </span>
       </div>
-      <p className="mt-2 text-sm font-semibold text-slate-900">{group.prompt}</p>
-      <p className="mt-2 text-sm text-slate-600">{members}</p>
+      <p className={`mt-2 text-sm font-semibold ${!isDark ? 'text-slate-900' : 'text-white'}`}>{group.prompt}</p>
+      <p className={`mt-2 text-sm ${!isDark ? 'text-slate-600' : 'text-slate-300'}`}>{members}</p>
     </div>
   );
 }

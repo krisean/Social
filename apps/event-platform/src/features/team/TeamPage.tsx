@@ -1242,7 +1242,7 @@ export function TeamPage() {
             </Button>
           }
         >
-          <p className={`text-sm ${!isDark ? 'text-slate-600' : 'text-cyan-300'}`}>
+          <p className={`text-sm ${!isDark ? 'text-slate-700' : 'text-slate-300'}`}>
             The host has ended this session.
           </p>
         </Modal>

@@ -14,6 +14,11 @@ async function handleAdvanceSession(req: Request, uid: string, supabase: any): P
     if (session.host_uid !== uid) {
       throw new AppError(403, 'Only the host can advance the game', 'permission-denied');
     }
+
+    // Check if session is paused
+    if (session.paused) {
+      throw new AppError(400, 'Cannot advance while session is paused', 'failed-precondition');
+    }
     
     const currentStatus = session.status;
     const roundIndex = session.round_index || 0;
@@ -35,7 +40,7 @@ async function handleAdvanceSession(req: Request, uid: string, supabase: any): P
         endsAt = new Date(Date.now() + (settings.voteSecs || 90) * 1000).toISOString();
         break;
         
-      case 'vote':
+      case 'vote': {
         // Check if there are more groups to vote on
         const groups = currentRound?.groups || [];
         const nextGroupIndex = (voteGroupIndex || 0) + 1;
@@ -54,6 +59,7 @@ async function handleAdvanceSession(req: Request, uid: string, supabase: any): P
           await calculateRoundScores(supabase, sessionId, roundIndex);
         }
         break;
+      }
         
       case 'results':
         // Check if there are more rounds

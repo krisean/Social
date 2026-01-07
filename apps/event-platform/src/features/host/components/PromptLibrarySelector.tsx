@@ -39,7 +39,7 @@ export function PromptLibrarySelector({
           value={query}
           onChange={(event) => setQuery(event.target.value)}
           placeholder="Search libraries"
-          className={`rounded-2xl border px-4 py-2 text-sm shadow-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 ${!isDark ? 'border-slate-200 bg-white focus:border-brand-primary focus:ring-brand-light' : 'border-slate-600 bg-slate-800 focus:border-cyan-400 focus:ring-cyan-400/20'}`}
+          className={`px-4 py-2 text-sm placeholder:text-slate-400 border rounded-lg focus:outline-none focus:ring-2 ${!isDark ? 'bg-white border-slate-200 focus:border-brand-primary focus:ring-brand-light' : 'bg-slate-700 border-slate-600 text-white focus:border-cyan-400 focus:ring-cyan-400/20'}`}
           disabled={disabled}
         />
       </div>
@@ -55,11 +55,7 @@ export function PromptLibrarySelector({
                   onSelect(library.id);
                 }
               }}
-              className={`flex w-64 min-w-[240px] snap-center flex-col gap-3 rounded-3xl border-2 px-4 py-5 text-left transition ${
-                isSelected
-                  ? `${!isDark ? 'border-brand-primary bg-white' : 'border-cyan-400 bg-slate-800'} shadow-2xl`
-                  : `border-transparent ${!isDark ? 'bg-white/90' : 'bg-slate-700/90'} shadow-md hover:shadow-xl`
-              } ${disabled ? "pointer-events-none opacity-60" : ""}`}
+              className={`prompt-card ${isSelected ? (isDark ? 'prompt-card-selected-dark' : 'prompt-card-selected-light') : (isDark ? 'prompt-card-dark' : 'prompt-card-light')} ${disabled ? 'prompt-card-disabled' : ''}`}
               aria-pressed={isSelected}
               disabled={disabled}
             >
@@ -67,11 +63,11 @@ export function PromptLibrarySelector({
                 <span className="text-3xl" aria-hidden="true">
                   {library.emoji}
                 </span>
-                <span className="rounded-full ${!isDark ? 'bg-slate-900/5' : 'bg-slate-600/20'} px-3 py-1 text-xs font-semibold uppercase tracking-wide ${!isDark ? 'text-slate-600' : 'text-slate-300'}">
+                <span className={`prompt-library-name ${isDark ? 'prompt-library-name-dark' : 'prompt-library-name-light'}`}>
                   {library.name}
                 </span>
               </div>
-              <p className="text-sm ${!isDark ? 'text-slate-600' : 'text-slate-300'}">{library.description}</p>
+              <p className={`text-sm ${!isDark ? 'text-slate-700' : 'text-slate-300'}`}>{library.description}</p>
             </button>
           );
         })}

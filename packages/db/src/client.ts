@@ -43,11 +43,11 @@ export function resetClient(): void {
 export type { Database };
 export type Tables = Database['public']['Tables'];
 export type Session = Tables['sessions']['Row'];
-export type Player = Tables['players']['Row'];
-export type Submission = Tables['submissions']['Row'];
+export type Team = Tables['teams']['Row'];  // Updated: players → teams
+export type Answer = Tables['answers']['Row'];  // Updated: submissions → answers
 export type Vote = Tables['votes']['Row'];
 export type Venue = Tables['venues']['Row'];
-export type EventRound = Tables['event_rounds']['Row'];
+// export type EventRound = Tables['event_rounds']['Row'];  // Removed: table doesn't exist
 export type FeedUser = Tables['feed_users']['Row'];
 export type FeedPost = Tables['feed_posts']['Row'];
 export type FeedLike = Tables['feed_likes']['Row'];

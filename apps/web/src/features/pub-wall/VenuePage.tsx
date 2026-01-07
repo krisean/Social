@@ -5,7 +5,7 @@ import { CommentWall } from './components/CommentWall';
 export function VenuePage() {
   const { venueKey } = useParams();
 
-  const { venue, submissions, submitComment, loading } = useVenueWall(venueKey);
+  const { venue, answers, submitComment, loading } = useVenueWall(venueKey);
 
   if (loading) {
     return (
@@ -46,7 +46,7 @@ export function VenuePage() {
         </div>
 
         <CommentWall
-          submissions={submissions}
+          answers={answers}
           onSubmit={submitComment}
           venueName={venue.name}
         />

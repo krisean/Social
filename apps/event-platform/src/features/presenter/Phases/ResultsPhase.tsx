@@ -33,6 +33,7 @@ export function ResultsPhase({
             maxItems={6}
             variant="presenter"
             className="grid gap-3 text-lg font-semibold lg:grid-cols-2"
+            isDark={isDark}
           />
         </div>
       </Card>
@@ -45,6 +46,7 @@ export function ResultsPhase({
               summary={summary}
               voteCounts={voteCounts}
               variant="presenter"
+              isDark={isDark}
             />
           ))
         ) : (

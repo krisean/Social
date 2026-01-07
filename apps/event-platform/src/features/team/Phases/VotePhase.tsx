@@ -63,26 +63,29 @@ export function VotePhase({
     : "No groups";
 
   return (
-    <Card className="space-y-3 p-3 sm:space-y-5 sm:p-5" isDark={isDark}>
-      <div className="space-y-1.5 text-center sm:space-y-2">
-        <h2 className={`text-xl font-bold sm:text-2xl ${!isDark ? 'text-slate-900' : 'text-white'}`}>
+    <Card className={`space-y-3 p-3 sm:space-y-5 sm:p-5 ${isDark ? 'relative' : ''}`} isDark={isDark}>
+      {isDark && (
+        <div className="absolute inset-0 rounded-3xl bg-gradient-radial from-purple-500/10 via-cyan-500/15 to-transparent pointer-events-none" />
+      )}
+      <div className="relative space-y-1.5 text-center sm:space-y-2">
+        <h2 className={`text-xl font-bold sm:text-2xl ${!isDark ? 'text-slate-900' : 'text-cyan-400 neon-glow-cyan'}`}>
           {statusHeadline[session.status]}
         </h2>
-        <p className={`text-[11px] font-semibold uppercase tracking-wide sm:text-xs ${!isDark ? 'text-slate-700' : 'text-slate-300'}`}>
+        <p className={`text-[11px] font-semibold uppercase tracking-wide sm:text-xs ${!isDark ? 'text-slate-500' : 'text-slate-400'}`}>
           {groupLabel}
         </p>
-        <p className={`text-base font-semibold sm:text-lg ${!isDark ? 'text-slate-900' : 'text-white'}`}>
+        <p className={`text-base font-black sm:text-lg ${!isDark ? 'text-slate-800' : 'text-pink-300 neon-glow-pink'}`}>
           {promptValue}
         </p>
-        <p className={`text-xs font-semibold sm:text-sm ${!isDark ? 'text-brand-primary' : 'text-cyan-400'}`}>
+        <p className={`text-xs font-medium sm:text-sm ${!isDark ? 'text-slate-600' : 'text-slate-400'}`}>
           {isVotingOnOwnGroup
             ? "Viewing your group's answers — you cannot vote in your own group."
             : "Tap your favorite answer — everyone can vote."}
         </p>
       </div>
-      <Timer endTime={session.endsAt} label="Voting ends" size="md" />
+      <Timer endTime={session.endsAt} label="Voting ends" size="md" isDark={isDark} paused={session.paused} />
       <div className={`rounded-full p-0.5 shadow-inner ${!isDark ? 'bg-white/80 shadow-slate-300' : 'bg-slate-700/80 shadow-slate-600'}`}>
-        <ProgressBar endTime={session.endsAt} totalSeconds={totalSeconds} />
+        <ProgressBar endTime={session.endsAt} totalSeconds={totalSeconds} isDark={isDark} paused={session.paused} />
       </div>
       <div className="space-y-3">
         {activeGroupAnswers.length ? (
@@ -96,19 +99,19 @@ export function VotePhase({
             return (
               <article
                 key={answer.id}
-                className={`flex gap-3 rounded-2xl p-4 transition-all duration-200 cursor-pointer shadow-md ${
-                  !isDark ? 'bg-white' : 'bg-slate-800'
+                className={`flex gap-3 rounded-2xl p-4 transition-all duration-200 cursor-pointer shadow-lg border ${
+                  !isDark ? 'bg-slate-100 text-slate-900 border-slate-200 shadow-slate-300/40' : 'bg-cyan-900/50 text-white border-cyan-400/60 shadow-cyan-500/25'
                 } ${
                   isSelected
-                    ? `${!isDark ? 'ring-4 ring-amber-400 bg-amber-50/30' : 'ring-4 ring-cyan-400 bg-cyan-900/30'} shadow-lg`
-                    : `hover:${!isDark ? 'bg-white/5' : 'bg-slate-700/50'}`
+                    ? `${!isDark ? 'ring-4 ring-brand-primary bg-brand-light/50' : 'ring-4 ring-cyan-400 bg-cyan-400/20 card-glow-selected'} shadow-lg`
+                    : `${!isDark ? `hover:bg-slate-50 border-slate-300/60` : `card-hover-glow hover:bg-cyan-800/40 border-cyan-300/60`}`
                 } ${isSubmittingVote || voteSummaryActive || isVotingOnOwnGroup ? "opacity-70 cursor-not-allowed" : ""}`}
                 onClick={() => !isSubmittingVote && !voteSummaryActive && !isVotingOnOwnGroup && handleVote(answer.id)}
               >
                 {/* Avatar/Mascot */}
                 <div className="flex-shrink-0">
                   {mascot ? (
-                    <div className={`w-12 h-12 rounded-full flex items-center justify-center text-lg ${!isDark ? 'bg-slate-100' : 'bg-slate-700'}`}>
+                    <div className={`w-12 h-12 rounded-full flex items-center justify-center text-lg border-2 ${!isDark ? 'bg-white border-slate-300' : 'bg-slate-700 border-slate-500'}`}>
                       <img
                         src={mascot.path}
                         alt={mascot.name}
@@ -118,13 +121,13 @@ export function VotePhase({
                           const parent = e.currentTarget.parentElement;
                           if (parent) {
                             parent.textContent = authorName.charAt(0).toUpperCase();
-                            parent.className = `w-12 h-12 rounded-full flex items-center justify-center text-lg font-bold ${!isDark ? 'bg-slate-200 text-slate-600' : 'bg-slate-600 text-slate-300'}`;
+                            parent.className = `w-12 h-12 rounded-full flex items-center justify-center text-lg font-bold border-2 ${!isDark ? 'bg-white border-slate-300 text-slate-600' : 'bg-slate-700 border-slate-500 text-slate-300'}`;
                           }
                         }}
                       />
                     </div>
                   ) : (
-                    <div className={`w-12 h-12 rounded-full flex items-center justify-center text-lg font-bold ${!isDark ? 'bg-slate-200 text-slate-600' : 'bg-slate-600 text-slate-300'}`}>
+                    <div className={`w-12 h-12 rounded-full flex items-center justify-center text-lg font-bold border-2 ${!isDark ? 'bg-white border-slate-300 text-slate-600' : 'bg-slate-700 border-slate-500 text-slate-300'}`}>
                       {authorName.charAt(0).toUpperCase()}
                     </div>
                   )}
@@ -156,8 +159,8 @@ export function VotePhase({
                     disabled={isSubmittingVote || voteSummaryActive || isVotingOnOwnGroup}
                     className={`text-2xl transition-all duration-200 ${
                       isSelected
-                        ? "transform scale-110 text-red-500"
-                        : "text-slate-400 hover:text-red-400"
+                        ? `${!isDark ? 'transform scale-110 text-red-500' : 'transform scale-110 text-red-500'} ${isDark ? 'neon-glow-magenta' : ''}`
+                        : `${!isDark ? 'text-slate-400 hover:text-red-400' : 'text-slate-400 hover:text-red-400'} ${isDark ? 'hover:neon-glow-magenta' : ''}`
                     }`}
                     aria-label={isSelected ? "Remove vote" : "Vote for this answer"}
                   >
@@ -168,23 +171,23 @@ export function VotePhase({
             );
           })
         ) : (
-          <Card className="text-center" isDark={isDark}>
-            <p className="text-slate-600">
+          <Card className="elevated-card text-center" isDark={isDark}>
+            <p className={`text-sm font-medium ${!isDark ? 'text-slate-700' : 'text-slate-300'}`}>
               Waiting for answers from this group...
             </p>
           </Card>
         )}
       </div>
       {voteSummaryActive ? (
-        <p className="text-center text-xs font-medium text-brand-primary sm:text-sm">
+        <p className={`text-center text-xs font-medium sm:text-sm ${!isDark ? 'text-brand-primary' : 'text-cyan-400 neon-glow-cyan'}`}>
           Votes locked in! Tally shown before the next prompt.
         </p>
       ) : isVotingOnOwnGroup ? (
-        <p className="text-center text-xs font-medium text-slate-600 sm:text-sm">
+        <p className={`text-center text-xs font-medium sm:text-sm ${!isDark ? 'text-slate-700' : 'text-slate-400'}`}>
           You cannot vote in your own group, but you can see all the answers.
         </p>
       ) : myActiveVote ? (
-        <p className="text-center text-xs font-medium text-brand-primary sm:text-sm">
+        <p className={`text-center text-xs font-medium sm:text-sm ${!isDark ? 'text-brand-primary' : 'text-cyan-400 neon-glow-cyan'}`}>
           Vote recorded — tap another answer to change it.
         </p>
       ) : null}

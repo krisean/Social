@@ -26,11 +26,44 @@ export function PresenterPage() {
   const answers = useAnswers(sessionId, session?.roundIndex);
   const votes = useVotes(sessionId, session?.roundIndex);
   const [now, setNow] = useState(Date.now());
+  const [pauseMessageIndex, setPauseMessageIndex] = useState(0);
 
   useEffect(() => {
     const interval = window.setInterval(() => setNow(Date.now()), 500);
     return () => window.clearInterval(interval);
   }, []);
+
+  // Cycle through pause messages every 10 seconds when paused
+  useEffect(() => {
+    if (!session?.paused) {
+      setPauseMessageIndex(0);
+      return;
+    }
+
+    const pauseMessages = [
+      "Timer's on hold, bud. Stretch yer legs.",
+      "Hold up... don't do anything stupid yet.",
+      "Paused. Don't send 'er yet, eh.",
+      "Sit tight, bud. We'll get back to it.",
+      "Timer's taking a nap. So are we.",
+      "Chill, bud. Wait for the go.",
+      "Pause time! No excuses yet.",
+      "Don't do anything rash... yet.",
+      "Patience, bud. It'll start again soon.",
+      "Time's frozen. Overthinking is allowed.",
+      "Nothing's happening yet... stay classy, bud.",
+      "Keep your phones ready. Not yet, bud.",
+      "Breather time. Think of something good.",
+      "Pause in effect. Don't get too comfortable.",
+      "Almost... but not quite. Chill, bud."
+    ];
+
+    const interval = window.setInterval(() => {
+      setPauseMessageIndex(prev => (prev + 1) % pauseMessages.length);
+    }, 15000); // Change every 15 seconds
+
+    return () => window.clearInterval(interval);
+  }, [session?.paused]);
 
   const voteCounts = useMemo(() => {
     const counts = new Map<string, number>();
@@ -133,13 +166,62 @@ export function PresenterPage() {
     });
   }, [roundGroups, answersByGroup, voteCounts]);
 
+  const timeRemaining = useMemo(() => {
+    if (!session?.endsAt) return 0;
+    const remaining = Math.max(0, new Date(session.endsAt).getTime() - Date.now());
+    return Math.ceil(remaining / 1000); // seconds
+  }, [session?.endsAt, now]);
+
   const presenterHeading = useMemo(() => {
     if (!session) return "";
     switch (session.status) {
       case "lobby":
         return "Scan the QR to join the round";
       case "answer":
-        return totalGroups ? "Unique prompts in play" : "Preparing prompts...";
+        if (!totalGroups) return "Preparing prompts...";
+
+        // Show pause messages when session is paused
+        if (session.paused) {
+          const pauseMessages = [
+            "Timer's on hold, bud. Stretch yer legs.",
+            "Hold up... don't do anything stupid yet.",
+            "Paused. Don't send 'er yet, eh.",
+            "Sit tight, bud. We'll get back to it.",
+            "Timer's taking a nap. So are we.",
+            "Chill, bud. Wait for the go.",
+            "Pause time! No excuses yet.",
+            "Don't do anything rash... yet.",
+            "Patience, bud. It'll start again soon.",
+            "Time's frozen. Overthinking is allowed.",
+            "Nothing's happening yet... stay classy, bud.",
+            "Keep your phones ready. Not yet, bud.",
+            "Breather time. Think of something good.",
+            "Pause in effect. Don't get too comfortable.",
+            "Almost... but not quite. Chill, bud."
+          ];
+          return pauseMessages[pauseMessageIndex];
+        }
+
+        // Dynamic Alberta-style messaging based on time remaining
+        if (timeRemaining >= 61) {
+          return `ANSWER THE PROMPT\nThat prompt on your phone. Yeah, that one.\nSend 'er, bud. Make it funny. No stress.\nTime left: ${timeRemaining} seconds`;
+        } else if (timeRemaining >= 41) {
+          return `You got this. Just pick somethin', bud.\n${timeRemaining} seconds left`;
+        } else if (timeRemaining >= 26) {
+          return `Alright, let's see it. Don't stall.\n${timeRemaining} seconds left`;
+        } else if (timeRemaining >= 16) {
+          return `Overthinkin' = sus. Just roll with it.\n${timeRemaining} seconds left`;
+        } else if (timeRemaining >= 11) {
+          return `It's fine. Really, just send 'er.\n${timeRemaining} seconds left`;
+        } else if (timeRemaining >= 6) {
+          return `Hot take: just type it, bud.\n${timeRemaining} seconds`;
+        } else if (timeRemaining >= 3) {
+          return `Any ol' answer works now.\n${timeRemaining} seconds`;
+        } else if (timeRemaining >= 1) {
+          return `Send 'er, bud.\n${timeRemaining} second${timeRemaining === 1 ? '' : 's'}`;
+        } else {
+          return `Commit. That's all she wrote.\n${timeRemaining} seconds`;
+        }
       case "vote":
         return (
           activeGroup?.prompt ??
@@ -159,6 +241,8 @@ export function PresenterPage() {
     roundGroups,
     activeGroupIndex,
     totalGroups,
+    timeRemaining,
+    pauseMessageIndex,
   ]);
 
   const groupStatusLabel = useMemo(() => {
@@ -216,7 +300,7 @@ export function PresenterPage() {
     );
   }
 
-  const showStatusSummaryCard = session.status !== "answer";
+  const showStatusSummaryCard = session.status !== "lobby" && session.status !== "ended";
 
   const renderPhaseContent = () => {
     const statusCard = showStatusSummaryCard ? (
@@ -243,7 +327,7 @@ export function PresenterPage() {
         return (
           <>
             {statusCard}
-            <AnswerPhase roundGroups={roundGroups} teamLookup={teamLookup} />
+            <AnswerPhase roundGroups={roundGroups} teamLookup={teamLookup} isDark={isDark} />
           </>
         );
       case "vote":
@@ -320,6 +404,7 @@ export function PresenterPage() {
               size="lg"
               label="Time"
               isDark={isDark}
+              paused={session.paused}
             />
           </div>
         </header>
