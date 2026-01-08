@@ -11,7 +11,6 @@
 ### Top Comment (Week 1)
 - Twitter-parody live voting game
 - QR scan → anonymous team → submit creative roasts → vote on favorites → live leaderboards
-- **$1.50 per play** = $60/night venue revenue
 
 ### VIBox (Week 4)
 - AI jukebox powered by Suno API
@@ -143,7 +142,7 @@ pnpm supabase:gen-types
 
 ## 🤝 Contributing
 
-1. Fork the repository
+1. Clone the repository
 2. Create a feature branch
 3. Make your changes
 4. Run tests: `pnpm test`
