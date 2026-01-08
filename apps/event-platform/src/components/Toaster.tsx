@@ -8,18 +8,17 @@ const variantStyles: Record<string, string> = {
 };
 
 export function Toaster() {
-  const { toasts, dismissToast } = useToastContext();
+  const { toasts } = useToastContext();
 
   if (!toasts.length) return null;
 
   return (
     <div className="fixed top-4 left-1/2 z-50 flex w-full max-w-md -translate-x-1/2 flex-col gap-2 px-4 sm:left-auto sm:right-4 sm:translate-x-0">
       {toasts.map((toast) => (
-        <button
+        <div
           key={toast.id}
-          onClick={() => dismissToast(toast.id)}
           className={clsx(
-            "w-full rounded-xl px-4 py-3 text-left shadow-lg outline-none transition hover:scale-[1.01] focus-visible:ring-2 focus-visible:ring-brand-primary",
+            "w-full rounded-xl px-4 py-3 text-left shadow-lg outline-none transition",
             variantStyles[toast.variant ?? "info"],
           )}
         >
@@ -27,7 +26,7 @@ export function Toaster() {
           {toast.description ? (
             <p className="mt-1 text-sm opacity-90">{toast.description}</p>
           ) : null}
-        </button>
+        </div>
       ))}
     </div>
   );

@@ -123,7 +123,7 @@ export function RoundSummaryCard({
             return (
               <li key={answer.id} className={`rounded-2xl p-4 border ${!isDark ? 'bg-white text-slate-900 border-slate-200' : 'bg-slate-800/50 text-white border-slate-600'}`}>
                 <div className="flex items-start justify-between gap-4">
-                  <p className="font-semibold text-slate-900">
+                  <p className={`font-semibold ${!isDark ? 'text-slate-900' : 'text-white'}`}>
                     {answer.text}
                     {isWinner && (
                       <span className="ml-2 rounded-full bg-brand-primary px-2 py-0.5 text-xs font-semibold text-white">
@@ -131,7 +131,7 @@ export function RoundSummaryCard({
                       </span>
                     )}
                   </p>
-                  <span className="text-sm font-medium text-slate-600">
+                  <span className={`text-sm font-medium ${!isDark ? 'text-slate-600' : 'text-slate-300'}`}>
                     {votesForAnswer} vote{votesForAnswer === 1 ? "" : "s"}
                   </span>
                 </div>

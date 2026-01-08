@@ -1,0 +1,222 @@
+import { useCallback } from "react";
+import type { Session, Answer } from "../../../shared/types";
+import { joinSession, submitAnswer, submitVote } from "../../session/sessionService";
+import { maskProfanity, containsProfanity } from "../../../shared/utils/profanity";
+import { answerSchema, joinSchema } from "../../../shared/schemas";
+import { isKickedFromCode } from "../utils/teamConstants";
+
+interface UseTeamHandlersProps {
+  sessionId: string | null;
+  session: Session | null;
+  joinForm: { code: string; teamName: string };
+  setJoinForm: (form: { code: string; teamName: string }) => void;
+  setJoinErrors: (errors: Record<string, string>) => void;
+  setIsJoining: (joining: boolean) => void;
+  setSessionId: (id: string | null) => void;
+  setTeamSession: (session: any) => void;
+  setHasManuallyLeft: (hasLeft: boolean) => void;
+  setAutoJoinAttempted: (attempted: boolean) => void;
+  answerText: string;
+  setAnswerText: (text: string) => void;
+  myAnswer: Answer | null;
+  setIsSubmittingAnswer: (submitting: boolean) => void;
+  setIsSubmittingVote: (submitting: boolean) => void;
+  toast: (options: { title: string; variant: "success" | "error" | "info" }) => void;
+}
+
+export function useTeamHandlers({
+  sessionId,
+  session,
+  joinForm,
+  setJoinForm,
+  setJoinErrors,
+  setIsJoining,
+  setSessionId,
+  setTeamSession,
+  setHasManuallyLeft,
+  setAutoJoinAttempted,
+  answerText,
+  setAnswerText,
+  myAnswer,
+  setIsSubmittingAnswer,
+  setIsSubmittingVote,
+  toast,
+}: UseTeamHandlersProps) {
+  const handleJoin = useCallback(
+    async (values: { code: string; teamName: string }) => {
+      setIsJoining(true);
+      setJoinErrors({});
+
+      // Validate inputs before attempting to join
+      const parsed = joinSchema.safeParse({
+        code: values.code.trim().toUpperCase(),
+        teamName: values.teamName.trim(),
+      });
+
+      if (!parsed.success) {
+        const fieldErrors: Record<string, string> = {};
+        parsed.error.issues.forEach((issue) => {
+          const path = issue.path[0];
+          if (typeof path === "string") {
+            fieldErrors[path] = issue.message;
+          }
+        });
+        setJoinErrors(fieldErrors);
+        
+        // Show toast with the first error message
+        const firstError = parsed.error.issues[0];
+        toast({
+          title: firstError?.message ?? "Please check your input",
+          variant: "error",
+        });
+        setIsJoining(false);
+        return;
+      }
+
+      // Check if player was kicked from this session
+      if (isKickedFromCode(parsed.data.code)) {
+        setJoinErrors({ code: "You were removed from this session" });
+        toast({
+          title: "You were removed from this session and cannot rejoin.",
+          variant: "error",
+        });
+        setIsJoining(false);
+        return;
+      }
+
+      try {
+        const response = await joinSession({
+          code: parsed.data.code,
+          teamName: parsed.data.teamName,
+        });
+
+        if (!response) {
+          throw new Error("Failed to join session");
+        }
+
+        setSessionId(response.session.id);
+        setTeamSession({
+          sessionId: response.session.id,
+          code: response.session.code,
+          teamName: response.team.teamName,
+          teamId: response.team.id,
+          uid: response.team.uid,
+        });
+        setAnswerText("");
+
+        // Reset hasManuallyLeft flag when user successfully joins
+        setHasManuallyLeft(false);
+        
+        // Note: We don't clear kicked sessions here because the check happens BEFORE join
+        // If they got past the check, they're joining a different session
+        
+        toast({
+          title: "Joined successfully!",
+          variant: "success",
+        });
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : "Failed to join session";
+        setJoinErrors({ form: errorMessage });
+        toast({
+          title: "Failed to join",
+          variant: "error",
+        });
+      } finally {
+        setIsJoining(false);
+        setAutoJoinAttempted(true);
+      }
+    },
+    [
+      setIsJoining,
+      setJoinErrors,
+      setSessionId,
+      setTeamSession,
+      setAnswerText,
+      setHasManuallyLeft,
+      toast,
+      setAutoJoinAttempted,
+    ]
+  );
+
+  const handleSubmitAnswer = useCallback(async () => {
+    if (!session || !sessionId) return;
+    
+    if (containsProfanity(answerText)) {
+      toast({
+        title: "Inappropriate language detected - Keep it classy!",
+        variant: "error",
+      });
+      return;
+    }
+
+    const parsed = answerSchema.safeParse(answerText);
+    if (!parsed.success) {
+      toast({
+        title: parsed.error.issues[0]?.message ?? "Invalid answer",
+        variant: "error",
+      });
+      return;
+    }
+
+    setIsSubmittingAnswer(true);
+    const isUpdating = !!myAnswer;
+    
+    try {
+      await submitAnswer({
+        sessionId: session.id,
+        text: maskProfanity(parsed.data),
+      });
+      
+      toast({
+        title: isUpdating ? "Answer updated" : "Answer locked in",
+        variant: "success",
+      });
+    } catch (error) {
+      toast({
+        title: "Failed to submit answer",
+        variant: "error",
+      });
+    } finally {
+      setIsSubmittingAnswer(false);
+    }
+  }, [
+    session,
+    sessionId,
+    answerText,
+    myAnswer,
+    setIsSubmittingAnswer,
+    toast,
+  ]);
+
+  const handleVote = useCallback(
+    async (answerId: string) => {
+      if (!session || !sessionId) return;
+
+      setIsSubmittingVote(true);
+      try {
+        await submitVote({
+          sessionId: session.id,
+          answerId,
+        });
+        toast({
+          title: "Vote submitted!",
+          variant: "success",
+        });
+      } catch (error) {
+        toast({
+          title: "Failed to submit vote",
+          variant: "error",
+        });
+      } finally {
+        setIsSubmittingVote(false);
+      }
+    },
+    [session, sessionId, setIsSubmittingVote, toast]
+  );
+
+  return {
+    handleJoin,
+    handleSubmitAnswer,
+    handleVote,
+  };
+}

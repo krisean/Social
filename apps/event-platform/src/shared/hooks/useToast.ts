@@ -1,15 +1,15 @@
 import { useCallback } from "react";
-import { useToastContext } from "../providers/ToastContext";
+import { useToast as useUIToast } from "@social/ui";
 
 export function useToast() {
-  const { showToast, dismissToast } = useToastContext();
+  const { addToast, removeToast } = useUIToast();
 
-  const toast = useCallback(
-    (options: Parameters<typeof showToast>[0]) => showToast(options),
-    [showToast],
-  );
+  // Use new format
+  const toast = useCallback((options: { title: string; variant?: "success" | "error" | "info"; description?: string }) => {
+    addToast(options);
+  }, [addToast]);
 
-  return { toast, dismissToast };
+  return { toast, dismissToast: removeToast };
 }
 export interface ToastOptions {
   title: string;

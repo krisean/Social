@@ -2,7 +2,7 @@ import { Outlet, Link } from "react-router-dom";
 import { ThemeToggle } from "../components/ThemeToggle";
 import { useAuth } from "../shared/providers/AuthContext";
 import { useTheme } from "../shared/providers/ThemeProvider";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 
 export function RootLayout() {
   // Safely use hooks with error handling
