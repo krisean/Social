@@ -67,6 +67,7 @@ function mapSession(data: any): Session | null {
     paused: data.paused ?? false,
     pausedAt: data.paused_at,
     totalPausedMs: data.total_paused_ms ?? 0,
+    endedByHost: data.ended_by_host ?? false,
   };
 }
 
@@ -164,19 +165,28 @@ export function subscribeToTeams(
   callback: (teams: Team[]) => void,
 ) {
   // Initial fetch
-  supabase
-    .from("teams")
-    .select("*")
-    .eq("session_id", sessionId)
-    .order("joined_at", { ascending: true })
-    .then(({ data, error }) => {
-      if (error) {
-        console.error("Error fetching teams:", error);
-        callback([]);
-      } else {
-        callback(data?.map(mapTeam).filter((team): team is Team => Boolean(team)) ?? []);
-      }
-    });
+  const fetchTeams = () => {
+    console.log("Fetching teams for session:", sessionId);
+    supabase
+      .from("teams")
+      .select("*")
+      .eq("session_id", sessionId)
+      .order("joined_at", { ascending: true })
+      .then(({ data, error }) => {
+        if (error) {
+          console.error("Error fetching teams:", error);
+          callback([]);
+        } else {
+          const teams = data?.map(mapTeam).filter((team): team is Team => Boolean(team)) ?? [];
+          console.log("Calling callback with", teams.length, "teams:", teams.map(t => t.teamName));
+          callback(teams);
+          console.log("Callback invoked successfully");
+        }
+      });
+  };
+
+  // Initial fetch
+  fetchTeams();
   
   // Subscribe to changes
   const channel = supabase
@@ -189,23 +199,47 @@ export function subscribeToTeams(
         table: "teams",
         filter: `session_id=eq.${sessionId}`,
       },
-      () => {
-        // Refetch all teams on any change
-        supabase
-          .from("teams")
-          .select("*")
-          .eq("session_id", sessionId)
-          .order("joined_at", { ascending: true })
-          .then(({ data, error }) => {
-            if (!error && data) {
-              callback(data.map(mapTeam).filter((team): team is Team => Boolean(team)));
-            }
-          });
+      (payload) => {
+        console.log("Team change detected:", payload.eventType, "for session:", sessionId);
+        
+        // For DELETE events, refetch immediately
+        if (payload.eventType === 'DELETE') {
+          console.log("Team deleted, refetching immediately");
+          fetchTeams();
+        } else if (payload.eventType === 'INSERT') {
+          console.log("Team added, refetching after short delay");
+          setTimeout(fetchTeams, 100);
+        } else if (payload.eventType === 'UPDATE') {
+          console.log("Team updated, refetching after short delay");
+          setTimeout(fetchTeams, 100);
+        } else {
+          // Unknown event type, refetch anyway
+          console.log("Unknown event type, refetching");
+          fetchTeams();
+        }
       }
     )
-    .subscribe();
+    .subscribe((status) => {
+      console.log("Teams subscription status:", status);
+      if (status === 'SUBSCRIBED') {
+        console.log("Successfully subscribed to teams for session:", sessionId);
+      } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+        console.error("Failed to subscribe to teams for session:", sessionId, status);
+        // Fallback: set up polling if subscription fails
+        console.log("Setting up fallback polling for teams");
+        const pollInterval = setInterval(fetchTeams, 5000); // Poll every 5 seconds
+        // Store interval ID for cleanup
+        (channel as any)._fallbackInterval = pollInterval;
+      }
+    });
   
   return () => {
+    console.log("Unsubscribing from teams for session:", sessionId);
+    // Clear fallback polling if it exists
+    const fallbackInterval = (channel as any)._fallbackInterval;
+    if (fallbackInterval) {
+      clearInterval(fallbackInterval);
+    }
     channel.unsubscribe();
   };
 }

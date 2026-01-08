@@ -1,5 +1,5 @@
 import type { Session } from "../../../shared/types";
-import type { Toast } from "@social/ui";
+import type { Toast } from "../../../shared/hooks/useToast";
 import { advancePhase, startGame } from "../../session/sessionService";
 
 interface PrimaryActionDeps {
@@ -29,7 +29,7 @@ export const handlePrimaryAction = (deps: PrimaryActionDeps) => async () => {
   try {
     if (session.status === "lobby") {
       await startGame({ sessionId: session.id });
-      toast("Game started", "success");
+      toast({ title: "Game started", variant: "success" });
     } else if (
       session.status === "answer" ||
       session.status === "vote" ||
@@ -49,7 +49,7 @@ export const handlePrimaryAction = (deps: PrimaryActionDeps) => async () => {
       errorMessage = error.message;
     }
 
-    toast(errorMessage, "error");
+    toast({ title: errorMessage, variant: "error" });
   } finally {
     triggerPerformingAction(false);
   }

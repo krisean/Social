@@ -69,7 +69,7 @@ export function LobbyPhase({
                   className="elevated-card flex items-center gap-3 px-4 py-3"
                 >
                   {mascot ? (
-                    <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full ${!isDark ? 'bg-slate-100' : 'bg-slate-700'}">
+                    <div className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full ${!isDark ? 'bg-slate-100' : 'bg-slate-700'}`}>
                       <img
                         src={mascot.path}
                         alt={mascot.name}
@@ -79,13 +79,13 @@ export function LobbyPhase({
                           const parent = e.currentTarget.parentElement;
                           if (parent) {
                             parent.textContent = team.teamName.charAt(0).toUpperCase();
-                            parent.className = "flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full ${!isDark ? 'bg-slate-200 text-sm font-bold text-slate-600' : 'bg-slate-600 text-sm font-bold text-slate-300'}";
+                            parent.className = `flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full ${!isDark ? 'bg-slate-200 text-sm font-bold text-slate-600' : 'bg-slate-600 text-sm font-bold text-slate-300'}`;
                           }
                         }}
                       />
                     </div>
                   ) : (
-                    <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full ${!isDark ? 'bg-slate-200 text-sm font-bold text-slate-600' : 'bg-slate-600 text-sm font-bold text-slate-300'}">
+                    <div className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full ${!isDark ? 'bg-slate-200 text-sm font-bold text-slate-600' : 'bg-slate-600 text-sm font-bold text-slate-300'}`}>
                       {team.teamName.charAt(0).toUpperCase()}
                     </div>
                   )}

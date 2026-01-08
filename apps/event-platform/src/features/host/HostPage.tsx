@@ -1,29 +1,24 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button, QRCodeBlock, Card, Modal, useToast } from "@social/ui";
 import { useAuth } from "../../shared/providers/AuthContext";
 import { useCurrentPhase } from "../../shared/providers/CurrentPhaseContext";
 import { useTheme } from "../../shared/providers/ThemeProvider";
 import { useHostSession } from "./useHostSession";
+import { useGameState, transformRoundSummariesForUI } from "../../application";
+import { useInviteLink, useTeamLookup, useActiveGroupAnswers } from "../../shared/hooks";
+import { useHostState, useHostComputations, useHostEffects } from "./hooks";
 import {
-  advancePhase,
-  fetchAnalytics,
   setPromptLibrary,
   pauseSession,
 } from "../session/sessionService";
-import { useAnswers, useTeams, useSession, useVotes } from "../session/hooks";
-import type { Session, Answer } from "../../shared/types";
-import type { SessionAnalytics } from "../../shared/types";
 import { getErrorMessage } from "../../shared/utils/errors";
 import {
   phaseCopy,
   actionLabel,
   prompts,
-  promptLibraries,
-  defaultPromptLibrary,
   defaultPromptLibraryId,
 } from "../../shared/constants";
-import { leaderboardFromTeams } from "../../shared/utils/leaderboard";
 import {
   LobbyPhase,
   AnswerPhase,
@@ -43,7 +38,6 @@ import {
 import { PromptLibrarySelector } from "./components/PromptLibrarySelector";
 import type {
   PromptLibraryId,
-  PromptLibrary,
 } from "../../shared/promptLibraries";
 
 export function HostPage() {
@@ -59,38 +53,55 @@ export function HostPage() {
   const { setCurrentPhase } = useCurrentPhase();
   const navigate = useNavigate();
 
-  const [sessionId, setSessionId] = useState<string | null>(storedSessionId);
-  const [showCreateModal, setShowCreateModal] = useState(!storedSessionId);
-  const [isCreating, setIsCreating] = useState(false);
-  const [createErrors, setCreateErrors] = useState<Record<string, string>>({});
-  const [createForm, setCreateForm] = useState({ teamName: "", venueName: "" });
-  const [showPromptLibraryModal, setShowPromptLibraryModal] = useState(false);
-  const [isUpdatingPromptLibrary, setIsUpdatingPromptLibrary] = useState(false);
-  const [hostGroupVotes, setHostGroupVotes] = useState<Record<string, string>>(
-    {},
-  );
-  const [isSubmittingVote, setIsSubmittingVote] = useState(false);
-  const [analytics, setAnalytics] = useState<SessionAnalytics | null>(null);
-  const [isPerformingAction, setIsPerformingAction] = useState(false);
-  const [isEndingSession, setIsEndingSession] = useState(false);
-  const [isPausingSession, setIsPausingSession] = useState(false);
-  const [showEndSessionModal, setShowEndSessionModal] = useState(false);
-  const [kickingTeamId, setKickingTeamId] = useState<string | null>(null);
-  const sessionRef = useRef<Session | null>(null);
-  const isPerformingActionRef = useRef(false);
-  const autoAdvanceTimeoutRef = useRef<number | null>(null);
-  const autoAdvanceRetryRef = useRef<number | null>(null);
-  const autoAdvanceKeyRef = useRef<string | null>(null);
-  const VOTE_SUMMARY_MS = 7000;
+  const hostState = useHostState(storedSessionId);
+  const {
+    sessionId,
+    setSessionId,
+    showCreateModal,
+    setShowCreateModal,
+    isCreating,
+    setIsCreating,
+    createErrors,
+    setCreateErrors,
+    createForm,
+    setCreateForm,
+    showPromptLibraryModal,
+    setShowPromptLibraryModal,
+    isUpdatingPromptLibrary,
+    setIsUpdatingPromptLibrary,
+    hostGroupVotes,
+    setHostGroupVotes,
+    isSubmittingVote,
+    setIsSubmittingVote,
+    analytics,
+    setAnalytics,
+    isPerformingAction,
+    setIsPerformingAction,
+    isEndingSession,
+    setIsEndingSession,
+    isPausingSession,
+    setIsPausingSession,
+    showEndSessionModal,
+    setShowEndSessionModal,
+    kickingTeamId,
+    setKickingTeamId,
+    sessionRef,
+    isPerformingActionRef,
+  } = hostState;
 
   const canCreateSession = !authLoading && Boolean(user);
 
-  const { session, hasSnapshot: sessionSnapshotReady } = useSession(
-    sessionId ?? undefined,
-  );
-  const teams = useTeams(sessionId ?? undefined);
-  const answers = useAnswers(sessionId ?? undefined, session?.roundIndex);
-  const votes = useVotes(sessionId ?? undefined, session?.roundIndex);
+  // Use the new application hooks - this replaces 4 separate hooks and multiple useMemo calls!
+  const gameState = useGameState({ 
+    sessionId: sessionId ?? undefined, 
+    userId: user?.id 
+  });
+
+  // Extract data from gameState for compatibility with existing code
+  const session = gameState.session;
+  const teams = gameState.teams;
+  const answers = gameState.answers;
+  const sessionSnapshotReady = !gameState.isLoading;
 
   // Set sessionRef.current to latest session for auto advance actions.
   useEffect(() => {
@@ -103,260 +114,61 @@ export function HostPage() {
     setIsPerformingAction(value);
   };
 
-  const leaderboard = useMemo(() => leaderboardFromTeams(teams), [teams]);
+  // Use gameState values instead of calculations
+  const roundGroups = gameState.currentGroups;
+  const totalGroups = roundGroups.length;
 
-  const promptLibraryMap = useMemo(() => {
-    const map = new Map<PromptLibraryId, PromptLibrary>();
-    promptLibraries.forEach((library) => {
-      map.set(library.id, library);
-    });
-    return map;
-  }, []);
+  // Vote Phase group info - use gameState values
+  const activeGroup = gameState.activeVoteGroup;
+  const activeGroupIndex = session?.voteGroupIndex ?? 0;
 
-  const selectedPromptLibraryId = session?.promptLibraryId ?? defaultPromptLibraryId;
-  const currentPromptLibrary = useMemo(
-    () =>
-      promptLibraryMap.get(selectedPromptLibraryId) ?? defaultPromptLibrary,
-    [selectedPromptLibraryId, promptLibraryMap],
-  );
+  // Use gameState voteCounts instead of calculation
+  const voteCounts = gameState.voteCounts;
 
-  // Validate session existence and setup on load/update
-  useEffect(() => {
-    if (!session && sessionId && sessionSnapshotReady) {
-      addToast(
-        "Session not found. It may have expired. Create a new one to continue hosting.",
-        "error"
-      );
-      clearHostSession();
-      setSessionId(null);
-      setShowCreateModal(true);
-      return;
-    }
+  // Answers for active voting group or all answers if not voting
+  const activeGroupAnswers = useActiveGroupAnswers(answers, session, activeGroup);
 
-    if (!session) {
-      return;
-    }
+  // Extract computations into custom hook
+  const {
+    leaderboard,
+    selectedPromptLibraryId,
+    currentPromptLibrary,
+    activeGroupVote,
+  } = useHostComputations({
+    gameState,
+    session,
+    hostGroupVotes,
+    activeGroup,
+  });
 
-    if (session.status === "ended") {
-      clearHostSession();
-      return;
-    }
-
-    if (!sessionId || session.id !== sessionId) {
-      setSessionId(session.id);
-    }
-
-    if (session.code) {
-      setHostSession({ sessionId: session.id, code: session.code });
-    }
-  }, [
+// Extract effects into custom hook
+  useHostEffects({
     session,
     sessionId,
     sessionSnapshotReady,
+    sessionRef,
+    setSessionId,
     setHostSession,
     clearHostSession,
-    addToast,
-  ]);
+    setShowCreateModal,
+    setCurrentPhase,
+    setAnalytics,
+    setShowPromptLibraryModal,
+    setHostGroupVotes,
+    toast: addToast,
+  });
 
-  // Update current phase in context for HowToPlayModal
-  useEffect(() => {
-    setCurrentPhase(session?.status ?? null);
-  }, [session?.status, setCurrentPhase]);
-
-  // Fetch analytics after session ends
-  useEffect(() => {
-    if (session?.status === "ended" && session.id) {
-      fetchAnalytics(session.id)
-        .then((data) => setAnalytics(data))
-        .catch(() => {});
-    }
-  }, [session?.status, session?.id]);
-
-  useEffect(() => {
-    if (session?.status !== "lobby") {
-      setShowPromptLibraryModal(false);
-    }
-  }, [session?.status]);
-
-  // Clear host votes when leaving vote phase
-  useEffect(() => {
-    if (session?.status !== "vote") {
-      setHostGroupVotes({});
-    }
-  }, [session?.status]);
-
-  // Auto advance phase timer and retries
-  useEffect(() => {
-    if (!session) return;
-    if (!session.endsAt) {
-      autoAdvanceKeyRef.current = null;
-      return;
-    }
-    if (session.paused) {
-      autoAdvanceKeyRef.current = null;
-      return;
-    }
-    if (!["answer", "vote", "results"].includes(session.status)) {
-      autoAdvanceKeyRef.current = null;
-      return;
-    }
-
-    const key = `${session.id}:${session.status}:${session.endsAt}`;
-    autoAdvanceKeyRef.current = key;
-
-    const endsAtTime = new Date(session.endsAt).getTime();
-    if (Number.isNaN(endsAtTime)) {
-      return;
-    }
-
-    const summaryDelay = session.status === "vote" ? VOTE_SUMMARY_MS : 0;
-    const initialDelay =
-      Math.max(endsAtTime - Date.now(), 0) + summaryDelay + 100;
-
-    if (autoAdvanceTimeoutRef.current !== null) {
-      window.clearTimeout(autoAdvanceTimeoutRef.current);
-    }
-    if (autoAdvanceRetryRef.current !== null) {
-      window.clearTimeout(autoAdvanceRetryRef.current);
-    }
-
-    const attemptAdvance = () => {
-      const current = sessionRef.current;
-      if (!current) return;
-      const currentKey = `${current.id}:${current.status}:${current.endsAt ?? ""}`;
-      if (currentKey !== key) return;
-      if (!["answer", "vote", "results"].includes(current.status)) return;
-
-      if (isPerformingActionRef.current) {
-        autoAdvanceRetryRef.current = window.setTimeout(attemptAdvance, 500);
-        return;
-      }
-
-      isPerformingActionRef.current = true;
-      setIsPerformingAction(true);
-      advancePhase({ sessionId: current.id })
-        .catch((error: unknown) => {
-          addToast(
-            getErrorMessage(
-              error,
-              "Auto-advance failed. Please tap the phase button manually."
-            ),
-            "error"
-          );
-        })
-        .finally(() => {
-          isPerformingActionRef.current = false;
-          setIsPerformingAction(false);
-        });
-    };
-
-    autoAdvanceTimeoutRef.current = window.setTimeout(
-      attemptAdvance,
-      initialDelay,
-    );
-
-    return () => {
-      if (autoAdvanceTimeoutRef.current !== null) {
-        window.clearTimeout(autoAdvanceTimeoutRef.current);
-        autoAdvanceTimeoutRef.current = null;
-      }
-      if (autoAdvanceRetryRef.current !== null) {
-        window.clearTimeout(autoAdvanceRetryRef.current);
-        autoAdvanceRetryRef.current = null;
-      }
-    };
-  }, [session, addToast]);
-
-  const inviteLink = useMemo(() => {
-    if (!session?.code) return "";
-    const origin = typeof window !== "undefined" ? window.location.origin : "";
-    if (!origin) return "";
-    return `${origin}/play?code=${session.code}`;
-  }, [session?.code]);
+  const inviteLink = useInviteLink(session);
 
   // Map team IDs to team names for lookup
-  const teamLookup = useMemo(() => {
-    const map = new Map<string, string>();
-    teams.forEach((team) => {
-      map.set(team.id, team.teamName);
-    });
-    return map;
-  }, [teams]);
+  const teamLookup = useTeamLookup(teams);
 
-  // Current round and groups for phases
-  const currentRound = session
-    ? (session.rounds[session.roundIndex] ?? null)
-    : null;
-  const roundGroups = useMemo(() => currentRound?.groups ?? [], [currentRound]);
-  const totalGroups = roundGroups.length;
-
-  // Vote Phase group info
-  const activeGroupIndex =
-    session?.status === "vote" && totalGroups
-      ? Math.min(totalGroups - 1, Math.max(0, session.voteGroupIndex ?? 0))
-      : 0;
-
-  const activeGroup =
-    session?.status === "vote" && totalGroups
-      ? (roundGroups[activeGroupIndex] ?? null)
-      : null;
-
-  // Vote counts by answerId
-  const voteCounts = useMemo(() => {
-    const counts = new Map<string, number>();
-    votes.forEach((vote) => {
-      counts.set(vote.answerId, (counts.get(vote.answerId) ?? 0) + 1);
-    });
-    return counts;
-  }, [votes]);
-
-  // Group answers mapping
-  const answersByGroup = useMemo(() => {
-    const map = new Map<string, Answer[]>();
-    answers.forEach((answer) => {
-      const list = map.get(answer.groupId) ?? [];
-      list.push(answer);
-      map.set(answer.groupId, list);
-    });
-    return map;
-  }, [answers]);
-
-  // Answers for active voting group or all answers if not voting
-  const activeGroupAnswers = useMemo(() => {
-    if (session?.status === "vote" && activeGroup) {
-      return answers.filter((answer) => answer.groupId === activeGroup.id);
-    }
-    return answers;
-  }, [answers, session?.status, activeGroup]);
-
-  // Summaries for all groups of current round with winners identified
-  const roundSummaries = useMemo(() => {
-    return roundGroups.map((group, index) => {
-      const groupAnswers = answersByGroup.get(group.id) ?? [];
-      const sorted = [...groupAnswers].sort(
-        (a, b) => (voteCounts.get(b.id) ?? 0) - (voteCounts.get(a.id) ?? 0),
-      );
-      const bestVotes = sorted.length ? (voteCounts.get(sorted[0].id) ?? 0) : 0;
-      const winners =
-        bestVotes > 0
-          ? sorted.filter(
-              (answer) => (voteCounts.get(answer.id) ?? 0) === bestVotes,
-            )
-          : [];
-      return {
-        group,
-        index,
-        answers: sorted,
-        winners,
-      };
-    });
-  }, [roundGroups, answersByGroup, voteCounts]);
-
-  // Host's current vote for the active group
-  const activeGroupVote = useMemo(() => {
-    if (!activeGroup) return null;
-    return hostGroupVotes[activeGroup.id] ?? null;
-  }, [hostGroupVotes, activeGroup]);
+  // Use gameState roundSummaries with shared transformation
+  const roundSummaries = transformRoundSummariesForUI(
+    gameState.roundSummaries,
+    roundGroups,
+    teams
+  );
 
   // Instantiate handlers with current dependencies
   const createSessionHandler = handleCreateSession({
@@ -397,6 +209,7 @@ export function HostPage() {
     session,
     toast: addToast,
     setKickingTeamId,
+    refresh: gameState.refresh,
   });
 
   const copyLinkHandler = handleCopyLink({ toast: addToast });
@@ -410,15 +223,15 @@ export function HostPage() {
         sessionId: session.id,
         pause: !session.paused
       });
-      addToast(
-        session.paused ? "Session resumed" : "Session paused",
-        "success"
-      );
+      addToast({
+        title: session.paused ? "Session resumed" : "Session paused",
+        variant: "success"
+      });
     } catch (error: unknown) {
-      addToast(
-        getErrorMessage(error, "Failed to pause/resume session"),
-        "error"
-      );
+      addToast({
+        title: getErrorMessage(error, "Failed to pause/resume session"),
+        variant: "error"
+      });
     } finally {
       setIsPausingSession(false);
     }
@@ -451,16 +264,16 @@ export function HostPage() {
       setIsUpdatingPromptLibrary(true);
       setPromptLibrary({ sessionId: session.id, promptLibraryId: libraryId })
         .then(() => {
-          addToast(
-            "Prompt library updated! New prompts will be used next round.",
-            "success"
-          );
+          addToast({
+            title: "Prompt library updated! New prompts will be used next round.",
+            variant: "success"
+          });
         })
         .catch((error: unknown) => {
-          addToast(
-            getErrorMessage(error, "Could not update prompts. Please try again."),
-            "error"
-          );
+          addToast({
+            title: getErrorMessage(error, "Could not update prompts. Please try again."),
+            variant: "error"
+          });
         })
         .finally(() => {
           setIsUpdatingPromptLibrary(false);
@@ -745,9 +558,14 @@ export function HostPage() {
               )}
               {session ? (
                 session.status === "ended" ? (
-                  <Button variant="secondary" onClick={handleReturnHome}>
-                    Return home
-                  </Button>
+                  <>
+                    <Button variant="secondary" onClick={() => setShowCreateModal(true)}>
+                      New Session
+                    </Button>
+                    <Button variant="ghost" onClick={handleReturnHome}>
+                      Return home
+                    </Button>
+                  </>
                 ) : (
                   <Button
                     variant="ghost"

@@ -100,6 +100,7 @@ async function handleAdvanceSession(req: Request, uid: string, supabase: any): P
   return corsResponse({ session: updatedSession as Session });
 }
 
+// @ts-ignore - Deno global is available in Supabase Edge Functions runtime
 Deno.serve(createHandler(handleAdvanceSession));
 
 async function calculateRoundScores(supabase: any, sessionId: string, roundIndex: number) {

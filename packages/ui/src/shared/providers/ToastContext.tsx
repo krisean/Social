@@ -3,14 +3,16 @@ import type { ReactNode } from 'react';
 
 export interface Toast {
   id: string;
-  message: string;
-  type: 'success' | 'error' | 'info' | 'warning';
+  title: string;
+  description?: string;
+  variant?: 'success' | 'error' | 'info';
   duration?: number;
 }
 
 interface ToastContextType {
   toasts: Toast[];
-  addToast: (message: string, type?: Toast['type'], duration?: number) => void;
+  addToast: (toast: Omit<Toast, 'id'>) => void;
+  addToastOld: (message: string, type?: 'success' | 'error' | 'info', duration?: number) => void;
   removeToast: (id: string) => void;
 }
 
@@ -19,16 +21,29 @@ const ToastContext = createContext<ToastContextType | undefined>(undefined);
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<Toast[]>([]);
 
-  const addToast = (
-    message: string,
-    type: Toast['type'] = 'info',
-    duration: number = 3000
-  ) => {
+  const addToast = (toast: Omit<Toast, 'id'>) => {
     const id = Math.random().toString(36).substring(7);
-    const newToast: Toast = { id, message, type, duration };
+    const newToast: Toast = { id, ...toast };
     
     setToasts((prev) => [...prev, newToast]);
 
+    // Auto-dismiss after duration (default 4 seconds)
+    const duration = toast.duration ?? 4000;
+    if (duration > 0) {
+      setTimeout(() => {
+        removeToast(id);
+      }, duration);
+    }
+  };
+
+  // Support old format for backward compatibility
+  const addToastOld = (message: string, type: 'success' | 'error' | 'info' = 'info', duration: number = 3000) => {
+    const id = Math.random().toString(36).substring(7);
+    const newToast: Toast = { id, title: message, variant: type, duration };
+    
+    setToasts((prev) => [...prev, newToast]);
+
+    // Auto-dismiss after duration
     if (duration > 0) {
       setTimeout(() => {
         removeToast(id);
@@ -41,7 +56,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <ToastContext.Provider value={{ toasts, addToast, removeToast }}>
+    <ToastContext.Provider value={{ toasts, addToast, addToastOld, removeToast }}>
       {children}
     </ToastContext.Provider>
   );

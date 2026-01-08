@@ -21,6 +21,11 @@ export function JoinForm({
   setJoinForm,
 }: JoinFormProps) {
   const { isDark } = useTheme();
+  
+  // Disable button if either field is empty or too short
+  const isDisabled = 
+    !joinForm.code || joinForm.code.trim().length === 0 || 
+    !joinForm.teamName || joinForm.teamName.trim().length === 0;
 
   return (
     <Card className="space-y-5" isDark={isDark}>
@@ -60,7 +65,7 @@ export function JoinForm({
           error={joinErrors.teamName}
           isDark={isDark}
         />
-        <Button type="submit" fullWidth isLoading={isJoining}>
+        <Button type="submit" fullWidth isLoading={isJoining} disabled={isDisabled}>
           Join game
         </Button>
       </form>

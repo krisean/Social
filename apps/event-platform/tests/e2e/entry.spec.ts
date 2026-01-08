@@ -1,18 +1,18 @@
 import { test, expect } from "@playwright/test";
 
-const landingHeading = /PHOENIX/i;
+const landingHeading = /SÖCIAL/i;
 
 test.describe("Landing page", () => {
   test("shows hero content and CTA navigation", async ({ page }) => {
     await page.goto("/");
 
-    await expect(page.getByRole("heading", { name: landingHeading })).toBeVisible();
-    await expect(page.getByText(/Phoenix Games/i)).toBeVisible();
+    await expect(page.getByRole("heading", { name: landingHeading, level: 1 })).toBeVisible();
+    await expect(page.getByText(/Söcial Games/i)).toBeVisible();
 
     await page.getByRole("link", { name: /Join a Game/i }).click();
 
     await expect(page).toHaveURL(/\/play$/);
-    await expect(page.getByRole("heading", { name: /Join the game/i })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /Join Söcial/i })).toBeVisible();
   });
 
   test("host CTA routes to host tools", async ({ page }) => {

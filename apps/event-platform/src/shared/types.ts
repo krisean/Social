@@ -88,6 +88,7 @@ export interface Session {
   paused?: boolean;
   pausedAt?: string;
   totalPausedMs?: number;
+  endedByHost?: boolean;
 }
 
 export interface Team {
