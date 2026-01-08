@@ -233,7 +233,7 @@ SELECT id, 'user-123', 'Test Team' FROM sessions WHERE code = 'TEST123';
 ```
 
 ## Deployment Instructions
-**Description**: These RLS policies are designed for the Social.gg Event Platform and should be applied after the main schema migration.
+**Description**: These RLS policies are designed for the playnow.social Event Platform and should be applied after the main schema migration.
 
 ```sql
 -- Apply these policies via Supabase Dashboard SQL Editor

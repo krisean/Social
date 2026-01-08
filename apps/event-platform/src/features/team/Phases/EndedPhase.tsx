@@ -1,7 +1,5 @@
-import { Card } from "../../../components/Card";
-import { Button } from "../../../components/Button";
+import { Card, Button, Leaderboard } from "@social/ui";
 import { useTheme } from "../../../shared/providers/ThemeProvider";
-import { Leaderboard } from "../../../components/phases/Leaderboard";
 import type { Team } from "../../../shared/types";
 
 interface LeaderboardTeam extends Team {
@@ -37,13 +35,13 @@ export function EndedPhase({
 }: EndedPhaseProps) {
   const { isDark } = useTheme();
   return (
-    <Card className="space-y-5">
+    <Card className="space-y-5" isDark={isDark}>
       <div className="flex items-center justify-between">
         <div>
           <h2 className={`text-2xl font-bold ${!isDark ? 'text-slate-900' : 'text-pink-400'}`}>
             Final Scoreboard
           </h2>
-          <p className="text-sm text-slate-600">Thanks for playing!</p>
+          <p className={`text-sm ${!isDark ? 'text-slate-600' : 'text-cyan-300'}`}>Thanks for playing!</p>
         </div>
         {currentTeam ? (
           <Button
@@ -60,10 +58,10 @@ export function EndedPhase({
       {currentTeam && (
         <div className="space-y-3">
           <div className="text-center">
-            <h3 className="text-lg font-semibold text-slate-700">
+            <h3 className={`text-lg font-semibold ${!isDark ? 'text-slate-700' : 'text-brand-primary'}`}>
               Celebrate Your Victory!
             </h3>
-            <p className="text-sm text-slate-600">Take a selfie with your score</p>
+            <p className={`text-sm ${!isDark ? 'text-slate-600' : 'text-slate-300'}`}>Take a selfie with your score</p>
           </div>
 
           {selfieImage ? (
@@ -113,12 +111,14 @@ export function EndedPhase({
 
       <div
         ref={scoreboardRef as React.LegacyRef<HTMLDivElement>}
-        className="max-h-80 overflow-y-auto rounded-3xl bg-white p-4 shadow-2xl"
+        className={`elevated-card max-h-80 overflow-y-auto p-4`}
       >
         <Leaderboard
           leaderboard={finalLeaderboard}
           highlightTeamId={currentTeam?.id}
-          variant="team"
+          variant="presenter"
+          className="grid gap-3 text-lg font-semibold lg:grid-cols-2"
+          isDark={isDark}
         />
       </div>
       <Button variant="ghost" onClick={handleLeave} fullWidth>

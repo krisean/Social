@@ -5,13 +5,9 @@
 
 export { AnswerCard } from "./AnswerCard";
 
-// For now, keep using existing components from their original locations
-// These will be moved in a separate migration
-export { GroupCard } from "../../../components/phases/GroupCard";
-export { Leaderboard } from "../../../components/phases/Leaderboard";
-export type { LeaderboardTeam } from "../../../components/phases/Leaderboard";
-export { RoundSummaryCard } from "../../../components/phases/RoundSummaryCard";
-export type { RoundSummary } from "../../../components/phases/RoundSummaryCard";
+// Components from @social/ui package
+export { GroupCard, Leaderboard, RoundSummaryCard } from "@social/ui";
+export type { LeaderboardTeam, RoundSummary } from "@social/ui";
 
 
 

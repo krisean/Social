@@ -1,15 +1,16 @@
-import { Leaderboard } from "../../../components/phases/Leaderboard";
-import { Card } from "../../../components/Card";
+import { Leaderboard, Card } from "@social/ui";
 import type { Team } from "../../../shared/types";
+import { useTheme } from "../../../shared/providers/ThemeProvider";
 
 interface EndedPhaseProps {
   leaderboard: (Team & { rank: number })[];
 }
 
 export function EndedPhase({ leaderboard }: EndedPhaseProps) {
+  const { isDark } = useTheme();
   return (
-    <Card>
-      <p className="text-sm font-semibold uppercase tracking-[0.3em] text-slate-600">
+    <Card isDark={isDark}>
+      <p className={`text-sm font-semibold uppercase tracking-[0.3em] ${!isDark ? 'text-slate-600' : 'text-slate-300'}`}>
         Final scoreboard
       </p>
       <div className="mt-4">
@@ -18,6 +19,7 @@ export function EndedPhase({ leaderboard }: EndedPhaseProps) {
           maxItems={8}
           variant="presenter"
           className="space-y-3 text-2xl font-semibold"
+          isDark={isDark}
         />
       </div>
     </Card>

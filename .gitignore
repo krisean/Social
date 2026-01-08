@@ -125,8 +125,17 @@ Thumbs.db
 # Temporary/debug files
 *.tmp
 *.temp
-database-debug.log
-firestore-debug.log
+
+# Organized logs directory
+logs/*.log
+logs/*.txt
+
+# Database files (optional - uncomment if SQL files should be ignored)
+# database/*.sql
+
+# Scripts (optional - uncomment if scripts should be ignored)
+# scripts/*.bat
+# scripts/*.ps1
 
 # Executables
 *.exe

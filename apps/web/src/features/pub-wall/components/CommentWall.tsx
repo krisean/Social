@@ -2,15 +2,15 @@ import { useState } from 'react';
 import { Card } from '@social/ui';
 import { Button } from '@social/ui';
 import { TextAreaField } from '@social/ui';
-import type { Submission } from '@social/db';
+import type { Answer } from '@social/db';
 
 interface CommentWallProps {
-  submissions: Submission[];
+  answers: Answer[];
   onSubmit: (content: string) => Promise<void>;
   venueName: string;
 }
 
-export function CommentWall({ submissions, onSubmit, venueName }: CommentWallProps) {
+export function CommentWall({ answers, onSubmit, venueName }: CommentWallProps) {
   const [commentText, setCommentText] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -78,18 +78,18 @@ export function CommentWall({ submissions, onSubmit, venueName }: CommentWallPro
       {/* Comments List */}
       <div className="space-y-4">
         <h3 className="text-xl font-semibold text-gray-900">
-          Recent Comments ({submissions.length})
+          Recent Comments ({answers.length})
         </h3>
 
-        {submissions.length === 0 ? (
+        {answers.length === 0 ? (
           <Card className="p-8 text-center">
             <p className="text-gray-500 text-lg">
               No comments yet. Be the first to share your thoughts!
             </p>
           </Card>
         ) : (
-          submissions.map((submission) => (
-            <Card key={submission.id} className="p-4">
+          answers.map((answer) => (
+            <Card key={answer.id} className="p-4">
               <div className="flex items-start space-x-3">
                 <div className="flex-shrink-0">
                   <div className="w-10 h-10 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full flex items-center justify-center">
@@ -102,17 +102,13 @@ export function CommentWall({ submissions, onSubmit, venueName }: CommentWallPro
                   <div className="flex items-center space-x-2 mb-2">
                     <span className="font-medium text-gray-900">Anonymous</span>
                     <span className="text-gray-500 text-sm">
-                      {formatTime(submission.created_at)}
+                      {formatTime(answer.created_at)}
                     </span>
                   </div>
                   <p className="text-gray-800 whitespace-pre-wrap">
-                    {submission.is_moderated ? '[Content moderated]' : submission.content}
+                    {answer.masked ? '[Content moderated]' : answer.text}
                   </p>
-                  {submission.vote_count > 0 && (
-                    <div className="mt-2 text-sm text-gray-500">
-                      👍 {submission.vote_count} {submission.vote_count === 1 ? 'like' : 'likes'}
-                    </div>
-                  )}
+                  {/* Note: answers don't have vote_count in current schema */}
                 </div>
               </div>
             </Card>

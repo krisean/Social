@@ -4,11 +4,11 @@
  */
 
 import type { SupabaseClient, RealtimeChannel } from '@supabase/supabase-js';
-import type { Database, Session, Player, Submission } from './client';
+import type { Database, Session, Team, Answer } from './client';
 
 export type SessionUpdateCallback = (session: Session) => void;
-export type PlayerUpdateCallback = (players: Player[]) => void;
-export type SubmissionUpdateCallback = (submissions: Submission[]) => void;
+export type TeamUpdateCallback = (teams: Team[]) => void;  // Updated: Player → Team
+export type AnswerUpdateCallback = (answers: Answer[]) => void;  // Updated: Submission → Answer
 
 export function subscribeToSession(
   client: SupabaseClient<Database>,
@@ -32,20 +32,19 @@ export function subscribeToSession(
     .subscribe();
 }
 
-export function subscribeToPlayers(
+export function subscribeToTeams(  // Updated: subscribeToPlayers → subscribeToTeams
   client: SupabaseClient<Database>,
   sessionId: string,
-  onUpdate: PlayerUpdateCallback,
+  onUpdate: TeamUpdateCallback,  // Updated: PlayerUpdateCallback → TeamUpdateCallback
 ): RealtimeChannel {
-  const channel = client.channel(`players:${sessionId}`);
+  const channel = client.channel(`teams:${sessionId}`);
 
-  const fetchPlayers = async () => {
+  const fetchTeams = async () => {  // Updated: fetchPlayers → fetchTeams
     const { data } = await client
-      .from('players')
+      .from('teams')  // Updated: players → teams
       .select('*')
       .eq('session_id', sessionId)
-      .eq('is_active', true)
-      .order('score', { ascending: false });
+      .order('created_at', { ascending: true });  // Updated: order by created_at instead of score
 
     if (data) {
       onUpdate(data);
@@ -57,40 +56,40 @@ export function subscribeToPlayers(
     {
       event: '*',
       schema: 'public',
-      table: 'players',
+      table: 'teams',  // Updated: players → teams
       filter: `session_id=eq.${sessionId}`,
     },
     () => {
-      fetchPlayers();
+      fetchTeams();  // Updated: fetchPlayers → fetchTeams
     },
   );
 
   channel.subscribe(() => {
-    fetchPlayers();
+    fetchTeams();  // Updated: fetchPlayers → fetchTeams
   });
 
   return channel;
 }
 
-export function subscribeToSubmissions(
+export function subscribeToAnswers(  // Updated: subscribeToSubmissions → subscribeToAnswers
   client: SupabaseClient<Database>,
   sessionId: string,
-  onUpdate: SubmissionUpdateCallback,
-  roundNumber?: number,
+  onUpdate: AnswerUpdateCallback,  // Updated: SubmissionUpdateCallback → AnswerUpdateCallback
+  roundIndex?: number,  // Updated: roundNumber → roundIndex
 ): RealtimeChannel {
-  const channel = client.channel(`submissions:${sessionId}:${roundNumber ?? 'all'}`);
+  const channel = client.channel(`answers:${sessionId}:${roundIndex ?? 'all'}`);
 
-  const fetchSubmissions = async () => {
+  const fetchAnswers = async () => {  // Updated: fetchSubmissions → fetchAnswers
     let query = client
-      .from('submissions')
+      .from('answers')  // Updated: submissions → answers
       .select('*')
       .eq('session_id', sessionId);
 
-    if (roundNumber !== undefined) {
-      query = query.eq('round_number', roundNumber);
+    if (roundIndex !== undefined) {
+      query = query.eq('round_index', roundIndex);  // Updated: round_number → round_index
     }
 
-    const { data } = await query.order('vote_count', { ascending: false });
+    const { data } = await query.order('created_at', { ascending: true });  // Updated: order by created_at
 
     if (data) {
       onUpdate(data);
@@ -102,15 +101,15 @@ export function subscribeToSubmissions(
     {
       event: '*',
       schema: 'public',
-      table: 'submissions',
+      table: 'answers',  // Updated: submissions → answers
       filter: `session_id=eq.${sessionId}`,
     },
     () => {
-      fetchSubmissions();
+      fetchAnswers();  // Updated: fetchSubmissions → fetchAnswers
     },
   );
 
-  // Also listen to votes to update submission counts
+  // Also listen to votes to update answer data
   channel.on(
     'postgres_changes',
     {
@@ -120,12 +119,12 @@ export function subscribeToSubmissions(
       filter: `session_id=eq.${sessionId}`,
     },
     () => {
-      fetchSubmissions();
+      fetchAnswers();  // Updated: fetchSubmissions → fetchAnswers
     },
   );
 
   channel.subscribe(() => {
-    fetchSubmissions();
+    fetchAnswers();  // Updated: fetchSubmissions → fetchAnswers
   });
 
   return channel;

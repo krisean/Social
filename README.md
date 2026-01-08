@@ -56,7 +56,7 @@ HELCIM_API_KEY=your_helcim_key
 social/
 ├── apps/
 │   ├── event-platform/    # Game host dashboard + player PWAs
-│   ├── topcomment-247/    # Top Comment game PWA
+│   ├── pubFeed/           # Pub Feed social game PWA
 │   ├── vibox-247/         # VIBox game PWA
 │   ├── dashboard/         # Venue analytics dashboard
 │   └── web/               # Marketing site
@@ -114,7 +114,7 @@ pnpm supabase:gen-types
 
 ### Apps
 - **event-platform:** Host controls + shared game engine
-- **topcomment-247:** Top Comment voting game
+- **pubFeed:** Pub Feed social game PWA
 - **vibox-247:** VIBox AI jukebox
 - **dashboard:** Venue analytics
 - **web:** Marketing site

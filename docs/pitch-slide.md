@@ -266,8 +266,8 @@ Each successful pilot venue → 2-3 referrals = viral adoption
 
 **Contact:**
 - Email: team@socialgames.gg
-- Website: social.gg
-- Demo: topcomment.social.gg
+- Website: playnow.social
+- Demo: topcomment.playnow.social
 
 **Next Steps:**
 1. Schedule 30-minute product demo

@@ -10,7 +10,6 @@ export interface CreateSessionResponse {
   sessionId: string;
   code: string;
   session: Session;
-  team: Team;
 }
 
 export interface JoinSessionRequest {
@@ -86,6 +85,9 @@ export interface Session {
   settings: SessionSettings;
   venueName?: string;
   promptLibraryId?: PromptLibraryId;
+  paused?: boolean;
+  pausedAt?: string;
+  totalPausedMs?: number;
 }
 
 export interface Team {
@@ -146,4 +148,9 @@ export interface SetPromptLibraryRequest {
 
 export interface SetPromptLibraryResponse {
   session: Session;
+}
+
+export interface PauseSessionRequest {
+  sessionId: string;
+  pause: boolean;
 }

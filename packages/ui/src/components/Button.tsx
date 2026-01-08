@@ -10,22 +10,28 @@ type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
   size?: ButtonSize;
   isLoading?: boolean;
   fullWidth?: boolean;
+  isDark?: boolean;
 };
 
 const baseStyles =
-  "inline-flex items-center justify-center rounded-full px-5 py-3 text-sm font-semibold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-60";
+  "inline-flex items-center justify-center rounded-full px-5 py-3 text-sm font-semibold transition-all duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-60";
 
-const variantStyles: Record<ButtonVariant, string> = {
-  primary:
-    "bg-brand-primary text-white shadow-lg hover:bg-brand-dark focus-visible:outline-brand-primary",
-  secondary:
-    "border border-brand-primary text-brand-primary hover:bg-brand-light focus-visible:outline-brand-primary",
-  ghost:
-    "text-brand-primary hover:bg-slate-100 focus-visible:outline-brand-primary",
-  outline:
-    "border border-slate-300 text-slate-600 hover:bg-slate-50 focus-visible:outline-slate-300",
-  danger:
-    "bg-rose-600 text-white shadow-lg hover:bg-rose-700 focus-visible:outline-rose-600",
+const getVariantStyles = (variant: ButtonVariant, isDark: boolean): string => {
+  const styles: Record<ButtonVariant, string> = {
+    primary:
+      "bg-brand-primary text-white hover:bg-brand-dark focus-visible:outline-brand-primary",
+    secondary:
+      "border border-brand-primary text-brand-primary hover:bg-brand-light focus-visible:outline-brand-primary",
+    ghost: isDark
+      ? "text-cyan-400 hover:bg-slate-700 focus-visible:outline-cyan-400"
+      : "text-brand-primary hover:bg-slate-100 focus-visible:outline-brand-primary",
+    outline: isDark
+      ? "border border-slate-600 text-slate-300 hover:bg-slate-700 focus-visible:outline-slate-600"
+      : "border border-slate-300 text-slate-600 hover:bg-slate-50 focus-visible:outline-slate-300",
+    danger:
+      "bg-rose-600 text-white hover:bg-rose-700 focus-visible:outline-rose-600",
+  };
+  return styles[variant];
 };
 
 const sizeStyles: Record<ButtonSize, string> = {
@@ -40,6 +46,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       variant = "primary",
       size = "md",
       isLoading,
+      isDark = false,
       className,
       fullWidth,
       children,
@@ -51,7 +58,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       ref={ref}
       className={clsx(
         baseStyles,
-        variantStyles[variant],
+        getVariantStyles(variant, isDark),
         sizeStyles[size],
         fullWidth && "w-full",
         className,

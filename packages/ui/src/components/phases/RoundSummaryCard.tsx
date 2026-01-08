@@ -14,6 +14,7 @@ interface RoundSummaryCardProps {
   voteCounts: Map<string, number>;
   variant?: RoundSummaryCardVariant;
   className?: string;
+  isDark?: boolean;
 }
 
 export function RoundSummaryCard({
@@ -21,6 +22,7 @@ export function RoundSummaryCard({
   voteCounts,
   variant = "host",
   className = "",
+  isDark = false,
 }: RoundSummaryCardProps) {
   const maxGroupVotes = summary.answers.reduce(
     (max, answer) => Math.max(max, voteCounts.get(answer.id) ?? 0),
@@ -29,17 +31,17 @@ export function RoundSummaryCard({
 
   if (variant === "presenter") {
     return (
-      <div className={`rounded-3xl bg-white p-6 shadow-md ${className}`}>
+      <div className={`elevated-card p-6 ${className}`}>
         <div className="flex flex-col gap-1 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-600">
+            <p className={`text-xs font-semibold uppercase tracking-[0.3em] ${!isDark ? 'text-slate-600' : 'text-brand-primary'}`}>
               Group {summary.index + 1}
             </p>
-            <p className="mt-1 text-2xl font-bold leading-tight text-slate-900">
+            <p className={`mt-1 text-2xl font-bold leading-tight ${!isDark ? 'text-slate-900' : 'text-white'}`}>
               {summary.group.prompt}
             </p>
           </div>
-          <div className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-600">
+          <div className={`text-xs font-semibold uppercase tracking-[0.3em] ${!isDark ? 'text-slate-600' : 'text-brand-primary'}`}>
             {summary.winners.length ? "Winning answers" : "No votes"}
           </div>
         </div>
@@ -57,10 +59,10 @@ export function RoundSummaryCard({
               return (
                 <div
                   key={answer.id}
-                  className={`rounded-2xl p-4 ${
+                  className={`rounded-2xl p-4 border ${
                     isWinner
-                      ? "bg-slate-200 text-slate-900"
-                      : "bg-slate-100 text-slate-700"
+                      ? `${!isDark ? 'bg-white text-slate-900 border-slate-200' : 'bg-slate-800/50 text-white border-slate-600'}`
+                      : `${!isDark ? 'bg-slate-50 text-slate-700 border-slate-100' : 'bg-slate-700/30 text-slate-300 border-slate-500'}`
                   }`}
                 >
                   <p className="text-lg font-semibold">{answer.text}</p>
@@ -81,7 +83,7 @@ export function RoundSummaryCard({
               );
             })
           ) : (
-            <div className="rounded-2xl bg-slate-100 p-4 text-sm text-slate-500">
+            <div className={`rounded-2xl p-4 text-sm border ${!isDark ? 'bg-slate-50 text-slate-500 border-slate-100' : 'bg-slate-700/30 text-slate-400 border-slate-500'}`}>
               No answers submitted for this group.
             </div>
           )}
@@ -92,17 +94,17 @@ export function RoundSummaryCard({
 
   // Host variant (default)
   return (
-    <div className={`rounded-3xl bg-white p-5 shadow-inner ${className}`}>
+      <div className={`elevated-card p-5 ${className}`}>
       <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+          <p className={`text-xs font-semibold uppercase tracking-wide ${!isDark ? 'text-slate-500' : 'text-brand-primary'}`}>
             Group {summary.index + 1}
           </p>
-          <p className="text-sm font-semibold text-slate-900">
+          <p className={`text-sm font-semibold ${!isDark ? 'text-slate-900' : 'text-white'}`}>
             {summary.group.prompt}
           </p>
         </div>
-        <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+        <div className={`text-xs font-semibold uppercase tracking-wide ${!isDark ? 'text-slate-500' : 'text-brand-primary'}`}>
           {summary.winners.length
             ? "Winning answers"
             : "No votes received"}
@@ -119,7 +121,7 @@ export function RoundSummaryCard({
               (winner) => winner.id === answer.id,
             );
             return (
-              <li key={answer.id} className="rounded-2xl bg-slate-100 p-4">
+              <li key={answer.id} className={`rounded-2xl p-4 border ${!isDark ? 'bg-white text-slate-900 border-slate-200' : 'bg-slate-800/50 text-white border-slate-600'}`}>
                 <div className="flex items-start justify-between gap-4">
                   <p className="font-semibold text-slate-900">
                     {answer.text}
@@ -145,7 +147,7 @@ export function RoundSummaryCard({
             );
           })
         ) : (
-          <li className="rounded-2xl bg-slate-100 px-4 py-3 text-sm text-slate-500">
+          <li className={`rounded-2xl px-4 py-3 text-sm border ${!isDark ? 'bg-slate-50 text-slate-500 border-slate-100' : 'bg-slate-700/30 text-slate-400 border-slate-500'}`}>
             No answers submitted for this group.
           </li>
         )}

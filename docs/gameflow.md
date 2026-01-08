@@ -43,7 +43,7 @@ This document describes the end-to-end game flow for a Social night in a bar.
 3. **Display lobby screen**
    - TV shows:
      - Venue name / event title
-     - QR code + short URL (e.g., `social.gg/christie`)
+     - QR code + short URL (e.g., `playnow.social/christie`)
      - Simple instructions: "Scan to join. Form a team. Compete for glory."
      - Sponsor logos (if applicable)
 

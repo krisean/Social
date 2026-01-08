@@ -1,7 +1,5 @@
 import type { FormEvent } from "react";
-import { Card } from "../../../components/Card";
-import { Button } from "../../../components/Button";
-import { FormField } from "../../../components/FormField";
+import { Card, Button, FormField } from "@social/ui";
 import { formatCode } from "../../../shared/constants";
 import { useTheme } from "../../../shared/providers/ThemeProvider";
 
@@ -25,7 +23,7 @@ export function JoinForm({
   const { isDark } = useTheme();
 
   return (
-    <Card className="space-y-5">
+    <Card className="space-y-5" isDark={isDark}>
       <div className="space-y-2 text-center">
         <h1 className={`text-3xl font-black ${!isDark ? 'text-slate-900' : 'text-pink-400'}`}>Join Söcial</h1>
         <p className={`text-sm ${!isDark ? 'text-slate-600' : 'text-cyan-300'}`}>
@@ -48,6 +46,7 @@ export function JoinForm({
           autoComplete="off"
           error={joinErrors.code}
           maxLength={6}
+          isDark={isDark}
         />
         <FormField
           label="Team name"
@@ -59,6 +58,7 @@ export function JoinForm({
           }
           maxLength={15}
           error={joinErrors.teamName}
+          isDark={isDark}
         />
         <Button type="submit" fullWidth isLoading={isJoining}>
           Join game

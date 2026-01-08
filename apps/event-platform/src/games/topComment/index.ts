@@ -3,7 +3,7 @@
  * Export top-level game information and components
  */
 
-import type { GameDescriptor } from "../../engine/types";
+import type { GameDescriptor } from "@social/game-engine";
 
 export const TOP_COMMENT_EVENT_DESCRIPTOR: GameDescriptor = {
   id: "top-comment-event",

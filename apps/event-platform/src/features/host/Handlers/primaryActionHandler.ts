@@ -1,5 +1,5 @@
 import type { Session } from "../../../shared/types";
-import type { Toast } from "../../../shared/hooks/useToast";
+import type { Toast } from "@social/ui";
 import { advancePhase, startGame } from "../../session/sessionService";
 
 interface PrimaryActionDeps {
@@ -29,7 +29,7 @@ export const handlePrimaryAction = (deps: PrimaryActionDeps) => async () => {
   try {
     if (session.status === "lobby") {
       await startGame({ sessionId: session.id });
-      toast({ title: "Game started", variant: "success" });
+      toast("Game started", "success");
     } else if (
       session.status === "answer" ||
       session.status === "vote" ||
@@ -39,24 +39,17 @@ export const handlePrimaryAction = (deps: PrimaryActionDeps) => async () => {
     }
   } catch (error: unknown) {
     console.error("Primary action error:", error);
-    
-    // Provide context-specific error messages
+
+    // Extract error message
     let errorMessage = "Please try again.";
     
-    if (session?.status === "lobby") {
-      errorMessage = "Need at least one player to start. Share the room code with players first.";
+    if (error instanceof Error) {
+      errorMessage = error.message;
     } else if (error && typeof error === 'object' && 'message' in error && typeof error.message === 'string') {
-      // Use the error message if available and not generic
-      if (error.message !== 'Edge Function returned a non-2xx status code') {
-        errorMessage = error.message;
-      }
+      errorMessage = error.message;
     }
-    
-    toast({
-      title: "Action failed",
-      description: errorMessage,
-      variant: "error",
-    });
+
+    toast(errorMessage, "error");
   } finally {
     triggerPerformingAction(false);
   }

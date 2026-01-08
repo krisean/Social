@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useTheme } from "../../../shared/providers/ThemeProvider";
 import { promptLibraries } from "../../../shared/constants";
 import type {
   PromptLibrary,
@@ -16,6 +17,7 @@ export function PromptLibrarySelector({
   onSelect,
   disabled = false,
 }: PromptLibrarySelectorProps) {
+  const { isDark } = useTheme();
   const [query, setQuery] = useState("");
 
   const filteredLibraries = useMemo(() => {
@@ -31,13 +33,13 @@ export function PromptLibrarySelector({
   return (
     <div className="space-y-3">
       <div className="flex flex-col gap-1">
-        <p className="text-sm font-semibold text-slate-800">Prompt library</p>
+        <p className={`text-sm font-semibold ${!isDark ? 'text-slate-800' : 'text-slate-200'}`}>Prompt library</p>
         <input
           type="search"
           value={query}
           onChange={(event) => setQuery(event.target.value)}
           placeholder="Search libraries"
-          className="rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm shadow-sm placeholder:text-slate-400 focus:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-light"
+          className={`px-4 py-2 text-sm placeholder:text-slate-400 border rounded-lg focus:outline-none focus:ring-2 ${!isDark ? 'bg-white border-slate-200 focus:border-brand-primary focus:ring-brand-light' : 'bg-slate-700 border-slate-600 text-white focus:border-cyan-400 focus:ring-cyan-400/20'}`}
           disabled={disabled}
         />
       </div>
@@ -53,11 +55,7 @@ export function PromptLibrarySelector({
                   onSelect(library.id);
                 }
               }}
-              className={`flex w-64 min-w-[240px] snap-center flex-col gap-3 rounded-3xl border-2 px-4 py-5 text-left transition ${
-                isSelected
-                  ? "border-brand-primary bg-white shadow-2xl"
-                  : "border-transparent bg-white/90 shadow-md hover:shadow-xl"
-              } ${disabled ? "pointer-events-none opacity-60" : ""}`}
+              className={`prompt-card ${isSelected ? (isDark ? 'prompt-card-selected-dark' : 'prompt-card-selected-light') : (isDark ? 'prompt-card-dark' : 'prompt-card-light')} ${disabled ? 'prompt-card-disabled' : ''}`}
               aria-pressed={isSelected}
               disabled={disabled}
             >
@@ -65,11 +63,11 @@ export function PromptLibrarySelector({
                 <span className="text-3xl" aria-hidden="true">
                   {library.emoji}
                 </span>
-                <span className="rounded-full bg-slate-900/5 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-slate-600">
+                <span className={`prompt-library-name ${isDark ? 'prompt-library-name-dark' : 'prompt-library-name-light'}`}>
                   {library.name}
                 </span>
               </div>
-              <p className="text-sm text-slate-600">{library.description}</p>
+              <p className={`text-sm ${!isDark ? 'text-slate-700' : 'text-slate-300'}`}>{library.description}</p>
             </button>
           );
         })}

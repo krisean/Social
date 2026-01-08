@@ -6,24 +6,25 @@ type FormFieldProps = InputHTMLAttributes<HTMLInputElement> & {
   label: string;
   hint?: string;
   error?: string;
+  isDark?: boolean;
 };
 
 export const FormField = forwardRef<HTMLInputElement, FormFieldProps>(
-  ({ label, hint, error, className, id, ...props }, ref) => {
+  ({ label, hint, error, isDark = false, className, id, ...props }, ref) => {
     const inputId = id ?? props.name ?? undefined;
     const hintId = hint && inputId ? `${inputId}-hint` : undefined;
     const errorId = error && inputId ? `${inputId}-error` : undefined;
     const describedBy = [hintId, errorId].filter(Boolean).join(" ") || undefined;
     return (
       <label className="flex flex-col gap-1 text-left" htmlFor={inputId}>
-        <span className="text-sm font-medium text-slate-700">{label}</span>
+        <span className={`text-sm font-medium ${!isDark ? 'text-slate-900' : 'text-slate-300'}`}>{label}</span>
         <input
           ref={ref}
           id={inputId}
           className={clsx(
-            "matte-input w-full rounded-2xl border border-white/40 bg-transparent px-4 py-3 text-base placeholder:text-slate-500 focus:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-light",
+            "matte-input w-full rounded-2xl border border-white/40 bg-transparent px-4 py-3 text-base placeholder:text-slate-500 dark:placeholder:text-slate-400 focus:border-brand-primary dark:focus:border-cyan-400 focus:outline-none focus:ring-2 focus:ring-brand-light dark:focus:ring-cyan-400/20",
             error &&
-              "border-rose-500 focus:border-rose-500 focus:ring-rose-200",
+              "border-rose-500 dark:border-rose-400 focus:border-rose-500 dark:focus:border-rose-400 focus:ring-rose-200 dark:focus:ring-rose-400/20",
             className,
           )}
           aria-invalid={error ? true : undefined}
@@ -31,7 +32,7 @@ export const FormField = forwardRef<HTMLInputElement, FormFieldProps>(
           {...props}
         />
         {hint ? (
-          <span id={hintId} className="text-xs text-slate-500">
+          <span id={hintId} className="text-xs text-slate-500 dark:text-slate-400">
             {hint}
           </span>
         ) : null}
@@ -39,7 +40,7 @@ export const FormField = forwardRef<HTMLInputElement, FormFieldProps>(
           <span
             id={errorId}
             data-testid={errorId ? `${errorId}` : undefined}
-            className="text-xs text-rose-600"
+            className="text-xs text-rose-600 dark:text-rose-400"
           >
             {error}
           </span>

@@ -1,5 +1,5 @@
-import { Card } from "../../../components/Card";
-import { Button } from "../../../components/Button";
+import { Card, Button } from "@social/ui";
+import { useTheme } from "../../../shared/providers/ThemeProvider";
 import { getMascotById } from "../../../shared/mascots";
 import type { Team } from "../../../shared/types";
 
@@ -20,24 +20,25 @@ export function LobbyPhase({
   sessionCode,
   teams,
 }: LobbyPhaseProps) {
+  const { isDark } = useTheme();
   return (
-    <Card className="space-y-5">
+    <Card className="space-y-5" isDark={isDark}>
       <div>
-        <h3 className="text-xl font-semibold text-slate-900">
+        <h3 className={`text-xl font-semibold ${!isDark ? 'text-slate-900' : 'text-pink-400'}`}>
           Waiting for teams
         </h3>
-        <p className="text-sm text-slate-600">Share the code and link below.</p>
+        <p className={`text-sm ${!isDark ? 'text-slate-600' : 'text-cyan-300'}`}>Share the code and link below.</p>
       </div>
       <div className="grid gap-3 sm:grid-cols-2">
         <button
           type="button"
           onClick={() => handleCopyLink(inviteLink)}
-          className="flex flex-col rounded-2xl border border-slate-200 bg-white p-4 text-left shadow-sm transition hover:border-brand-primary hover:shadow-md"
+          className={`flex flex-col rounded-2xl border p-4 text-left shadow-sm transition hover:shadow-md ${!isDark ? 'border-slate-200 bg-white hover:border-brand-primary text-slate-900' : 'border-cyan-400/50 bg-slate-800 hover:border-cyan-400 text-white'}`}
         >
-          <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+          <span className={`text-xs font-semibold uppercase tracking-wide ${!isDark ? 'text-slate-500' : 'text-cyan-300'}`}>
             Shareable link
           </span>
-          <span className="mt-1 break-all font-medium text-slate-900">
+          <span className={`mt-1 break-all font-medium ${!isDark ? 'text-brand-primary' : 'text-cyan-400'}`}>
             {inviteLink || storedCode}
           </span>
         </button>
@@ -58,17 +59,17 @@ export function LobbyPhase({
       </div>
       {teams.length > 0 && (
         <div>
-          <h3 className="text-sm font-semibold text-slate-700">Teams joined ({teams.length})</h3>
+          <h3 className={`text-sm font-semibold ${!isDark ? 'text-slate-700' : 'text-slate-300'}`}>Teams joined ({teams.length})</h3>
           <ul className="mt-3 grid gap-2 sm:grid-cols-2">
             {teams.map((team) => {
               const mascot = team.mascotId ? getMascotById(team.mascotId) : null;
               return (
                 <li
                   key={team.id}
-                  className="flex items-center gap-3 rounded-2xl bg-white px-4 py-3 shadow-sm"
+                  className="elevated-card flex items-center gap-3 px-4 py-3"
                 >
                   {mascot ? (
-                    <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-slate-100">
+                    <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full ${!isDark ? 'bg-slate-100' : 'bg-slate-700'}">
                       <img
                         src={mascot.path}
                         alt={mascot.name}
@@ -78,19 +79,19 @@ export function LobbyPhase({
                           const parent = e.currentTarget.parentElement;
                           if (parent) {
                             parent.textContent = team.teamName.charAt(0).toUpperCase();
-                            parent.className = "flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-slate-200 text-sm font-bold text-slate-600";
+                            parent.className = "flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full ${!isDark ? 'bg-slate-200 text-sm font-bold text-slate-600' : 'bg-slate-600 text-sm font-bold text-slate-300'}";
                           }
                         }}
                       />
                     </div>
                   ) : (
-                    <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-slate-200 text-sm font-bold text-slate-600">
+                    <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full ${!isDark ? 'bg-slate-200 text-sm font-bold text-slate-600' : 'bg-slate-600 text-sm font-bold text-slate-300'}">
                       {team.teamName.charAt(0).toUpperCase()}
                     </div>
                   )}
                   <div className="flex-1 min-w-0">
-                    <span className="text-sm font-medium text-slate-700 truncate">{team.teamName}</span>
-                    <span className="text-xs text-slate-500 ml-2">Score: {team.score}</span>
+                    <span className={`text-sm font-medium ${!isDark ? 'text-slate-800' : 'text-slate-200'} truncate`}>{team.teamName}</span>
+                    <span className={`text-xs ${!isDark ? 'text-slate-600' : 'text-cyan-300'} ml-2`}>Score: {team.score}</span>
                   </div>
                 </li>
               );

@@ -1,10 +1,10 @@
 # Social Game Engine **Social** — Comprehensive Project Report
 
-**Date:** December 16, 2025
-**Version:** 1.0 (MVP Launch Roadmap)
+**Date:** January 6, 2026
+**Version:** 2.0 (Post-Migration Architecture)
 **Team:** 4 UVic Co-founders (Kris, Pat, Eric, Braden) — **140 hrs/week capacity**
-**Target:** **$44k MRR** from **59 Victoria venues** by **Week 12**
-**Platform:** Turborepo monorepo → React PWA games (**Top Comment + VIBox**) on Supabase
+**Status:** **Supabase Migration Complete** - Firebase → PostgreSQL + Edge Functions
+**Platform:** Turborepo monorepo → React PWA games (**Top Comment + VIBox**) on Supabase PostgreSQL + Edge Functions
 
 ---
 
@@ -68,16 +68,28 @@ A shared monorepo powers Supabase realtime queues, OpenAI moderation, and React/
 ```text
 social/
 ├── apps/
-│   ├── web/        # social.gg landing + venue dashboard
-│   ├── topcomment/ # Game 1: Twitter parody PWA
-│   ├── vibox/      # Game 2: AI jukebox PWA
-│   └── admin/      # Supabase venue analytics
+│   ├── event-platform/    # Main event platform (host/team/presenter)
+│   │   ├── host/         # Host interface with session management
+│   │   ├── team/         # Player interface for joining games
+│   │   └── presenter/    # Large screen display for audiences
+│   ├── dashboard/        # Admin dashboard for venue analytics
+│   ├── web/              # Marketing site (playnow.social)
+│   ├── topcomment-247/   # Legacy Top Comment PWA
+│   └── vibox-247/        # Legacy VIBox PWA
 ├── packages/
-│   ├── ui/         # Shared Button, Leaderboard, QR scanner
-│   ├── db/         # Supabase schema + realtime queries
-│   ├── ai/         # OpenAI moderation + Suno wrapper
-│   └── payments/   # Stripe / Helcim webhooks
-├── turbo.json      # Build orchestration
+│   ├── game-engine/      # Core game engine interfaces
+│   ├── games/            # Game implementations (topcomment, vibox)
+│   │   ├── topcomment/   # Top Comment game logic & components
+│   │   └── vibox/        # VIBox game logic & components
+│   ├── ui/               # Shared React components (Card, Button, etc.)
+│   ├── db/               # Supabase client & database utilities
+│   ├── auth/             # Authentication utilities
+│   ├── ai/               # OpenAI moderation + AI services
+│   └── payments/         # Payment processing (Stripe/Helcim)
+├── supabase/
+│   ├── functions/        # Edge Functions for game operations
+│   └── migrations/       # Database schema migrations
+├── turbo.json            # Build orchestration
 └── pnpm-workspace.yaml
 ```
 
@@ -93,38 +105,83 @@ pnpm dev --filter=topcomment
 vercel deploy --prod
 ```
 
-Live at: `social.gg/topcomment`
+Live at: `playnow.social/topcomment`
 
 ---
 
 ## Supabase Schema (Shared Across Games)
 
 ```sql
+-- Core Sessions (Event Mode)
+CREATE TABLE sessions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  code TEXT UNIQUE NOT NULL,
+  host_uid TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'lobby',
+  round_index INTEGER NOT NULL DEFAULT 0,
+  rounds JSONB NOT NULL DEFAULT '[]',
+  vote_group_index INTEGER,
+  prompt_deck JSONB NOT NULL DEFAULT '[]',
+  prompt_cursor INTEGER NOT NULL DEFAULT 0,
+  prompt_library_id TEXT NOT NULL DEFAULT 'classic',
+  settings JSONB NOT NULL DEFAULT '{"answerSecs": 90, "voteSecs": 90, "resultsSecs": 12, "maxTeams": 24}',
+  venue_name TEXT,
+  venue_key TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  started_at TIMESTAMPTZ,
+  ended_at TIMESTAMPTZ,
+  ends_at TIMESTAMPTZ
+);
+
+-- Teams (Players in Event Sessions)
+CREATE TABLE teams (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  session_id UUID NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
+  uid TEXT NOT NULL,
+  team_name TEXT NOT NULL,
+  is_host BOOLEAN NOT NULL DEFAULT false,
+  score INTEGER NOT NULL DEFAULT 0,
+  mascot_id INTEGER,
+  joined_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  last_active_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE(session_id, uid)
+);
+
+-- Answers (Player Submissions)
+CREATE TABLE answers (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  session_id UUID NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
+  team_id UUID NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
+  round_index INTEGER NOT NULL,
+  group_id UUID NOT NULL,
+  text TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Votes (Player Voting)
+CREATE TABLE votes (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  session_id UUID NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
+  voter_id UUID NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
+  answer_id UUID NOT NULL REFERENCES answers(id) ON DELETE CASCADE,
+  round_index INTEGER NOT NULL,
+  group_id UUID NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Venues (for future venue management)
 CREATE TABLE venues (
-  id UUID PRIMARY KEY,
-  name TEXT,
-  qr_code TEXT UNIQUE
-);
-
-CREATE TABLE games (
-  id UUID PRIMARY KEY,
-  venue_id UUID REFERENCES venues,
-  type TEXT CHECK (type IN ('topcomment', 'vibox')),
-  status TEXT CHECK (status IN ('waiting', 'playing', 'voting'))
-);
-
-CREATE TABLE rounds (
-  id UUID PRIMARY KEY,
-  game_id UUID REFERENCES games,
-  prompt TEXT,
-  entries JSONB[]
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 ```
 
 **Realtime Subscriptions**
 
-* Channel: `games:venue_id`
-* RLS: `venue_id = auth.jwt()->venue_id`
+* Channel: `sessions:{session_id}` (per session)
+* RLS: Row Level Security with authenticated access
+* Real-time updates for live game state
 
 ---
 
@@ -132,35 +189,53 @@ CREATE TABLE rounds (
 
 ### Game 1: Top Comment (Twitter Parody)
 
-**MVP Scope (Weeks 1–4)**
+**Current Status: ✅ MVP Complete**
 
-* QR scan → anonymous nickname → join table
-* 3‑round flow: prompt → submit roast → emoji voting
-* Live leaderboard on bar TVs (Supabase realtime)
-* $1.50 tip‑to‑vote (Helcim / Stripe)
+**Event Mode Features:**
+* Host creates session with unique QR code
+* Multiple players join via team names and mascots
+* 3-round flow: prompt → submit answers → vote → results
+* Presenter view for bar TVs (Supabase realtime)
+* Host controls phase advancement
 
-**Technical Flow**
+**Patron Mode Features:**
+* Solo play without host
+* Self-paced rounds
+* Compete against historical leaderboards
+* No room codes needed
 
-* Auth: `supabase.auth.signInAnonymously()`
-* State machine: `waiting → entries → voting → winners`
-* Moderation: OpenAI `gpt-4o-mini` (~$0.001/scan)
+**Technical Implementation:**
+* Auth: Supabase anonymous auth + persistent sessions
+* State machine: `lobby → answer → vote → results → ended`
+* Moderation: OpenAI GPT-4o-mini content filtering
+* Real-time: Supabase realtime subscriptions
+* Engine: Modular game engine supporting multiple games
 
 ---
 
-### Game 2: VIBox (AI Jukebox)
+### Game 2: VIBox (AI Music Quiz)
 
-**Alpha Scope (Weeks 4–6)**
+**Current Status: ✅ Engine Complete**
 
-* QR scan → vibe picker (chill / hype / party)
-* Suno API → custom AI track (£2 per play)
-* Queue display on TVs + skip voting
-* No persistent history (alpha)
+**Event Mode Features:**
+* Host selects music categories/genres
+* Players guess song/artist information
+* Real-time scoring and leaderboards
+* Presenter view with song clues
+* Multiple rounds with escalating difficulty
 
-**Technical Flow**
+**Patron Mode Features:**
+* Solo music trivia challenges
+* Genre-specific quizzes
+* Historical scoring comparisons
+* Progressive difficulty levels
 
-* `vibe → sunoapi.org/v1/generate`
-* Store tracks in Supabase Storage
-* Schema reuse via `games.type = 'vibox'`
+**Technical Implementation:**
+* Music database integration
+* Dynamic question generation
+* Audio playback in browser
+* Real-time answer validation
+* Shared engine architecture with Top Comment
 
 ---
 
@@ -183,16 +258,19 @@ CREATE TABLE rounds (
 
 ---
 
-## 12‑Week Timeline
+## Current Project Status
 
-| Phase       | Focus                 | Owner(s)          | Cost |
-| ----------- | --------------------- | ----------------- | ---- |
-| Weeks 1–3   | Engine + shared infra | Braden, Kris, Pat | $50  |
-| Week 4      | Top Comment MVP       | Kris, Pat, Eric   | $250 |
-| Weeks 5–6   | VIBox Alpha           | Eric, Braden      | $25  |
-| Weeks 7–8   | Venue dashboard       | Kris, Pat         | $0   |
-| Weeks 9–10  | 10 venue pilots       | Pat               | $0   |
-| Weeks 11–12 | Validation + pipeline | Full team         | $0   |
+| Phase              | Status               | Completion         | Owner(s)          |
+| ------------------ | -------------------- | ------------------ | ----------------- |
+| ✅ Firebase Migration | Complete            | 100%              | Braden, Kris     |
+| ✅ Game Engine Architecture | Complete         | 100%              | Kris, Pat        |
+| ✅ Top Comment Event Mode | Complete         | 100%              | Kris, Pat, Eric  |
+| ✅ Top Comment Patron Mode | Complete        | 100%              | Kris, Pat        |
+| ✅ VIBox Event Mode | Complete            | 100%              | Eric, Braden     |
+| ✅ VIBox Patron Mode | Complete            | 100%              | Eric, Braden     |
+| 🔄 Venue Dashboard | In Progress         | 60%               | Kris, Pat        |
+| 📋 Venue Pilots    | Planning            | 20%               | Pat              |
+| 🎯 Revenue Validation | Pending          | 0%                | Full team        |
 
 ---
 
@@ -207,28 +285,41 @@ CREATE TABLE rounds (
 
 ---
 
-## Week 1 Action Plan (Solo: Kris / Pat)
+## Current Priorities & Next Steps
 
-### Today (4 hrs)
+### Immediate Focus (Q1 2026)
 
-* Create Turborepo
-* Top Comment QR join screen
-* Shared UI components
-* Supabase schema
-* Local PWA running
+**🎯 Venue Dashboard Completion (Weeks 1-2)**
+* Analytics dashboard for venue owners
+* QR code generation and management
+* Revenue tracking and reporting
+* Session monitoring and controls
 
-### Tomorrow (6 hrs)
+**🏪 Venue Pilot Program (Weeks 3-4)**
+* Select 5-10 Victoria venues for pilots
+* Onboard venues with custom QR codes
+* Train venue staff on system usage
+* Collect initial feedback and metrics
 
-* OpenAI moderation endpoint
-* Supabase auth + realtime
-* Deploy `social.gg/topcomment`
-* Generate 10 test QR codes
+**📊 Revenue Model Validation (Ongoing)**
+* Test $299/month pricing with pilot venues
+* Validate $1.50 per play microtransactions
+* Monitor server tip sharing mechanics
+* Track actual vs projected revenue
 
-### Day 3 (3 hrs)
+### Technical Debt & Improvements
 
-* Felicita’s table mockup
-* Sticker design
-* UVic co‑op pitch deck
+**🔧 Platform Stability**
+* Comprehensive testing suite (unit, integration, e2e)
+* Error handling and monitoring
+* Performance optimization
+* Mobile PWA improvements
+
+**🎮 Game Experience**
+* Enhanced UI/UX based on user feedback
+* Additional game modes and features
+* Improved presenter view layouts
+* Accessibility improvements
 
 ---
 
@@ -236,7 +327,7 @@ CREATE TABLE rounds (
 
 | Category          | Item               | Cost (CAD)  | Timing |
 | ----------------- | ------------------ | ----------- | ------ |
-| Domain            | social.gg          | $100 / year | Week 1 |
+| Domain            | playnow.social     | $100 / year | Week 1 |
 | Trademark         | CIPO intent‑to‑use | $250        | Week 1 |
 | Stickers          | 1,000 prints       | $100        | Week 2 |
 | Supabase          | Pro tier           | $25 / month | Week 4 |
@@ -249,12 +340,21 @@ CREATE TABLE rounds (
 
 ## Success Metrics & KPIs
 
-| Week    | Metric               | Target        | Measurement    |
-| ------- | -------------------- | ------------- | -------------- |
-| 4       | Top Comment adoption | 40% scan rate | Supabase       |
-| 8       | Paid venues          | 5 @ $299      | Stripe         |
-| 12      | MRR projection       | $44k          | Sales pipeline |
-| Ongoing | Server income        | $45/shift     | Helcim         |
+| Phase              | Metric                     | Target              | Status          |
+| ------------------ | -------------------------- | ------------------- | --------------- |
+| MVP Launch         | Game Engine Stability     | 99.9% uptime       | ✅ Complete    |
+| Pilot Program      | Venue Adoption Rate        | 40% scan rate       | 🔄 In Progress |
+| Revenue Validation | First 5 Paid Venues        | $1,495 MRR          | 📋 Planned     |
+| Scale Phase        | Full MRR Target            | $44k MRR            | 🎯 Goal        |
+| Ongoing           | Server Partnership Income  | $45/shift average   | 📊 Monitoring  |
+
+**Current Achievements:**
+- ✅ Full game engine with 2 complete games (Top Comment + VIBox)
+- ✅ Supabase PostgreSQL migration complete
+- ✅ Event + Patron modes implemented
+- ✅ Real-time multiplayer functionality
+- ✅ Presenter view for large screens
+- ✅ Mobile-responsive PWAs
 
 ---
 
@@ -283,7 +383,7 @@ FOR ALL USING (venue_id = auth.jwt()->>'venue_id');
 > 🔥 **TOP COMMENT: Scan to Roast Live**
 > Own tonight’s feed → **$1.50 votes**
 
-QR: `social.gg/topcomment?venue=felicitas`
+QR: `d/topcomment?venue=felicitas`
 
 ### UVic Co‑op Pitch
 
@@ -295,4 +395,4 @@ QR: `social.gg/topcomment?venue=felicitas`
 
 ---
 
-**Next Action:** `pnpm create turbo social` → **Week 1 complete by EOD**
+**Next Action:** Complete venue dashboard → **Launch pilot program by end of Q1 2026**

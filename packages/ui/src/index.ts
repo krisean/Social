@@ -7,6 +7,7 @@ export { Card } from './components/Card';
 export { Modal } from './components/Modal';
 export { Timer } from './components/Timer';
 export { ProgressBar } from './components/ProgressBar';
+export { SessionTimer } from './components/SessionTimer';
 export { QRCodeBlock } from './components/QRCodeBlock';
 export { FormField } from './components/FormField';
 export { TextAreaField } from './components/TextAreaField';

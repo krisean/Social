@@ -194,7 +194,7 @@ importers:
         specifier: ^1.6.0
         version: 1.6.1(@types/node@22.19.3)(jsdom@27.3.0)
 
-  apps/topcomment-247:
+  apps/pubFeed:
     dependencies:
       '@social/db':
         specifier: workspace:*

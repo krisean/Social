@@ -1,6 +1,4 @@
-import { Timer } from "../../../components/Timer";
-import { ProgressBar } from "../../../components/ProgressBar";
-import { Card } from "../../../components/Card";
+import { Timer, ProgressBar, Card } from "@social/ui";
 
 interface SpotlightPhaseProps {
   sessionEndsAt: string | undefined;

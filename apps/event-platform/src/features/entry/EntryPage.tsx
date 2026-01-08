@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { BackgroundAnimation } from "../../components/BackgroundAnimation";
-import { Card } from "../../components/Card";
+import { Card } from "@social/ui";
 import { useAuth } from "../../shared/providers/AuthContext";
 import { useTheme } from "../../shared/providers/ThemeProvider";
 
@@ -192,15 +192,21 @@ const barConfig = {
 export function EntryPage() {
   const { isGuest } = useAuth();
   const { isDark } = useTheme();
-  
-  const bgGradient = `bg-gradient-to-r ${barConfig.colors.background.from} ${barConfig.colors.background.via} ${barConfig.colors.background.to}`;
+
   const showBackground = true;
   return (
     <>
       <BackgroundAnimation show={showBackground} />
-      <main className={`relative min-h-screen px-4 py-10 sm:px-6 ${bgGradient}`}>
+      {showBackground && (
+        <style>{`
+          body {
+            background: transparent !important;
+          }
+        `}</style>
+      )}
+      <main className="relative min-h-screen px-4 py-10 sm:px-6">
         <div className="relative z-10 mx-auto flex w-full max-w-4xl flex-col gap-6">
-          <Card className="text-center space-y-4 backdrop-blur">
+          <Card className="text-center space-y-4 backdrop-blur" isDark={isDark}>
             <div className="mx-auto flex justify-center">
               <a
                 href={barConfig.websiteUrl}
@@ -234,7 +240,7 @@ export function EntryPage() {
           </Card>
 
           <div className="grid gap-6 md:grid-cols-3">
-            <Card className="md:col-span-2 space-y-6">
+            <Card className="md:col-span-2 space-y-6" isDark={isDark}>
               <div className="space-y-2 text-center">
                 <p className={`text-xs font-semibold uppercase tracking-[0.4em] ${!isDark ? 'text-amber-500' : 'text-cyan-400'}`}>
                   {barConfig.content.tagline}
@@ -273,7 +279,7 @@ export function EntryPage() {
               </div>
             </Card>
 
-            <Card className={`space-y-4 ${!isDark ? 'bg-amber-50/60' : 'bg-slate-800/60'}`}>
+            <Card className={`space-y-4 ${!isDark ? 'bg-amber-50/60' : 'bg-slate-800/60'}`} isDark={isDark}>
               <p className={`text-xs font-semibold uppercase tracking-[0.4em] ${!isDark ? 'text-amber-600' : 'text-cyan-400'}`}>
                 Account
               </p>
@@ -289,8 +295,8 @@ export function EntryPage() {
             </Card>
           </div>
 
-          <Card className="space-y-6">
-            <div className="flex flex-col gap-4 text-sm text-slate-600 sm:flex-row sm:items-center sm:justify-between">
+          <Card className="space-y-6" isDark={isDark}>
+            <div className={`flex flex-col gap-4 text-sm ${!isDark ? 'text-slate-600' : 'text-slate-300'} sm:flex-row sm:items-center sm:justify-between`}>
               <div className="space-y-3">
                 <div className="flex items-center gap-2">
                   <svg className={`h-5 w-5 ${!isDark ? 'text-amber-500' : 'text-cyan-400'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -306,14 +312,14 @@ export function EntryPage() {
                   <span>{barConfig.contact.phone}</span>
                 </div>
               </div>
-              <a href="#" className="text-sm font-semibold text-amber-600 transition hover:text-amber-500">
+              <a href="#" className={`text-sm font-semibold transition ${!isDark ? 'text-amber-600 hover:text-amber-500' : 'text-cyan-400 hover:text-cyan-300'}`}>
                 Privacy
               </a>
             </div>
-            <div className="flex items-center justify-center gap-2 border-t border-slate-100 pt-4 text-xs text-slate-500">
+            <div className={`flex items-center justify-center gap-2 border-t pt-4 text-xs ${!isDark ? 'border-slate-100 text-slate-500' : 'border-slate-700 text-slate-400'}`}>
               <span>Powered by</span>
               <img src="/logo.png" alt="Söcial" className="h-4 w-auto opacity-80" />
-              <span className="font-semibold text-slate-600">Söcial</span>
+              <span className={`font-semibold ${!isDark ? 'text-slate-600' : 'text-slate-300'}`}>Söcial</span>
             </div>
           </Card>
         </div>
