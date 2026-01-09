@@ -1,18 +1,22 @@
 // Shared types for Edge Functions
 
-export type SessionStatus = 'lobby' | 'answer' | 'vote' | 'results' | 'ended';
+export type SessionStatus = 'lobby' | 'category-select' | 'answer' | 'vote' | 'results' | 'ended';
 
 export interface SessionSettings {
   answerSecs: number;
   voteSecs: number;
   resultsSecs: number;
   maxTeams: number;
+  gameMode?: 'classic' | 'jeopardy';
+  categorySelectSecs?: number;
 }
 
 export interface RoundGroup {
   id: string;
   prompt: string;
   teamIds: string[];
+  promptLibraryId?: string;
+  selectingTeamId?: string;
 }
 
 export interface Round {
@@ -31,6 +35,11 @@ export interface Session {
   prompt_deck: string[];
   prompt_cursor: number;
   prompt_library_id: string;
+  category_grid?: {
+    available: string[];
+    used: string[];
+    totalSlots: number;
+  };
   settings: SessionSettings;
   venue_name?: string;
   venue_key?: string;

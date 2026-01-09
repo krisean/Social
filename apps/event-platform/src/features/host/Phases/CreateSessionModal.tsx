@@ -5,9 +5,9 @@ import { useTheme } from "../../../shared/providers/ThemeProvider";
 interface CreateSessionModalProps {
   open: boolean;
   onClose: () => void;
-  createForm: { teamName: string; venueName: string };
+  createForm: { teamName: string; venueName: string; gameMode: "classic" | "jeopardy" };
   setCreateForm: React.Dispatch<
-    React.SetStateAction<{ teamName: string; venueName: string }>
+    React.SetStateAction<{ teamName: string; venueName: string; gameMode: "classic" | "jeopardy" }>
   >;
   createErrors: Record<string, string>;
   isCreating: boolean;
@@ -89,6 +89,49 @@ export function CreateSessionModal({
           error={createErrors.venueName}
           isDark={isDark}
         />
+        <div className="space-y-2">
+          <label className={`text-sm font-semibold ${!isDark ? 'text-slate-700' : 'text-cyan-100'}`}>
+            Game Mode
+          </label>
+          <div className="grid grid-cols-2 gap-3">
+            <button
+              type="button"
+              onClick={() => setCreateForm((prev) => ({ ...prev, gameMode: "classic" }))}
+              className={`
+                p-4 rounded-xl border-2 text-left transition-all
+                ${createForm.gameMode === "classic"
+                  ? "border-brand-primary bg-brand-light"
+                  : !isDark ? "border-slate-300 bg-white hover:border-slate-400" : "border-slate-600 bg-slate-800 hover:border-slate-500"
+                }
+              `}
+            >
+              <div className={`font-semibold mb-1 ${!isDark ? 'text-slate-900' : 'text-cyan-100'}`}>
+                Classic
+              </div>
+              <div className={`text-xs ${!isDark ? 'text-slate-600' : 'text-cyan-300'}`}>
+                Traditional gameplay with one prompt library
+              </div>
+            </button>
+            <button
+              type="button"
+              onClick={() => setCreateForm((prev) => ({ ...prev, gameMode: "jeopardy" }))}
+              className={`
+                p-4 rounded-xl border-2 text-left transition-all
+                ${createForm.gameMode === "jeopardy"
+                  ? "border-brand-primary bg-brand-light"
+                  : !isDark ? "border-slate-300 bg-white hover:border-slate-400" : "border-slate-600 bg-slate-800 hover:border-slate-500"
+                }
+              `}
+            >
+              <div className={`font-semibold mb-1 ${!isDark ? 'text-slate-900' : 'text-cyan-100'}`}>
+                Jeopardy
+              </div>
+              <div className={`text-xs ${!isDark ? 'text-slate-600' : 'text-cyan-300'}`}>
+                Teams select categories each round
+              </div>
+            </button>
+          </div>
+        </div>
         <p className={`text-xs ${!isDark ? 'text-slate-600' : 'text-slate-400'}`}>
           You'll get a 6-character room code and QR to share with teams.
           Anonymous sign-in keeps things lightweight.

@@ -2,6 +2,7 @@ import type { Session } from "./types";
 
 export const phaseCopy: Record<Session["status"], string> = {
   lobby: "Gather your teams and share the code.",
+  "category-select": "Teams are selecting categories.",
   answer: "Teams are writing their responses.",
   vote: "Votes are coming in.",
   results: "Review the winning answer.",
@@ -10,23 +11,14 @@ export const phaseCopy: Record<Session["status"], string> = {
 
 export const actionLabel: Record<Session["status"], string> = {
   lobby: "Start Game",
+  "category-select": "Skip to Answers",
   answer: "Lock Answers",
   vote: "Lock Votes",
   results: "Next Round",
   ended: "Session Ended",
 };
 
-// Static prompt libraries (legacy - use usePromptLibraries hook for dynamic loading)
-export {
-  promptLibraries,
-  defaultPromptLibrary,
-  defaultPromptLibraryId,
-} from "./promptLibraries";
-import { defaultPromptLibrary } from "./promptLibraries";
-
-export const prompts: string[] = defaultPromptLibrary?.prompts ?? [];
-
-// Dynamic prompt library functions (preferred - loads from database)
+// Dynamic prompt library functions (loads from database with fallback to static)
 export {
   getPromptLibraries,
   getPromptLibrary,
@@ -43,6 +35,7 @@ export function formatCode(value: string) {
 
 export const statusHeadline: Record<Session["status"], string> = {
   lobby: "Waiting for the host to start...",
+  "category-select": "Choose a category!",
   answer: "Answer the prompt!",
   vote: "Time to vote!",
   results: "Round results are in",
@@ -51,6 +44,7 @@ export const statusHeadline: Record<Session["status"], string> = {
 
 export const phaseHeadline: Record<Session["status"], string> = {
   lobby: "Scan the QR to join",
+  "category-select": "Category Selection",
   answer: "Answer the prompt",
   vote: "Vote for your favorite idea",
   results: "Round results",
@@ -59,6 +53,7 @@ export const phaseHeadline: Record<Session["status"], string> = {
 
 export const phaseSubtitle: Record<Session["status"], string> = {
   lobby: "Or visit game.barscores.ca and enter the room code.",
+  "category-select": "Random teams are choosing prompt categories for this round.",
   answer: "Type fast! You have 90 seconds to drop your best answer.",
   vote: "Pick the funniest or boldest idea. No voting for your own team.",
   results: "Celebrate the winner! Next round starts soon.",

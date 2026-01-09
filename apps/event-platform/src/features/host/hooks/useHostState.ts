@@ -11,7 +11,11 @@ export function useHostState(storedSessionId: string | null) {
   const [showCreateModal, setShowCreateModal] = useState(!storedSessionId);
   const [isCreating, setIsCreating] = useState(false);
   const [createErrors, setCreateErrors] = useState<Record<string, string>>({});
-  const [createForm, setCreateForm] = useState({ teamName: "", venueName: "" });
+  const [createForm, setCreateForm] = useState<{ teamName: string; venueName: string; gameMode: "classic" | "jeopardy" }>({ 
+    teamName: "", 
+    venueName: "", 
+    gameMode: "classic" 
+  });
   const [showPromptLibraryModal, setShowPromptLibraryModal] = useState(false);
   const [isUpdatingPromptLibrary, setIsUpdatingPromptLibrary] = useState(false);
   const [hostGroupVotes, setHostGroupVotes] = useState<Record<string, string>>({});

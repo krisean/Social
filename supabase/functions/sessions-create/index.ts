@@ -5,11 +5,12 @@ import type { Session, Team } from '../_shared/types.ts';
 
 async function handleCreateSession(req: Request, supabase: any): Promise<Response> {
   const uid = await getUserId(req); // Still need auth for creating (to be host)
-    const { teamName, venueName, promptLibraryId } = await req.json();
+    const { teamName, venueName, promptLibraryId, gameMode } = await req.json();
     
     const cleanedTeamName = cleanTeamName(requireString(teamName, 'teamName'));
     const cleanedVenueName = venueName ? cleanTeamName(venueName) : undefined;
     const libraryId = promptLibraryId || 'classic';
+    const mode = gameMode || 'classic';
     
     // Generate unique room code
     const code = await supabase.rpc('ensure_unique_code');
@@ -20,6 +21,27 @@ async function handleCreateSession(req: Request, supabase: any): Promise<Respons
     // Get prompts for this library
     const library = await getPromptLibrary(libraryId);
     const promptDeck = [...library.prompts].sort(() => Math.random() - 0.5);
+    
+    // Initialize category grid for jeopardy mode
+    let categoryGrid = null;
+    if (mode === 'jeopardy') {
+      const allLibraryIds = [
+        'classic', 'bar', 'basic', 'halloween', 'selfie', 'victoria',
+        'dangerfield', 'medieval', 'anime', 'politics', 'scifi',
+        'popculture', 'cinema', 'canucks', 'bc', 'tech',
+        'internetculture', 'datingapp', 'remotework', 'adulting',
+        'groupchat', 'streaming', 'climateanxiety', 'fictionalworlds'
+      ];
+      
+      categoryGrid = {
+        available: allLibraryIds,
+        used: [],
+        totalSlots: 40, // 10 rounds × 4 groups
+      };
+      console.log('Creating jeopardy session with category grid:', categoryGrid);
+    } else {
+      console.log('Creating classic session, no category grid');
+    }
     
     // Create session
     const { data: session, error: sessionError } = await supabase
@@ -33,11 +55,14 @@ async function handleCreateSession(req: Request, supabase: any): Promise<Respons
         prompt_deck: promptDeck,
         prompt_cursor: 0,
         prompt_library_id: libraryId,
+        category_grid: categoryGrid,
         settings: {
           answerSecs: 90,
           voteSecs: 90,
           resultsSecs: 12,
           maxTeams: 24,
+          gameMode: mode,
+          categorySelectSecs: 15,
         },
         venue_name: cleanedVenueName,
       })

@@ -3,6 +3,7 @@ export { useTeamLookup } from './useTeamLookup';
 export { useAnswersByGroup } from './useAnswersByGroup';
 export { useActiveGroupAnswers } from './useActiveGroupAnswers';
 export { useToast } from './useToast';
+export { usePromptLibraries, usePromptLibrary, useDefaultPromptLibrary } from './usePromptLibraries';
 
 // New shared hooks for session views
 export { useSessionTimers } from './useSessionTimers';

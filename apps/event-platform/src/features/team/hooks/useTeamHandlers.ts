@@ -1,6 +1,6 @@
 import { useCallback } from "react";
-import type { Session, Answer } from "../../../shared/types";
-import { joinSession, submitAnswer, submitVote } from "../../session/sessionService";
+import type { Session, Answer, RoundGroup } from "../../../shared/types";
+import { joinSession, submitAnswer, submitVote, selectCategory } from "../../session/sessionService";
 import { maskProfanity, containsProfanity } from "../../../shared/utils/profanity";
 import { answerSchema, joinSchema } from "../../../shared/schemas";
 import { isKickedFromCode } from "../utils/teamConstants";
@@ -19,8 +19,10 @@ interface UseTeamHandlersProps {
   answerText: string;
   setAnswerText: (text: string) => void;
   myAnswer: Answer | null;
+  myGroup: RoundGroup | null;
   setIsSubmittingAnswer: (submitting: boolean) => void;
   setIsSubmittingVote: (submitting: boolean) => void;
+  setIsSubmittingCategorySelection: (submitting: boolean) => void;
   toast: (options: { title: string; variant: "success" | "error" | "info" }) => void;
 }
 
@@ -38,8 +40,10 @@ export function useTeamHandlers({
   answerText,
   setAnswerText,
   myAnswer,
+  myGroup,
   setIsSubmittingAnswer,
   setIsSubmittingVote,
+  setIsSubmittingCategorySelection,
   toast,
 }: UseTeamHandlersProps) {
   const handleJoin = useCallback(
@@ -214,9 +218,39 @@ export function useTeamHandlers({
     [session, sessionId, setIsSubmittingVote, toast]
   );
 
+  const handleSelectCategory = useCallback(
+    async (categoryId: string) => {
+      if (!session || !myGroup) return;
+      
+      setIsSubmittingCategorySelection(true);
+      try {
+        await selectCategory({
+          sessionId: session.id,
+          groupId: myGroup.id,
+          categoryId,
+        });
+        
+        toast({
+          title: "Category selected!",
+          variant: "success",
+        });
+      } catch (error) {
+        console.error("Category selection error:", error);
+        toast({
+          title: "Failed to select category",
+          variant: "error",
+        });
+      } finally {
+        setIsSubmittingCategorySelection(false);
+      }
+    },
+    [session, myGroup, toast, setIsSubmittingCategorySelection]
+  );
+
   return {
     handleJoin,
     handleSubmitAnswer,
     handleVote,
+    handleSelectCategory,
   };
 }

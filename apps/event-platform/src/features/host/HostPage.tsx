@@ -16,11 +16,11 @@ import { getErrorMessage } from "../../shared/utils/errors";
 import {
   phaseCopy,
   actionLabel,
-  prompts,
-  defaultPromptLibraryId,
+  getDefaultPromptLibraryId,
 } from "../../shared/constants";
 import {
   LobbyPhase,
+  CategorySelectPhase,
   AnswerPhase,
   VotePhase,
   ResultsPhase,
@@ -182,6 +182,7 @@ export function HostPage() {
     setHostSession,
     setShowCreateModal,
     onSessionCreated: () => setShowPromptLibraryModal(true),
+    gameMode: createForm.gameMode,
   });
 
   const primaryActionHandler = handlePrimaryAction({
@@ -255,10 +256,11 @@ export function HostPage() {
   ]);
 
   const handlePromptLibrarySelect = useCallback(
-    (libraryId: PromptLibraryId) => {
+    async (libraryId: PromptLibraryId) => {
       if (!session || session.status !== "lobby") return;
       if (isUpdatingPromptLibrary) return;
-      if (libraryId === (session.promptLibraryId ?? defaultPromptLibraryId)) {
+      const defaultId = await getDefaultPromptLibraryId();
+      if (libraryId === (session.promptLibraryId ?? defaultId)) {
         return;
       }
       setIsUpdatingPromptLibrary(true);
@@ -363,6 +365,18 @@ export function HostPage() {
           />
         );
 
+      case "category-select":
+        return (
+          <CategorySelectPhase
+            session={session}
+            roundGroups={roundGroups}
+            teams={teams}
+            sessionEndsAt={session.endsAt}
+            categorySelectSecs={session.settings.categorySelectSecs ?? 15}
+            sessionPaused={session.paused}
+          />
+        );
+
       case "answer":
         return (
           <AnswerPhase
@@ -391,8 +405,6 @@ export function HostPage() {
             roundSummaries={roundSummaries}
             sessionEndsAt={session.endsAt}
             voteSecs={session.settings.voteSecs ?? 90}
-            prompts={prompts}
-            sessionRoundIndex={session.roundIndex}
             sessionPaused={session.paused}
           />
         );

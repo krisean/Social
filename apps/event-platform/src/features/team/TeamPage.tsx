@@ -12,7 +12,6 @@ import { useSelfieCamera } from "./useSelfieCamera";
 import { useAuth } from "../../shared/providers/AuthContext";
 import { useCurrentPhase } from "../../shared/providers/CurrentPhaseContext";
 import { useTheme } from "../../shared/providers/ThemeProvider";
-import { prompts } from "../../shared/constants";
 import {
   getKickedFromSessions,
   isKickedFromCode,
@@ -47,6 +46,8 @@ export function TeamPage() {
     setIsSubmittingAnswer,
     isSubmittingVote,
     setIsSubmittingVote,
+    isSubmittingCategorySelection,
+    setIsSubmittingCategorySelection,
     autoJoinAttempted,
     setAutoJoinAttempted,
     showHowToPlay,
@@ -302,7 +303,7 @@ export function TeamPage() {
   });
 
   // Extract event handlers into custom hook
-  const { handleJoin: handleJoinValues, handleSubmitAnswer, handleVote } = useTeamHandlers({
+  const { handleJoin: handleJoinValues, handleSubmitAnswer, handleVote, handleSelectCategory } = useTeamHandlers({
     sessionId,
     session,
     joinForm,
@@ -316,8 +317,10 @@ export function TeamPage() {
     answerText,
     setAnswerText,
     myAnswer,
+    myGroup,
     setIsSubmittingAnswer,
     setIsSubmittingVote,
+    setIsSubmittingCategorySelection,
     toast,
   });
 
@@ -395,12 +398,13 @@ export function TeamPage() {
     currentTeam,
     myGroup,
     roundGroups,
-    prompts,
     myAnswer,
     answerText,
     setAnswerText,
     handleSubmitAnswer,
     isSubmittingAnswer,
+    handleSelectCategory,
+    isSubmittingCategorySelection,
     totalSeconds,
     activeGroup,
     activeGroupIndex,

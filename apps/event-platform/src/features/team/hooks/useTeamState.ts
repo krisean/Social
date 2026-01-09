@@ -20,6 +20,7 @@ export function useTeamState(teamSession: { sessionId: string; code: string; tea
   const [answerText, setAnswerText] = useState("");
   const [isSubmittingAnswer, setIsSubmittingAnswer] = useState(false);
   const [isSubmittingVote, setIsSubmittingVote] = useState(false);
+  const [isSubmittingCategorySelection, setIsSubmittingCategorySelection] = useState(false);
   const [autoJoinAttempted, setAutoJoinAttempted] = useState(false);
   const [showHowToPlay, setShowHowToPlay] = useState(false);
   const [howToPlayInitialPhase, setHowToPlayInitialPhase] = useState<Session["status"] | null>(null);
@@ -57,6 +58,8 @@ export function useTeamState(teamSession: { sessionId: string; code: string; tea
     setIsSubmittingAnswer,
     isSubmittingVote,
     setIsSubmittingVote,
+    isSubmittingCategorySelection,
+    setIsSubmittingCategorySelection,
     autoJoinAttempted,
     setAutoJoinAttempted,
     showHowToPlay,

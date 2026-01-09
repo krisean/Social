@@ -31,6 +31,7 @@ export const handlePrimaryAction = (deps: PrimaryActionDeps) => async () => {
       await startGame({ sessionId: session.id });
       toast({ title: "Game started", variant: "success" });
     } else if (
+      session.status === "category-select" ||
       session.status === "answer" ||
       session.status === "vote" ||
       session.status === "results"

@@ -65,15 +65,39 @@ async function handleStartSession(req: Request, uid: string, supabase: any): Pro
       });
     }
     
-    // Calculate phase end time (answer phase)
-    const answerSecs = session.settings?.answerSecs || 90;
-    const endsAt = new Date(Date.now() + answerSecs * 1000).toISOString();
+    // Determine initial phase based on game mode
+    const isJeopardyMode = session.settings?.gameMode === 'jeopardy';
+    const initialStatus = isJeopardyMode ? 'category-select' : 'answer';
+    
+    console.log('Starting session with mode:', session.settings?.gameMode, 'initialStatus:', initialStatus);
+    
+    // Select random team for each group in jeopardy mode
+    if (isJeopardyMode && rounds.length > 0) {
+      try {
+        rounds[0].groups = rounds[0].groups.map(group => ({
+          ...group,
+          selectingTeamId: group.teamIds[Math.floor(Math.random() * group.teamIds.length)],
+        }));
+        console.log('Selected random teams for groups:', rounds[0].groups.map(g => ({ id: g.id, selectingTeamId: g.selectingTeamId })));
+      } catch (err) {
+        console.error('Error selecting random teams:', err);
+        throw err;
+      }
+    }
+    
+    // Calculate phase end time
+    const phaseSecs = isJeopardyMode 
+      ? (session.settings?.categorySelectSecs || 15)
+      : (session.settings?.answerSecs || 90);
+    const endsAt = new Date(Date.now() + phaseSecs * 1000).toISOString();
+    
+    console.log('Updating session to status:', initialStatus, 'with', rounds.length, 'rounds');
     
     // Update session
     const { data: updatedSession, error: updateError } = await supabase
       .from('sessions')
       .update({
-        status: 'answer',
+        status: initialStatus,
         round_index: 0,
         rounds,
         prompt_cursor: promptCursor,
@@ -84,7 +108,12 @@ async function handleStartSession(req: Request, uid: string, supabase: any): Pro
       .select()
       .single();
     
-    if (updateError) throw updateError;
+    if (updateError) {
+      console.error('Session update error:', updateError);
+      throw updateError;
+    }
+    
+    console.log('Session started successfully with status:', updatedSession.status);
     
     return corsResponse({ session: updatedSession as Session });
   }
