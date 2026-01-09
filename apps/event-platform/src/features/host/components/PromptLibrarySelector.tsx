@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useTheme } from "../../../shared/providers/ThemeProvider";
-import { promptLibraries } from "../../../shared/constants";
+import { usePromptLibraries } from "../../../shared/hooks/usePromptLibraries";
 import type {
   PromptLibrary,
   PromptLibraryId,
@@ -19,8 +19,10 @@ export function PromptLibrarySelector({
 }: PromptLibrarySelectorProps) {
   const { isDark } = useTheme();
   const [query, setQuery] = useState("");
+  const { data: promptLibraries, isLoading } = usePromptLibraries();
 
   const filteredLibraries = useMemo(() => {
+    if (!promptLibraries) return [];
     const value = query.trim().toLowerCase();
     if (!value) return promptLibraries;
     return promptLibraries.filter((library) =>
@@ -28,7 +30,7 @@ export function PromptLibrarySelector({
         .toLowerCase()
         .includes(value),
     );
-  }, [query]);
+  }, [query, promptLibraries]);
 
   return (
     <div className="space-y-3">
@@ -44,7 +46,17 @@ export function PromptLibrarySelector({
         />
       </div>
       <div className="flex gap-4 overflow-x-auto pb-2">
-        {filteredLibraries.map((library: PromptLibrary) => {
+        {isLoading && (
+          <div className={`text-sm ${!isDark ? 'text-slate-600' : 'text-slate-400'}`}>
+            Loading libraries...
+          </div>
+        )}
+        {!isLoading && filteredLibraries.length === 0 && (
+          <div className={`text-sm ${!isDark ? 'text-slate-600' : 'text-slate-400'}`}>
+            No libraries found
+          </div>
+        )}
+        {!isLoading && filteredLibraries.map((library: PromptLibrary) => {
           const isSelected = selectedId === library.id;
           return (
             <button

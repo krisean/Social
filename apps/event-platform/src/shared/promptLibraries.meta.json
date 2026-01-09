@@ -47,5 +47,124 @@
     "emoji": "🌊",
     "description": "Local flavor tailored for Victoria, BC crowds.",
     "promptFile": "victoriaPrompts.json"
+  },
+  {
+    "id": "medieval",
+    "name": "Medieval Mayhem",
+    "emoji": "⚔️",
+    "description": "Knights, castles, and medieval chaos for history buffs.",
+    "promptFile": "medievalPrompts.json"
+  },
+  {
+    "id": "anime",
+    "name": "Anime Antics",
+    "emoji": "🍜",
+    "description": "Slice-of-life and ridiculous shonen-themed prompts.",
+    "promptFile": "animePrompts.json"
+  },
+  {
+    "id": "politics",
+    "name": "Political Roasts",
+    "emoji": "🏛️",
+    "description": "Global politics satire for the politically aware crowd.",
+    "promptFile": "politicsPrompts.json"
+  },
+  {
+    "id": "scifi",
+    "name": "Sci-Fi Shenanigans",
+    "emoji": "🚀",
+    "description": "Space stations, aliens, and futuristic fails.",
+    "promptFile": "scifiPrompts.json"
+  },
+  {
+    "id": "popculture",
+    "name": "Pop Culture Chaos",
+    "emoji": "⭐",
+    "description": "Celebrity drama and entertainment industry roasts.",
+    "promptFile": "popCulturePrompts.json"
+  },
+  {
+    "id": "cinema",
+    "name": "Cinema Snark",
+    "emoji": "🎬",
+    "description": "Movie industry humor and film fails.",
+    "promptFile": "cinemaPrompts.json"
+  },
+  {
+    "id": "canucks",
+    "name": "Canucks Chaos",
+    "emoji": "🏒",
+    "description": "Vancouver Canucks memes and hockey heartbreak.",
+    "promptFile": "canucksPrompts.json"
+  },
+  {
+    "id": "bc",
+    "name": "BC Vibes",
+    "emoji": "🌲",
+    "description": "British Columbia culture, housing crisis, and ferry delays.",
+    "promptFile": "bcPrompts.json"
+  },
+  {
+    "id": "tech",
+    "name": "Tech & AI Slop",
+    "emoji": "💻",
+    "description": "Modern tech fails and AI-generated chaos.",
+    "promptFile": "techPrompts.json"
+  },
+  {
+    "id": "internetculture",
+    "name": "Internet Culture",
+    "emoji": "📱",
+    "description": "Viral memes, cancel culture, and social media phenomena.",
+    "promptFile": "internetCulturePrompts.json"
+  },
+  {
+    "id": "datingapp",
+    "name": "Dating App Disasters",
+    "emoji": "💔",
+    "description": "Modern dating fails, ghosting, and profile disasters.",
+    "promptFile": "datingAppPrompts.json"
+  },
+  {
+    "id": "remotework",
+    "name": "Remote Work Reality",
+    "emoji": "💼",
+    "description": "Zoom fails, WFH struggles, and work-life boundaries.",
+    "promptFile": "remoteWorkPrompts.json"
+  },
+  {
+    "id": "adulting",
+    "name": "Adulting Fails",
+    "emoji": "🎓",
+    "description": "Taxes, responsibilities, and pretending to be an adult.",
+    "promptFile": "adultingPrompts.json"
+  },
+  {
+    "id": "groupchat",
+    "name": "Group Chat Chaos",
+    "emoji": "💬",
+    "description": "Wrong messages, group dynamics, and chat etiquette.",
+    "promptFile": "groupChatPrompts.json"
+  },
+  {
+    "id": "streaming",
+    "name": "Streaming Wars",
+    "emoji": "📺",
+    "description": "Too many subscriptions, binge culture, and algorithm fails.",
+    "promptFile": "streamingPrompts.json"
+  },
+  {
+    "id": "climateanxiety",
+    "name": "Climate Anxiety",
+    "emoji": "🌍",
+    "description": "Eco-guilt, greenwashing, and sustainability pressure.",
+    "promptFile": "climateAnxietyPrompts.json"
+  },
+  {
+    "id": "fictionalworlds",
+    "name": "Fictional Worlds",
+    "emoji": "🎭",
+    "description": "Dark humor about Star Wars, Harry Potter, and more.",
+    "promptFile": "fictionalWorldsPrompts.json"
   }
 ]

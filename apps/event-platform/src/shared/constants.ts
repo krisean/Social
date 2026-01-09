@@ -16,6 +16,7 @@ export const actionLabel: Record<Session["status"], string> = {
   ended: "Session Ended",
 };
 
+// Static prompt libraries (legacy - use usePromptLibraries hook for dynamic loading)
 export {
   promptLibraries,
   defaultPromptLibrary,
@@ -24,6 +25,14 @@ export {
 import { defaultPromptLibrary } from "./promptLibraries";
 
 export const prompts: string[] = defaultPromptLibrary?.prompts ?? [];
+
+// Dynamic prompt library functions (preferred - loads from database)
+export {
+  getPromptLibraries,
+  getPromptLibrary,
+  getDefaultPromptLibrary,
+  getDefaultPromptLibraryId,
+} from "./dynamicPromptLibraries";
 
 export function formatCode(value: string) {
   return value

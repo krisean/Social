@@ -300,13 +300,13 @@ export function HostPage() {
             Prompt library
           </span>
           <p className={`text-lg font-bold ${!isDark ? 'text-slate-900' : 'text-pink-400'}`}>
-            {currentPromptLibrary.emoji} {currentPromptLibrary.name}
+            {currentPromptLibrary?.emoji} {currentPromptLibrary?.name || 'Loading...'}
           </p>
           <p className={`text-sm ${!isDark ? 'text-slate-500' : 'text-cyan-300'}`}>
-            {currentPromptLibrary.description}
+            {currentPromptLibrary?.description || 'Loading prompt library...'}
           </p>
         </div>
-        {currentPromptLibrary.prompts.length > 0 && (
+        {currentPromptLibrary && currentPromptLibrary.prompts.length > 0 && (
           <div className="space-y-2">
             <p className={`text-xs font-semibold uppercase tracking-wide ${!isDark ? 'text-slate-500' : 'text-cyan-400'}`}>
               Sample prompts
