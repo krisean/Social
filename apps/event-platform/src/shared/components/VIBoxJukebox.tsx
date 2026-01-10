@@ -210,6 +210,42 @@ export function VIBoxJukebox({
     }
   }, [isOpen]);
 
+  // Add real-time test function
+  const testRealtimeEvent = async () => {
+    console.log('🧪 Testing real-time event...');
+    try {
+      // Insert a test record to trigger real-time
+      const { error } = await supabase
+        .from('vibox_queue' as any)
+        .insert({
+          track_id: 'test-realtime',
+          track_title: 'Real-time Test',
+          track_artist: 'Test',
+          position: 999,
+          is_played: false,
+          session_id: getSessionId(),
+          device_type: getDeviceType(),
+          created_at: new Date().toISOString()
+        });
+      
+      if (error) {
+        console.error('❌ Test insert failed:', error);
+      } else {
+        console.log('✅ Test insert sent - should trigger real-time event');
+        // Clean up the test record after 2 seconds
+        setTimeout(async () => {
+          await supabase
+            .from('vibox_queue' as any)
+            .delete()
+            .eq('track_id', 'test-realtime');
+          console.log('🧹 Test record cleaned up');
+        }, 2000);
+      }
+    } catch (error) {
+      console.error('❌ Test failed:', error);
+    }
+  };
+
   // Load queue from Supabase and set up real-time subscription
   useEffect(() => {
     let pollingInterval: NodeJS.Timeout;
@@ -838,6 +874,14 @@ export function VIBoxJukebox({
                   Clear Queue
                 </Button>
               )}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={testRealtimeEvent}
+                className="text-xs"
+              >
+                🧪 Test Real-time
+              </Button>
               {allowUploads && tracks.filter(t => !t.isPreloaded).length > 0 && (
                 <Button variant="secondary" onClick={clearAll}>
                   Clear Uploads
