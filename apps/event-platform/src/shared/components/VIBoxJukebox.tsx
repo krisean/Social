@@ -242,6 +242,7 @@ export function VIBoxJukebox({
     };
 
     const loadQueueDebounced = async () => {
+      console.log('🔄 loadQueueDebounced called');
       // Clear existing debounce
       if (debounceTimeoutRef.current) {
         clearTimeout(debounceTimeoutRef.current);
@@ -249,6 +250,7 @@ export function VIBoxJukebox({
       
       // Debounce to prevent rapid reloads for realtime updates
       debounceTimeoutRef.current = setTimeout(async () => {
+        console.log('🔄 Executing debounced queue reload');
         await loadQueue();
       }, 300); // 300ms debounce
     };
@@ -277,38 +279,19 @@ export function VIBoxJukebox({
         .on(
           'postgres_changes',
           {
-            event: 'INSERT',
+            event: '*',
             schema: 'public',
             table: 'vibox_queue',
           },
           async (payload) => {
-            console.log('🎵 INSERT detected:', payload);
-            // Use debounced reload for realtime updates
-            await loadQueueDebounced();
-          }
-        )
-        .on(
-          'postgres_changes',
-          {
-            event: 'UPDATE',
-            schema: 'public',
-            table: 'vibox_queue',
-          },
-          async (payload) => {
-            console.log('🎵 UPDATE detected:', payload);
-            // Use debounced reload for realtime updates
-            await loadQueueDebounced();
-          }
-        )
-        .on(
-          'postgres_changes',
-          {
-            event: 'DELETE',
-            schema: 'public',
-            table: 'vibox_queue',
-          },
-          async (payload) => {
-            console.log('🎵 DELETE detected:', payload);
+            console.log('🎵 REALTIME EVENT:', payload.eventType, payload);
+            console.log('🎵 Payload details:', {
+              event: payload.eventType,
+              table: payload.table,
+              schema: payload.schema,
+              new: payload.new,
+              old: payload.old
+            });
             // Use debounced reload for realtime updates
             await loadQueueDebounced();
           }
