@@ -253,6 +253,7 @@ export function VIBoxJukebox({
       debounceTimeoutRef.current = setTimeout(async () => {
         console.log('🔄 Executing debounced queue reload');
         await loadQueue();
+        setIsQueueLoading(false); // Reset loading state
       }, 300); // 300ms debounce
     };
 
