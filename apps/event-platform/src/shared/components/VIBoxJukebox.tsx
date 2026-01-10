@@ -185,12 +185,6 @@ export function VIBoxJukebox({
 
   // Refresh queue when modal opens (Deployed: 2025-01-10 v3f1baa0)
   useEffect(() => {
-    // Environment detection for debugging
-    const isVercel = typeof window !== 'undefined' && window.location.hostname.includes('vercel.app');
-    const isLocalhost = typeof window !== 'undefined' && window.location.hostname.includes('localhost');
-    
-    console.log('🌍 Environment:', {
-      isVercel,
       isLocalhost,
       hostname: window.location?.hostname,
       userAgent: navigator.userAgent
