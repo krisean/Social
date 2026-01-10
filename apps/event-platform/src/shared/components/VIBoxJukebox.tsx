@@ -185,6 +185,16 @@ export function VIBoxJukebox({
 
   // Refresh queue when modal opens (Deployed: 2025-01-10 v3f1baa0)
   useEffect(() => {
+    // Environment detection for debugging
+    const isVercel = typeof window !== 'undefined' && window.location.hostname.includes('vercel.app');
+    const isLocalhost = typeof window !== 'undefined' && window.location.hostname.includes('localhost');
+    
+    console.log('🌍 Environment:', {
+      isVercel,
+      isLocalhost,
+      hostname: window.location?.hostname,
+      userAgent: navigator.userAgent
+    });
     if (isOpen) {
       // Load queue immediately when modal opens
       const loadQueueOnOpen = async () => {
@@ -273,7 +283,11 @@ export function VIBoxJukebox({
       }
 
       // Check Supabase configuration
-      console.log('🌐 Setting up realtime for vibox_queue table...');
+      console.log('🌐 Setting up realtime for vibox_queue table...', {
+        environment: isVercel ? 'Vercel' : 'Localhost',
+        url: window.location?.href
+        hostname: window.location?.hostname
+      });
 
       // Set up real-time subscription with status callbacks
       queueChannelRef.current = supabase
@@ -299,12 +313,19 @@ export function VIBoxJukebox({
           }
         )
         .subscribe((status, err) => {
-          console.log('🔌 Realtime subscription status:', status);
+          console.log('🔌 Realtime subscription status:', status, {
+            environment: isVercel ? 'Vercel' : 'Localhost',
+            url: window.location?.href,
+            hostname: window.location?.hostname
+          });
           if (err) console.error('❌ Realtime subscription error:', err);
           
           // If subscription is successful, clear polling
           if (status === 'SUBSCRIBED') {
-            console.log('✅ Realtime connected - polling disabled');
+            console.log('✅ Realtime connected - polling disabled', {
+              environment: isVercel ? 'Vercel' : 'Localhost',
+              timestamp: new Date().toISOString()
+            });
             if (pollingInterval) clearInterval(pollingInterval);
           }
         });
