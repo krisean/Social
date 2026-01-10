@@ -1118,7 +1118,7 @@
                               }
                     },
                     "Taverna": {
-                              "total": 11,
+                              "total": 13,
                               "secondaryVibes": {
                                         "Taverna": [
                                                   {
@@ -1135,10 +1135,6 @@
                                                   },
                                                   {
                                                             "file": "Dwarf Tavern Throwdown.mp3",
-                                                            "genre": "Folk"
-                                                  },
-                                                  {
-                                                            "file": "Electronic Tavern.mp3",
                                                             "genre": "Folk"
                                                   },
                                                   {
@@ -1164,6 +1160,18 @@
                                                   {
                                                             "file": "Skull Island Quiz Night.mp3",
                                                             "genre": "Folk"
+                                                  },
+                                                  {
+                                                            "file": "Goblin Quest Adventure.mp3",
+                                                            "genre": "Hyperpop"
+                                                  },
+                                                  {
+                                                            "file": "Goblin Quest.mp3",
+                                                            "genre": "Hyperpop"
+                                                  },
+                                                  {
+                                                            "file": "Trivia Dojo Charge.mp3",
+                                                            "genre": "Rock"
                                                   }
                                         ]
                               }
