@@ -840,15 +840,7 @@ export function VIBoxJukebox({
                   Clear Queue
                 </Button>
               )}
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={testRealtimeEvent}
-                className="text-xs"
-              >
-                🧪 Test Real-time
-              </Button>
-              {allowUploads && tracks.filter(t => !t.isPreloaded).length > 0 && (
+                            {allowUploads && tracks.filter(t => !t.isPreloaded).length > 0 && (
                 <Button variant="secondary" onClick={clearAll}>
                   Clear Uploads
                 </Button>
