@@ -221,6 +221,7 @@ export function VIBoxJukebox({
           track_id: 'test-realtime',
           track_title: 'Real-time Test',
           track_artist: 'Test',
+          track_url: '/vibox/test-realtime.mp3', // Fixed: Provide valid URL
           position: 999,
           is_played: false,
           session_id: getSessionId(),
