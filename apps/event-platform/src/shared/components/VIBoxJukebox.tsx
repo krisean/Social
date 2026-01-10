@@ -196,8 +196,11 @@ export function VIBoxJukebox({
             .order('position', { ascending: true });
 
           if (error) throw error;
-          if (data) setQueue(data as unknown as ViboxQueueItem[]);
-          console.log('📋 Queue refreshed on open:', data?.length || 0, 'items');
+          if (data) {
+            setQueue(data as unknown as ViboxQueueItem[]);
+            console.log('📋 Queue refreshed on open:', data?.length || 0, 'items');
+            console.log('🔄 Queue items on open:', data.map((item: any) => ({ id: item.id, track: item.track_title, position: item.position })));
+          }
         } catch (error) {
           console.error('Error loading queue on open:', error);
         }
