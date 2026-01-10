@@ -75,7 +75,7 @@ social/
 │   ├── dashboard/        # Admin dashboard for venue analytics
 │   ├── web/              # Marketing site (playnow.social)
 │   ├── topcomment-247/   # Legacy Top Comment PWA
-│   └── vibox-247/        # Legacy VIBox PWA
+│   └── vibox/        # Legacy VIBox PWA
 ├── packages/
 │   ├── game-engine/      # Core game engine interfaces
 │   ├── games/            # Game implementations (topcomment, vibox)

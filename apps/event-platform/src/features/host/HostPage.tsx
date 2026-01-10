@@ -41,6 +41,7 @@ import {
 import { handleBanTeam } from "./Handlers/banPlayerHandler";
 import { PromptLibrarySelector } from "./components/PromptLibrarySelector";
 import { BannedTeamsManager } from "./components/BannedTeamsManager";
+import { VIBoxJukebox } from "../../shared/components/VIBoxJukebox";
 import type {
   PromptLibraryId,
 } from "../../shared/promptLibraries";
@@ -65,6 +66,7 @@ export function HostPage() {
   const [newCategories, setNewCategories] = useState<PromptLibraryId[]>([]);
   const [isUpdatingCategories, setIsUpdatingCategories] = useState(false);
   const [showBannedTeamsModal, setShowBannedTeamsModal] = useState(false);
+  const [showVIBoxModal, setShowVIBoxModal] = useState(false);
   
   const hostState = useHostState(storedSessionId);
   const {
@@ -742,6 +744,14 @@ export function HostPage() {
                 ← Back
               </Link>
               {presenterButton}
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowVIBoxModal(true)}
+                className="text-purple-600 hover:text-purple-700"
+              >
+                🎵 VIBox
+              </Button>
             </div>
             <div>
               <h1 className={`text-3xl font-black ${!isDark ? 'text-slate-900' : 'text-pink-400'}`}>
@@ -1106,6 +1116,14 @@ export function HostPage() {
         isOpen={showBannedTeamsModal}
         onClose={() => setShowBannedTeamsModal(false)}
         toast={addToast}
+      />
+      
+      <VIBoxJukebox
+        isOpen={showVIBoxModal}
+        onClose={() => setShowVIBoxModal(false)}
+        toast={addToast}
+        mode="host"
+        allowUploads={true}
       />
     </main>
   );

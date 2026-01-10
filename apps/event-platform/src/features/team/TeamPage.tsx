@@ -4,6 +4,7 @@ import { Button, Card, Modal } from "@social/ui";
 import { useToast } from "../../shared/hooks";
 import { BackgroundAnimation } from "../../components/BackgroundAnimation";
 import { HowToPlayModal } from "../howToPlay/HowToPlayModal";
+import { VIBoxJukebox } from "../../shared/components/VIBoxJukebox";
 import { transformRoundSummariesForUI, transformLeaderboardForUI } from "../../application";
 import { useActiveGroupAnswers } from "../../shared/hooks";
 import { useTeamState, useTeamEffects, useTeamPhaseRenderer, useTeamHandlers, useTeamComputations, useTeamTimers, useTeamSessionManagement, useTeamQueryParams, useTeamKickedPlayerDetection, useTeamAnswerInitialization } from "./hooks";
@@ -64,6 +65,8 @@ export function TeamPage() {
     setShowKickedModal,
     showSessionEndedModal,
     setShowSessionEndedModal,
+    showVIBoxModal,
+    setShowVIBoxModal,
     now,
     setNow,
     scoreboardRef,
@@ -506,7 +509,15 @@ export function TeamPage() {
   return (
     <>
       <BackgroundAnimation show={showBackground} />
-      <div className="pointer-events-auto fixed right-4 top-4 z-50">
+      <div className="pointer-events-auto fixed right-4 top-4 z-50 flex flex-col gap-2">
+        <button
+          type="button"
+          onClick={() => setShowVIBoxModal(true)}
+          className={`flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold shadow-sm transition-all focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 ${!isDark ? 'border-slate-300 bg-white text-slate-700 hover:border-purple-400 hover:bg-purple-50 hover:text-purple-600 focus-visible:outline-purple-400' : 'border-cyan-400/50 bg-slate-800 text-cyan-300 hover:border-purple-400 hover:bg-slate-700 focus-visible:outline-purple-400'}`}
+        >
+          <span className="text-lg">🎵</span>
+          <span>VIBox</span>
+        </button>
         <button
           type="button"
           onClick={handleOpenHowToPlay}
@@ -711,6 +722,14 @@ export function TeamPage() {
         open={showHowToPlay}
         onClose={() => setShowHowToPlay(false)}
         initialPhase={howToPlayInitialPhase}
+      />
+      
+      <VIBoxJukebox
+        isOpen={showVIBoxModal}
+        onClose={() => setShowVIBoxModal(false)}
+        toast={toast}
+        mode="team"
+        allowUploads={false} // Teams can't upload, only view and control playback
       />
     </>
   );
