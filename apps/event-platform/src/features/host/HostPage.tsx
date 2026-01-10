@@ -1,4 +1,4 @@
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button, QRCodeBlock, Card, Modal, useToast } from "@social/ui";
 import { useAuth } from "../../shared/providers/AuthContext";
@@ -6,13 +6,15 @@ import { useCurrentPhase } from "../../shared/providers/CurrentPhaseContext";
 import { useTheme } from "../../shared/providers/ThemeProvider";
 import { useHostSession } from "./useHostSession";
 import { useGameState, transformRoundSummariesForUI } from "../../application";
-import { useInviteLink, useTeamLookup, useActiveGroupAnswers } from "../../shared/hooks";
+import { useInviteLink, useTeamLookup, useActiveGroupAnswers, usePromptLibraries } from "../../shared/hooks";
 import { useHostState, useHostComputations, useHostEffects } from "./hooks";
 import {
   setPromptLibrary,
   pauseSession,
 } from "../session/sessionService";
 import { getErrorMessage } from "../../shared/utils/errors";
+import { supabase } from "../../supabase/client";
+import { getThemedStyles } from "../../shared/utils/themeHelpers";
 import {
   phaseCopy,
   actionLabel,
@@ -35,7 +37,9 @@ import {
   handleKickTeam,
   handlePrimaryAction,
 } from "./Handlers";
+import { handleBanTeam } from "./Handlers/banPlayerHandler";
 import { PromptLibrarySelector } from "./components/PromptLibrarySelector";
+import { BannedTeamsManager } from "./components/BannedTeamsManager";
 import type {
   PromptLibraryId,
 } from "../../shared/promptLibraries";
@@ -43,7 +47,8 @@ import type {
 export function HostPage() {
   const { user, loading: authLoading } = useAuth();
   const { addToast } = useToast();
-  const { isDark } = useTheme();
+  const { isDark, theme } = useTheme();
+  const themedStyles = getThemedStyles(theme);
   const {
     sessionId: storedSessionId,
     code: storedCode,
@@ -53,6 +58,13 @@ export function HostPage() {
   const { setCurrentPhase } = useCurrentPhase();
   const navigate = useNavigate();
 
+  const { data: libraries } = usePromptLibraries();
+  const [selectedCategoryIndices, setSelectedCategoryIndices] = useState<number[]>([]);
+  const [showCategoryModal, setShowCategoryModal] = useState(false);
+  const [newCategories, setNewCategories] = useState<PromptLibraryId[]>([]);
+  const [isUpdatingCategories, setIsUpdatingCategories] = useState(false);
+  const [showBannedTeamsModal, setShowBannedTeamsModal] = useState(false);
+  
   const hostState = useHostState(storedSessionId);
   const {
     sessionId,
@@ -85,6 +97,8 @@ export function HostPage() {
     setShowEndSessionModal,
     kickingTeamId,
     setKickingTeamId,
+    banningTeamId,
+    setBanningTeamId,
     sessionRef,
     isPerformingActionRef,
   } = hostState;
@@ -181,8 +195,14 @@ export function HostPage() {
     setSessionId,
     setHostSession,
     setShowCreateModal,
-    onSessionCreated: () => setShowPromptLibraryModal(true),
+    onSessionCreated: () => {
+      // Only show prompt library modal for Classic mode
+      if (createForm.gameMode === "classic") {
+        setShowPromptLibraryModal(true);
+      }
+    },
     gameMode: createForm.gameMode,
+    selectedCategories: createForm.selectedCategories,
   });
 
   const primaryActionHandler = handlePrimaryAction({
@@ -210,6 +230,13 @@ export function HostPage() {
     session,
     toast: addToast,
     setKickingTeamId,
+    refresh: gameState.refresh,
+  });
+
+  const banTeamHandler = handleBanTeam({
+    session,
+    toast: addToast,
+    setBanningTeamId,
     refresh: gameState.refresh,
   });
 
@@ -294,49 +321,297 @@ export function HostPage() {
     isSubmittingVote,
   });
 
+  // Handler for selecting/swapping categories
+  const handleCategoryClick = useCallback(async (index: number) => {
+    if (!session?.settings?.selectedCategories) return;
+    
+    // If this is the first selection, just mark it
+    if (selectedCategoryIndices.length === 0) {
+      setSelectedCategoryIndices([index]);
+      return;
+    }
+    
+    // If clicking the same category, deselect it
+    if (selectedCategoryIndices[0] === index) {
+      setSelectedCategoryIndices([]);
+      return;
+    }
+    
+    // If this is the second selection, swap them
+    const index1 = selectedCategoryIndices[0];
+    const index2 = index;
+    
+    const newCategories = [...session.settings.selectedCategories];
+    [newCategories[index1], newCategories[index2]] = [newCategories[index2], newCategories[index1]];
+    
+    try {
+      const { error } = await supabase
+        .from('sessions')
+        .update({
+          settings: {
+            ...session.settings,
+            selectedCategories: newCategories,
+          },
+          category_grid: {
+            ...session.category_grid,
+            categories: newCategories.map((id: string) => {
+              const existing = session.category_grid?.categories.find((c: any) => c.id === id);
+              return existing || { id, usedPrompts: [], promptBonuses: [] };
+            }),
+          },
+        })
+        .eq('id', session.id);
+      
+      if (error) throw error;
+      addToast({ title: 'Categories swapped', variant: 'success' });
+      setSelectedCategoryIndices([]); // Clear selection after swap
+    } catch (error) {
+      addToast({ title: getErrorMessage(error, 'Failed to swap categories'), variant: 'error' });
+      setSelectedCategoryIndices([]); // Clear selection on error
+    }
+  }, [session, addToast, selectedCategoryIndices]);
+
+  // Handler for updating categories
+  const handleUpdateCategories = useCallback(async () => {
+    if (!session || newCategories.length !== 6) return;
+    
+    setIsUpdatingCategories(true);
+    try {
+      // Generate new bonuses for each category
+      const generateCategoryBonuses = () => {
+        const pointValues = [100, 200, 300, 400, 500, 600, 700];
+        const bonuses = [];
+        
+        for (let i = 0; i < 6; i++) {
+          bonuses.push({
+            promptIndex: i,
+            bonusType: 'points',
+            bonusValue: pointValues[i],
+            revealed: false
+          });
+        }
+        
+        bonuses.push({
+          promptIndex: 6,
+          bonusType: 'multiplier',
+          bonusValue: 2,
+          revealed: false
+        });
+        
+        // Shuffle
+        for (let i = bonuses.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [bonuses[i], bonuses[j]] = [bonuses[j], bonuses[i]];
+        }
+        
+        return bonuses.map((bonus, index) => ({ ...bonus, promptIndex: index }));
+      };
+      
+      const newCategoryGrid = {
+        categories: newCategories.map((id) => ({
+          id,
+          usedPrompts: [],
+          promptBonuses: generateCategoryBonuses(),
+        })),
+        totalSlots: 42,
+        categoriesPerCard: 3,
+      };
+      
+      const { error } = await supabase
+        .from('sessions')
+        .update({
+          settings: {
+            ...session.settings,
+            selectedCategories: newCategories,
+          },
+          category_grid: newCategoryGrid,
+        })
+        .eq('id', session.id);
+      
+      if (error) throw error;
+      addToast({ title: 'Categories updated', variant: 'success' });
+      setShowCategoryModal(false);
+      setSelectedCategoryIndices([]); // Clear any swap selections
+    } catch (error) {
+      addToast({ title: getErrorMessage(error, 'Failed to update categories'), variant: 'error' });
+    } finally {
+      setIsUpdatingCategories(false);
+    }
+  }, [session, newCategories, addToast]);
+
+  // Handler for changing game mode
+  const handleChangeGameMode = useCallback(async (newMode: "classic" | "jeopardy") => {
+    if (!session) return;
+    
+    try {
+      const updates: any = {
+        settings: {
+          ...session.settings,
+          gameMode: newMode,
+        },
+      };
+      
+      // Clear category grid when switching to classic
+      if (newMode === "classic") {
+        updates.category_grid = null;
+      }
+      
+      const { error } = await supabase
+        .from('sessions')
+        .update(updates)
+        .eq('id', session.id);
+      
+      if (error) throw error;
+      addToast({ title: `Switched to ${newMode === "classic" ? "Classic" : "Jeopardy"} mode`, variant: 'success' });
+    } catch (error) {
+      addToast({ title: getErrorMessage(error, 'Failed to change game mode'), variant: 'error' });
+    }
+  }, [session, addToast]);
+
   const promptLibraryCard =
     session && session.status === "lobby" ? (
       <Card className="flex flex-col gap-4" isDark={isDark}>
-        <div className={`flex flex-col gap-1 ${!isDark ? 'text-slate-700' : 'text-cyan-100'}`}>
-          <span className={`text-xs font-semibold uppercase tracking-wide ${!isDark ? 'text-slate-500' : 'text-cyan-400'}`}>
-            Prompt library
-          </span>
-          <p className={`text-lg font-bold ${!isDark ? 'text-slate-900' : 'text-pink-400'}`}>
-            {currentPromptLibrary?.emoji} {currentPromptLibrary?.name || 'Loading...'}
-          </p>
-          <p className={`text-sm ${!isDark ? 'text-slate-500' : 'text-cyan-300'}`}>
-            {currentPromptLibrary?.description || 'Loading prompt library...'}
-          </p>
-        </div>
-        {currentPromptLibrary && currentPromptLibrary.prompts.length > 0 && (
-          <div className="space-y-2">
-            <p className={`text-xs font-semibold uppercase tracking-wide ${!isDark ? 'text-slate-500' : 'text-cyan-400'}`}>
-              Sample prompts
-            </p>
-            <div className="space-y-2">
-              {currentPromptLibrary.prompts.slice(0, 3).map((prompt, index) => (
-                <div
-                  key={index}
-                  className={`rounded-lg border px-3 py-2 text-sm ${!isDark ? 'border-slate-200 bg-slate-50 text-slate-700' : 'border-slate-600 bg-slate-700 text-cyan-100'}`}
-                >
-                  {prompt}
-                </div>
-              ))}
+        {session.settings?.gameMode === "jeopardy" ? (
+          // Jeopardy Mode: Show selected categories with reordering
+          <>
+            <div className="flex items-start justify-between gap-2">
+              <div className={`flex flex-col gap-1 ${!isDark ? 'text-slate-700' : 'text-cyan-100'}`}>
+                <span className={`text-xs font-semibold uppercase tracking-wide ${!isDark ? 'text-slate-500' : 'text-cyan-400'}`}>
+                  Jeopardy Categories
+                </span>
+                <p className={`text-lg font-bold ${!isDark ? 'text-slate-900' : 'text-pink-400'}`}>
+                  6 Categories Selected
+                </p>
+                <p className="text-sm" style={themedStyles.textSecondary}>
+                  Teams will select from these categories during the game
+                </p>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => handleChangeGameMode("classic")}
+              >
+                Switch to Classic
+              </Button>
             </div>
-          </div>
+            {session.settings?.selectedCategories && libraries && (
+              <div className="space-y-2">
+                <p className="text-xs font-semibold uppercase tracking-wide" style={themedStyles.textSecondary}>
+                  {selectedCategoryIndices.length === 0 
+                    ? 'Tap any category to select, then tap another to swap'
+                    : 'Tap another category to swap positions'}
+                </p>
+                <div className="grid grid-cols-3 gap-2">
+                  {session.settings.selectedCategories.map((catId: PromptLibraryId, index: number) => {
+                    const lib = libraries?.find(l => l.id === catId);
+                    const isCard1 = index < 3;
+                    const isSelected = selectedCategoryIndices.includes(index);
+                    return lib ? (
+                      <button
+                        key={`${catId}-${index}`}
+                        onClick={() => handleCategoryClick(index)}
+                        className={`relative rounded-lg border px-3 py-3 text-center transition-all touch-manipulation active:scale-95 ${
+                          isSelected ? 'border-brand-primary bg-brand-light ring-2 ring-brand-primary scale-95' : ''
+                        }`}
+                        style={!isSelected ? { 
+                          backgroundColor: theme.colors.card.background,
+                          borderColor: theme.colors.card.border,
+                        } : undefined}
+                      >
+                        <div className="text-2xl mb-1">{lib.emoji}</div>
+                        <div 
+                          className={`text-xs font-semibold ${isSelected ? 'text-brand-primary' : ''}`}
+                          style={!isSelected ? themedStyles.textPrimary : undefined}
+                        >
+                          {lib.name}
+                        </div>
+                        <div 
+                          className="absolute top-1 right-1 text-xs font-bold px-1.5 py-0.5 rounded"
+                          style={isCard1 ? themedStyles.badgeCard1 : themedStyles.badgeCard2}
+                        >
+                          {isCard1 ? 'Card 1' : 'Card 2'}
+                        </div>
+                        {isSelected && (
+                          <div className="absolute inset-0 flex items-center justify-center bg-brand-primary/10 rounded-lg pointer-events-none">
+                            <span className="text-2xl">✓</span>
+                          </div>
+                        )}
+                      </button>
+                    ) : null;
+                  })}
+                </div>
+              </div>
+            )}
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <p className={`text-xs ${!isDark ? 'text-slate-500' : 'text-cyan-300'}`}>
+                Grid size will be calculated based on team count when you start.
+              </p>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => {
+                  setNewCategories(session.settings?.selectedCategories || []);
+                  setShowCategoryModal(true);
+                }}
+              >
+                Change Categories
+              </Button>
+            </div>
+          </>
+        ) : (
+          // Classic Mode: Show prompt library
+          <>
+            <div className="flex items-start justify-between gap-2">
+              <div className={`flex flex-col gap-1 ${!isDark ? 'text-slate-700' : 'text-cyan-100'}`}>
+                <span className={`text-xs font-semibold uppercase tracking-wide ${!isDark ? 'text-slate-500' : 'text-cyan-400'}`}>
+                  Prompt library
+                </span>
+                <p className={`text-lg font-bold ${!isDark ? 'text-slate-900' : 'text-pink-400'}`}>
+                  {currentPromptLibrary?.emoji} {currentPromptLibrary?.name || 'Loading...'}
+                </p>
+                <p className={`text-sm ${!isDark ? 'text-slate-500' : 'text-cyan-300'}`}>
+                  {currentPromptLibrary?.description || 'Loading prompt library...'}
+                </p>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => handleChangeGameMode("jeopardy")}
+              >
+                Switch to Jeopardy
+              </Button>
+            </div>
+            {currentPromptLibrary && currentPromptLibrary.prompts.length > 0 && (
+              <div className="space-y-2">
+                <p className={`text-xs font-semibold uppercase tracking-wide ${!isDark ? 'text-slate-500' : 'text-cyan-400'}`}>
+                  Sample prompts
+                </p>
+                <div className="space-y-2">
+                  {currentPromptLibrary.prompts.slice(0, 3).map((prompt, index) => (
+                    <div
+                      key={index}
+                      className={`rounded-lg border px-3 py-2 text-sm ${!isDark ? 'border-slate-200 bg-slate-50 text-slate-700' : 'border-slate-600 bg-slate-700 text-cyan-100'}`}
+                    >
+                      {prompt}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <p className={`text-xs ${!isDark ? 'text-slate-500' : 'text-cyan-300'}`}>
+                Pick a deck for tonight before you start the first round.
+              </p>
+              <Button
+                variant="secondary"
+                onClick={() => setShowPromptLibraryModal(true)}
+                disabled={isUpdatingPromptLibrary}
+              >
+                {session.promptLibraryId ? "Change" : "Choose"} prompts
+              </Button>
+            </div>
+          </>
         )}
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <p className={`text-xs ${!isDark ? 'text-slate-500' : 'text-cyan-300'}`}>
-            Pick a deck for tonight before you start the first round.
-          </p>
-          <Button
-            variant="secondary"
-            onClick={() => setShowPromptLibraryModal(true)}
-            disabled={isUpdatingPromptLibrary}
-          >
-            {session.promptLibraryId ? "Change" : "Choose"} prompts
-          </Button>
-        </div>
       </Card>
     ) : null;
 
@@ -612,9 +887,18 @@ export function HostPage() {
                   <h3 className={`text-lg font-semibold ${!isDark ? 'text-slate-900' : 'text-pink-400'}`}>
                     Lobby ({teams.length})
                   </h3>
-                  <span className={`text-xs ${!isDark ? 'text-slate-500' : 'text-cyan-300'}`}>
-                    Max {session.settings.maxTeams}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="ghost"
+                      onClick={() => setShowBannedTeamsModal(true)}
+                      className="text-xs text-purple-600"
+                    >
+                      View Banned
+                    </Button>
+                    <span className={`text-xs ${!isDark ? 'text-slate-500' : 'text-cyan-300'}`}>
+                      Max {session.settings.maxTeams}
+                    </span>
+                  </div>
                 </div>
                 <ul className="space-y-2">
                   {teams.map((team) => (
@@ -627,15 +911,26 @@ export function HostPage() {
                         {team.isHost ? " (Host)" : ""}
                       </span>
                       {!team.isHost ? (
-                        <Button
-                          variant="ghost"
-                          onClick={() => kickTeamHandler(team.id)}
-                          className="text-sm text-rose-600"
-                          disabled={kickingTeamId !== null}
-                          isLoading={kickingTeamId === team.id}
-                        >
-                          {kickingTeamId === team.id ? "Kicking..." : "Kick"}
-                        </Button>
+                        <div className="flex gap-2">
+                          <Button
+                            variant="ghost"
+                            onClick={() => kickTeamHandler(team.id)}
+                            className="text-sm text-orange-600"
+                            disabled={kickingTeamId !== null || banningTeamId !== null}
+                            isLoading={kickingTeamId === team.id}
+                          >
+                            {kickingTeamId === team.id ? "Kicking..." : "Kick"}
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            onClick={() => banTeamHandler(team.id)}
+                            className="text-sm text-rose-600"
+                            disabled={kickingTeamId !== null || banningTeamId !== null}
+                            isLoading={banningTeamId === team.id}
+                          >
+                            {banningTeamId === team.id ? "Banning..." : "Ban"}
+                          </Button>
+                        </div>
                       ) : null}
                     </li>
                   ))}
@@ -718,6 +1013,84 @@ export function HostPage() {
           and all teams will be disconnected.
         </p>
       </Modal>
+      <Modal
+        open={showCategoryModal}
+        onClose={() => setShowCategoryModal(false)}
+        title="Change Categories"
+        isDark={isDark}
+        footer={
+          <div className="flex w-full items-center justify-between">
+            <Button variant="ghost" onClick={() => setShowCategoryModal(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleUpdateCategories}
+              disabled={newCategories.length !== 6 || isUpdatingCategories}
+              isLoading={isUpdatingCategories}
+            >
+              Update Categories
+            </Button>
+          </div>
+        }
+      >
+        <div className="space-y-4">
+          <p className={`text-sm ${!isDark ? 'text-slate-600' : 'text-cyan-300'}`}>
+            Select 6 categories for your Jeopardy game. This will reset all progress and generate new bonuses.
+          </p>
+          <p className={`text-xs font-semibold ${!isDark ? 'text-slate-700' : 'text-cyan-100'}`}>
+            {newCategories.length}/6 categories selected
+          </p>
+          {libraries && (
+            <div className="grid grid-cols-3 gap-2 max-h-96 overflow-y-auto">
+              {libraries.map((library) => {
+                const isSelected = newCategories.includes(library.id);
+                const canSelect = isSelected || newCategories.length < 6;
+                
+                return (
+                  <button
+                    key={library.id}
+                    type="button"
+                    onClick={() => {
+                      if (isSelected) {
+                        setNewCategories(newCategories.filter(id => id !== library.id));
+                      } else if (canSelect) {
+                        setNewCategories([...newCategories, library.id]);
+                      }
+                    }}
+                    disabled={!canSelect}
+                    className={`
+                      p-3 rounded-lg border-2 text-center transition-all touch-manipulation
+                      ${isSelected
+                        ? "border-brand-primary bg-brand-light scale-95"
+                        : canSelect
+                          ? (!isDark ? "border-slate-300 bg-white hover:border-slate-400" : "border-slate-600 bg-slate-800 hover:border-slate-500")
+                          : "opacity-30 cursor-not-allowed border-slate-200 bg-slate-50"
+                      }
+                    `}
+                  >
+                    <div className="text-2xl mb-1">{library.emoji}</div>
+                    <div className={`text-xs font-semibold ${
+                      isSelected ? 'text-brand-primary' : !isDark ? 'text-slate-700' : 'text-cyan-100'
+                    }`}>
+                      {library.name}
+                    </div>
+                    {isSelected && (
+                      <div className="text-brand-primary text-sm mt-1">✓</div>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </Modal>
+      
+      <BannedTeamsManager
+        sessionId={sessionId}
+        isOpen={showBannedTeamsModal}
+        onClose={() => setShowBannedTeamsModal(false)}
+        toast={addToast}
+      />
     </main>
   );
 }

@@ -4,7 +4,7 @@ import { getPromptLibrary } from '../_shared/prompts.ts';
 
 async function handleSelectCategory(req: Request, supabase: any): Promise<Response> {
   const uid = await getUserId(req);
-  const { sessionId, groupId, categoryId } = await req.json();
+  const { sessionId, groupId, categoryId, promptIndex } = await req.json();
 
   // Validate inputs
   if (!sessionId || !groupId || !categoryId) {
@@ -29,18 +29,75 @@ async function handleSelectCategory(req: Request, supabase: any): Promise<Respon
 
   // Validate category is available
   const categoryGrid = session.category_grid;
-  if (!categoryGrid || !categoryGrid.available.includes(categoryId)) {
-    throw new Error('Category not available');
+  if (!categoryGrid || !categoryGrid.categories) {
+    throw new Error('Invalid category grid');
   }
 
-  // Update category grid
+  const category = categoryGrid.categories.find((c: any) => c.id === categoryId);
+  if (!category) {
+    throw new Error('Category not found in grid');
+  }
+
+  // Check if category has available prompts
+  const usedPrompts = category.usedPrompts || [];
+  if (usedPrompts.length >= 7) {
+    throw new Error('No more prompts available in this category');
+  }
+
+  // Validate the requested prompt index
+  if (promptIndex < 0 || promptIndex > 6) {
+    throw new Error(`Invalid prompt index: ${promptIndex}. Must be between 0 and 6.`);
+  }
+
+  // Check if the requested prompt is already used
+  if (usedPrompts.includes(promptIndex)) {
+    throw new Error(`Prompt ${promptIndex} in category ${categoryId} has already been used`);
+  }
+
+  // Check if the requested prompt is locked
+  const lockedTiles = categoryGrid.lockedTiles || [];
+  const isLocked = lockedTiles.some((tile: any) => 
+    tile.categoryId === categoryId && tile.promptIndex === promptIndex
+  );
+  if (isLocked) {
+    throw new Error(`Prompt ${promptIndex} in category ${categoryId} is locked`);
+  }
+
+  // Use the specific prompt index from the request
+  const selectedIndex = promptIndex;
+
+  // Get the actual prompt from the library
+  const library = await getPromptLibrary(categoryId);
+  if (!library.prompts[selectedIndex]) {
+    throw new Error(`Prompt index ${selectedIndex} not found in library ${categoryId}`);
+  }
+  const selectedPrompt = library.prompts[selectedIndex];
+
+  // Get the bonus for this prompt
+  const promptBonuses = category.promptBonuses || [];
+  const bonus = promptBonuses.find((b: any) => b.promptIndex === selectedIndex);
+  
+  if (!bonus) {
+    console.warn(`No bonus found for prompt ${selectedIndex} in category ${categoryId}`);
+  }
+
+  // Update category grid with used prompt and revealed bonus
   const updatedGrid = {
     ...categoryGrid,
-    available: categoryGrid.available.filter((id: string) => id !== categoryId),
-    used: [...categoryGrid.used, categoryId],
+    categories: categoryGrid.categories.map((c: any) =>
+      c.id === categoryId
+        ? { 
+            ...c, 
+            usedPrompts: [...usedPrompts, selectedIndex],
+            promptBonuses: c.promptBonuses?.map((b: any) =>
+              b.promptIndex === selectedIndex ? { ...b, revealed: true } : b
+            ) || []
+          }
+        : c
+    ),
   };
 
-  // Update round group with selected category
+  // Update round group with selected category, prompt, and bonus
   const currentRoundIndex = session.round_index ?? 0;
   const rounds = session.rounds || [];
   const updatedRounds = rounds.map((round: any, idx: number) => {
@@ -50,10 +107,22 @@ async function handleSelectCategory(req: Request, supabase: any): Promise<Respon
       ...round,
       groups: round.groups.map((group: any) =>
         group.id === groupId
-          ? { ...group, promptLibraryId: categoryId }
+          ? { 
+              ...group, 
+              promptLibraryId: categoryId, 
+              prompt: selectedPrompt,
+              selectedBonus: bonus ? {
+                bonusType: bonus.bonusType,
+                bonusValue: bonus.bonusValue
+              } : undefined
+            }
           : group
       ),
     };
+  });
+
+  console.log(`Selected prompt ${selectedIndex} from category ${categoryId} for group ${groupId}`, {
+    bonus: bonus ? `${bonus.bonusType === 'points' ? bonus.bonusValue + ' points' : bonus.bonusValue + 'x multiplier'}` : 'none'
   });
 
   // Update session
@@ -71,6 +140,12 @@ async function handleSelectCategory(req: Request, supabase: any): Promise<Respon
     console.error('Update error:', updateError);
     throw new Error('Failed to update session');
   }
+
+  console.log('Category selection successful:', {
+    categoryId,
+    promptIndex: selectedIndex,
+    remainingInCategory: 7 - usedPrompts.length - 1,
+  });
 
   return corsResponse({ session: updatedSession });
 }

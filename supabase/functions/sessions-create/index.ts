@@ -3,9 +3,45 @@ import { createPublicHandler, requireString, cleanTeamName, corsResponse, getUse
 import { getPromptLibrary, DEFAULT_PROMPTS, GROUP_SIZE, TOTAL_ROUNDS } from '../_shared/prompts.ts';
 import type { Session, Team } from '../_shared/types.ts';
 
+/**
+ * Generate shuffled bonuses for a category column (7 prompts)
+ * 6 cards with point values (100-700) + 1 card with 2x multiplier
+ */
+function generateCategoryBonuses() {
+  const pointValues = [100, 200, 300, 400, 500, 600, 700];
+  const bonuses = [];
+  
+  // Add 6 point cards
+  for (let i = 0; i < 6; i++) {
+    bonuses.push({
+      promptIndex: i,
+      bonusType: 'points',
+      bonusValue: pointValues[i],
+      revealed: false
+    });
+  }
+  
+  // Add 1 multiplier card
+  bonuses.push({
+    promptIndex: 6,
+    bonusType: 'multiplier',
+    bonusValue: 2,
+    revealed: false
+  });
+  
+  // Shuffle array using Fisher-Yates algorithm
+  for (let i = bonuses.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [bonuses[i], bonuses[j]] = [bonuses[j], bonuses[i]];
+  }
+  
+  // Reassign promptIndex after shuffle
+  return bonuses.map((bonus, index) => ({ ...bonus, promptIndex: index }));
+}
+
 async function handleCreateSession(req: Request, supabase: any): Promise<Response> {
   const uid = await getUserId(req); // Still need auth for creating (to be host)
-    const { teamName, venueName, promptLibraryId, gameMode } = await req.json();
+    const { teamName, venueName, promptLibraryId, gameMode, selectedCategories } = await req.json();
     
     const cleanedTeamName = cleanTeamName(requireString(teamName, 'teamName'));
     const cleanedVenueName = venueName ? cleanTeamName(venueName) : undefined;
@@ -33,12 +69,27 @@ async function handleCreateSession(req: Request, supabase: any): Promise<Respons
         'groupchat', 'streaming', 'climateanxiety', 'fictionalworlds'
       ];
       
+      // Use host-selected categories or default to 6 (3 per card)
+      const selectedCats = selectedCategories && selectedCategories.length === 6
+        ? selectedCategories 
+        : allLibraryIds.slice(0, 6);
+      
+      // Validate all selected categories exist
+      const validCategories = selectedCats.filter((id: string) => allLibraryIds.includes(id));
+      if (validCategories.length !== 6) {
+        throw new Error('Invalid category selection: must select exactly 6 categories (3 per card)');
+      }
+      
       categoryGrid = {
-        available: allLibraryIds,
-        used: [],
-        totalSlots: 40, // 10 rounds × 4 groups
+        categories: validCategories.map((id: string) => ({
+          id,
+          usedPrompts: [],
+          promptBonuses: generateCategoryBonuses(),
+        })),
+        totalSlots: 42, // 6 categories × 7 prompts (max)
+        categoriesPerCard: 3, // Fixed: 3 categories per card
       };
-      console.log('Creating jeopardy session with category grid:', categoryGrid);
+      console.log('Creating jeopardy session with 6 categories (3 per card) and shuffled bonuses:', categoryGrid);
     } else {
       console.log('Creating classic session, no category grid');
     }
@@ -63,6 +114,7 @@ async function handleCreateSession(req: Request, supabase: any): Promise<Respons
           maxTeams: 24,
           gameMode: mode,
           categorySelectSecs: 15,
+          selectedCategories: mode === 'jeopardy' && categoryGrid ? categoryGrid.categories.map((c: { id: string; usedPrompts: number[] }) => c.id) : undefined,
         },
         venue_name: cleanedVenueName,
       })

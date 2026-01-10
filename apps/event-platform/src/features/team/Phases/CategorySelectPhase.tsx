@@ -9,7 +9,7 @@ interface CategorySelectPhaseProps {
   session: Session;
   currentTeam: Team | null;
   myGroup: RoundGroup | null;
-  onSelectCategory: (categoryId: string) => void;
+  onSelectCategory: (categoryId: string, promptIndex: number) => void;
   isSubmitting: boolean;
 }
 

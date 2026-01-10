@@ -9,6 +9,7 @@ export interface SessionSettings {
   maxTeams: number;
   gameMode?: 'classic' | 'jeopardy';
   categorySelectSecs?: number;
+  selectedCategories?: string[];
 }
 
 export interface RoundGroup {
@@ -36,8 +37,10 @@ export interface Session {
   prompt_cursor: number;
   prompt_library_id: string;
   category_grid?: {
-    available: string[];
-    used: string[];
+    categories: Array<{
+      id: string;
+      usedPrompts: number[];
+    }>;
     totalSlots: number;
   };
   settings: SessionSettings;

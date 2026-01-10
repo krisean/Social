@@ -13,12 +13,12 @@ import { useAuth } from "../../shared/providers/AuthContext";
 import { useCurrentPhase } from "../../shared/providers/CurrentPhaseContext";
 import { useTheme } from "../../shared/providers/ThemeProvider";
 import {
-  getKickedFromSessions,
-  isKickedFromCode,
-  addToKickedSessions,
+  getBannedFromSessions,
+  isBannedFromCode,
+  addToBannedSessions,
   getHasManuallyLeft,
-  removeKickedSession,
-  addKickedSession,
+  removeBannedSession,
+  addBannedSession,
 } from "./utils/teamConstants";
 import { JoinForm, EndedPhase } from "./Phases";
 
@@ -92,8 +92,8 @@ export function TeamPage() {
     setFinalTeams,
     setCurrentPhase,
     toast,
-    addToKickedSessions,
-    isKickedFromCode,
+    addToBannedSessions,
+    isBannedFromCode,
     getHasManuallyLeft,
     setHasManuallyLeft,
   });
@@ -155,9 +155,9 @@ export function TeamPage() {
     activeTeams,
     showKickedModal,
     setShowKickedModal,
-    addKickedSession,
-    removeKickedSession,
-    getKickedFromSessions,
+    addBannedSession,
+    removeBannedSession,
+    getBannedFromSessions,
     setSessionId,
     clearTeamSession,
     toast,

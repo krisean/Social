@@ -5,6 +5,7 @@ export interface CreateSessionRequest {
   venueName?: string;
   promptLibraryId?: PromptLibraryId;
   gameMode?: "classic" | "jeopardy";
+  selectedCategories?: PromptLibraryId[];
 }
 
 export interface CreateSessionResponse {
@@ -60,6 +61,7 @@ export interface SessionSettings {
   maxTeams: number;
   gameMode?: "classic" | "jeopardy";
   categorySelectSecs?: number;
+  selectedCategories?: PromptLibraryId[];
 }
 
 export interface RoundGroup {
@@ -68,6 +70,10 @@ export interface RoundGroup {
   teamIds: string[];
   promptLibraryId?: PromptLibraryId;
   selectingTeamId?: string;
+  selectedBonus?: {
+    bonusType: 'points' | 'multiplier';
+    bonusValue: number;
+  };
 }
 
 export interface RoundDefinition {
@@ -95,8 +101,10 @@ export interface Session {
   totalPausedMs?: number;
   endedByHost?: boolean;
   categoryGrid?: {
-    available: PromptLibraryId[];
-    used: PromptLibraryId[];
+    categories: Array<{
+      id: PromptLibraryId;
+      usedPrompts: number[];
+    }>;
     totalSlots: number;
   };
 }
@@ -170,6 +178,7 @@ export interface CategorySelectionRequest {
   sessionId: string;
   groupId: string;
   categoryId: PromptLibraryId;
+  promptIndex: number;
 }
 
 export interface CategorySelectionResponse {

@@ -3,7 +3,7 @@ import { CategoryGrid } from "../../../shared/components/CategoryGrid";
 import { usePromptLibraries } from "../../../shared/hooks";
 import type { Session, Team, RoundGroup } from "../../../shared/types";
 import { useTheme } from "../../../shared/providers/ThemeProvider";
-import { getRemainingCategories } from "../../../shared/utils/categoryGrid";
+import { getTotalRemainingPrompts } from "../../../shared/utils/categoryGrid";
 
 interface CategorySelectPhaseProps {
   session: Session;
@@ -55,7 +55,7 @@ export function CategorySelectPhase({
     );
   }
 
-  const remainingCategories = getRemainingCategories(session.categoryGrid);
+  const remainingPrompts = getTotalRemainingPrompts(session.categoryGrid);
   const selectedCount = roundGroups.filter(g => g.promptLibraryId).length;
   const totalGroups = roundGroups.length;
 
@@ -70,7 +70,7 @@ export function CategorySelectPhase({
             Teams are choosing categories for Round {session.roundIndex + 1}
           </p>
           <p className={`text-xs mt-1 ${!isDark ? 'text-slate-500' : 'text-cyan-400'}`}>
-            {selectedCount} of {totalGroups} groups selected • {remainingCategories} categories remaining
+            {selectedCount} of {totalGroups} groups selected • {remainingPrompts} prompts remaining
           </p>
         </div>
 

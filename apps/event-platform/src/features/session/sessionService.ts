@@ -392,7 +392,20 @@ export const joinSession = async (payload: JoinSessionRequest) => {
     "sessions-join",
     { body: payload }
   );
-  if (error) throw error;
+  if (error) {
+    console.error("Join session error details:", error);
+    // Try to extract error message from the response
+    const errorMessage = (error as any)?.message || error.toString();
+    throw new Error(errorMessage);
+  }
+  // Check if data contains an error field (from our Edge Function)
+  if (data && 'error' in data) {
+    console.error("Join session returned error:", data.error);
+    throw new Error((data as any).error);
+  }
+  if (!data) {
+    throw new Error("No response data from join session");
+  }
   return data;
 };
 
@@ -457,6 +470,15 @@ export const submitVote = async (payload: SubmitVoteRequest) => {
 export const kickPlayer = async (payload: KickTeamRequest) => {
   const { data, error } = await supabase.functions.invoke<{ success: boolean }>(
     "sessions-kick-player",
+    { body: payload }
+  );
+  if (error) throw error;
+  return data;
+};
+
+export const banPlayer = async (payload: KickTeamRequest) => {
+  const { data, error } = await supabase.functions.invoke<{ success: boolean }>(
+    "sessions-ban-player",
     { body: payload }
   );
   if (error) throw error;

@@ -210,30 +210,77 @@ async function handleAdvanceSession(req: Request, uid: string, supabase: any): P
 Deno.serve(createHandler(handleAdvanceSession));
 
 async function calculateRoundScores(supabase: any, sessionId: string, roundIndex: number) {
-  // Get all votes for this round
+  // Get session to access round groups and bonuses
+  const { data: session } = await supabase
+    .from('sessions')
+    .select('rounds')
+    .eq('id', sessionId)
+    .single();
+  
+  const currentRound = session?.rounds?.[roundIndex];
+  const groups = currentRound?.groups || [];
+  
+  // Get all votes and answers for this round
   const { data: votes } = await supabase
     .from('votes')
-    .select('answer_id, answers!inner(team_id)')
+    .select('answer_id, answers!inner(team_id, group_id)')
     .eq('session_id', sessionId)
     .eq('round_index', roundIndex);
   
   if (!votes || votes.length === 0) return;
   
-  // Count votes per team
-  const votesByTeam = new Map<string, number>();
+  // Count votes per team and track which group each team belongs to
+  const votesByTeam = new Map<string, { voteCount: number; groupId: string }>();
   
   for (const vote of votes) {
     const teamId = vote.answers?.team_id;
-    if (teamId) {
-      votesByTeam.set(teamId, (votesByTeam.get(teamId) || 0) + 1);
+    const groupId = vote.answers?.group_id;
+    if (teamId && groupId) {
+      const existing = votesByTeam.get(teamId);
+      votesByTeam.set(teamId, {
+        voteCount: (existing?.voteCount || 0) + 1,
+        groupId: groupId
+      });
     }
   }
   
-  // Update team scores
-  for (const [teamId, voteCount] of votesByTeam.entries()) {
+  // Update team scores with base voting points + bonuses
+  for (const [teamId, data] of votesByTeam.entries()) {
+    const { voteCount, groupId } = data;
+    
+    // Find the group this team belongs to
+    const group = groups.find((g: any) => g.id === groupId);
+    const bonus = group?.selectedBonus;
+    
+    let totalScore = voteCount; // Base score from votes
+    
+    // Apply bonus if this team won their group's vote
+    if (bonus) {
+      // Check if this team is the winner of their group (has most votes)
+      const groupTeamVotes = Array.from(votesByTeam.entries())
+        .filter(([_, d]) => d.groupId === groupId)
+        .map(([tid, d]) => ({ teamId: tid, votes: d.voteCount }));
+      
+      const maxVotes = Math.max(...groupTeamVotes.map(t => t.votes));
+      const isWinner = voteCount === maxVotes;
+      
+      if (isWinner) {
+        if (bonus.bonusType === 'points') {
+          // Add flat points
+          totalScore += bonus.bonusValue;
+          console.log(`Team ${teamId} won with ${voteCount} votes and earned ${bonus.bonusValue} bonus points`);
+        } else if (bonus.bonusType === 'multiplier') {
+          // Apply multiplier to voting score
+          totalScore = voteCount * bonus.bonusValue;
+          console.log(`Team ${teamId} won with ${voteCount} votes and earned ${bonus.bonusValue}x multiplier (${totalScore} total)`);
+        }
+      }
+    }
+    
+    // Update team score
     await supabase.rpc('increment_team_score', {
       team_id: teamId,
-      score_delta: voteCount,
+      score_delta: totalScore,
     });
   }
 }

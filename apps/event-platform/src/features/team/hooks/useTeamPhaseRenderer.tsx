@@ -25,7 +25,7 @@ interface UseTeamPhaseRendererProps {
   setAnswerText: (text: string) => void;
   handleSubmitAnswer: () => void;
   isSubmittingAnswer: boolean;
-  handleSelectCategory: (categoryId: string) => void;
+  handleSelectCategory: (categoryId: string, promptIndex: number) => void;
   isSubmittingCategorySelection: boolean;
   totalSeconds: number;
   activeGroup: RoundGroup | null;

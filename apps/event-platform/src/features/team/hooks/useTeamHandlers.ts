@@ -3,7 +3,7 @@ import type { Session, Answer, RoundGroup } from "../../../shared/types";
 import { joinSession, submitAnswer, submitVote, selectCategory } from "../../session/sessionService";
 import { maskProfanity, containsProfanity } from "../../../shared/utils/profanity";
 import { answerSchema, joinSchema } from "../../../shared/schemas";
-import { isKickedFromCode } from "../utils/teamConstants";
+import { isBannedFromCode } from "../utils/teamConstants";
 
 interface UseTeamHandlersProps {
   sessionId: string | null;
@@ -77,11 +77,11 @@ export function useTeamHandlers({
         return;
       }
 
-      // Check if player was kicked from this session
-      if (isKickedFromCode(parsed.data.code)) {
-        setJoinErrors({ code: "You were removed from this session" });
+      // Check if player was banned from this session
+      if (isBannedFromCode(parsed.data.code)) {
+        setJoinErrors({ code: "You were banned from this session" });
         toast({
-          title: "You were removed from this session and cannot rejoin.",
+          title: "You were banned from this session and cannot rejoin.",
           variant: "error",
         });
         setIsJoining(false);
@@ -119,10 +119,11 @@ export function useTeamHandlers({
           variant: "success",
         });
       } catch (error) {
+        console.error("Join session error:", error);
         const errorMessage = error instanceof Error ? error.message : "Failed to join session";
         setJoinErrors({ form: errorMessage });
         toast({
-          title: "Failed to join",
+          title: errorMessage || "Failed to join",
           variant: "error",
         });
       } finally {
@@ -219,7 +220,7 @@ export function useTeamHandlers({
   );
 
   const handleSelectCategory = useCallback(
-    async (categoryId: string) => {
+    async (categoryId: string, promptIndex: number) => {
       if (!session || !myGroup) return;
       
       setIsSubmittingCategorySelection(true);
@@ -228,6 +229,7 @@ export function useTeamHandlers({
           sessionId: session.id,
           groupId: myGroup.id,
           categoryId,
+          promptIndex,
         });
         
         toast({

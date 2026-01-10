@@ -2,32 +2,32 @@ export const DUPLICATE_TEAM_NAME_CODE = "functions/already-exists";
 export const DUPLICATE_TEAM_NAME_MESSAGE =
   "That team name is already taken. Try another one.";
 export const HAS_MANUALLY_LEFT_KEY = "sidebets_has_manually_left";
-export const KICKED_FROM_SESSIONS_KEY = "sidebets_kicked_from_sessions";
+export const BANNED_FROM_SESSIONS_KEY = "sidebets_banned_from_sessions";
 
-export interface KickedSession {
+export interface BannedSession {
   sessionId: string;
   code: string;
 }
 
-export function getKickedFromSessions(): Map<string, KickedSession> {
+export function getBannedFromSessions(): Map<string, BannedSession> {
   if (typeof window === "undefined") return new Map();
   try {
-    const stored = window.sessionStorage.getItem(KICKED_FROM_SESSIONS_KEY);
+    const stored = window.sessionStorage.getItem(BANNED_FROM_SESSIONS_KEY);
     if (!stored) return new Map();
     const parsed = JSON.parse(stored);
     
     // Reconstruct Map with both sessionId and code as keys
-    const map = new Map<string, KickedSession>();
+    const map = new Map<string, BannedSession>();
     if (Array.isArray(parsed)) {
       // New format: array of sessions
-      parsed.forEach((session: KickedSession) => {
+      parsed.forEach((session: BannedSession) => {
         map.set(session.sessionId, session);
         map.set(session.code.toUpperCase(), session);
       });
     } else {
       // Old format: object entries
       Object.entries(parsed).forEach(([, value]) => {
-        const session = value as KickedSession;
+        const session = value as BannedSession;
         map.set(session.sessionId, session);
         map.set(session.code.toUpperCase(), session);
       });
@@ -38,9 +38,9 @@ export function getKickedFromSessions(): Map<string, KickedSession> {
   }
 }
 
-export function isKickedFromCode(code: string): boolean {
-  const kicked = getKickedFromSessions();
-  return kicked.has(code.toUpperCase());
+export function isBannedFromCode(code: string): boolean {
+  const banned = getBannedFromSessions();
+  return banned.has(code.toUpperCase());
 }
 
 export function isDuplicateTeamNameError(error: unknown): boolean {
@@ -53,14 +53,14 @@ export function isDuplicateTeamNameError(error: unknown): boolean {
   return false;
 }
 
-export function addToKickedSessions(sessionId: string, code: string): void {
+export function addToBannedSessions(sessionId: string, code: string): void {
   if (typeof window === "undefined") return;
   try {
-    const kicked = getKickedFromSessions();
-    kicked.set(sessionId, { sessionId, code });
+    const banned = getBannedFromSessions();
+    banned.set(sessionId, { sessionId, code });
     window.sessionStorage.setItem(
-      KICKED_FROM_SESSIONS_KEY,
-      JSON.stringify(Object.fromEntries(kicked))
+      BANNED_FROM_SESSIONS_KEY,
+      JSON.stringify(Object.fromEntries(banned))
     );
   } catch {
     // Ignore storage errors
@@ -85,22 +85,22 @@ export function setHasManuallyLeft(hasLeft: boolean): void {
   }
 }
 
-export function removeKickedSession(sessionId: string): void {
+export function removeBannedSession(sessionId: string): void {
   if (typeof window === "undefined") return;
   try {
-    const kicked = getKickedFromSessions();
-    const session = kicked.get(sessionId);
+    const banned = getBannedFromSessions();
+    const session = banned.get(sessionId);
     if (session) {
-      kicked.delete(sessionId);
-      kicked.delete(session.code);
+      banned.delete(sessionId);
+      banned.delete(session.code);
       // Store as array of unique sessions
       const sessionsArray = Array.from(
         new Map(
-          Array.from(kicked.values()).map((s) => [s.sessionId, s]),
+          Array.from(banned.values()).map((s) => [s.sessionId, s]),
         ).values(),
       );
       window.sessionStorage.setItem(
-        KICKED_FROM_SESSIONS_KEY,
+        BANNED_FROM_SESSIONS_KEY,
         JSON.stringify(sessionsArray),
       );
     }
@@ -109,21 +109,21 @@ export function removeKickedSession(sessionId: string): void {
   }
 }
 
-export function addKickedSession(sessionId: string, code: string): void {
+export function addBannedSession(sessionId: string, code: string): void {
   if (typeof window === "undefined") return;
   try {
-    const kicked = getKickedFromSessions();
-    const session: KickedSession = { sessionId, code };
-    kicked.set(sessionId, session);
-    kicked.set(code, session); // Also index by code
+    const banned = getBannedFromSessions();
+    const session: BannedSession = { sessionId, code };
+    banned.set(sessionId, session);
+    banned.set(code, session); // Also index by code
     // Store as array of unique sessions (by sessionId)
     const sessionsArray = Array.from(
       new Map(
-        Array.from(kicked.values()).map((s) => [s.sessionId, s]),
+        Array.from(banned.values()).map((s) => [s.sessionId, s]),
       ).values(),
     );
     window.sessionStorage.setItem(
-      KICKED_FROM_SESSIONS_KEY,
+      BANNED_FROM_SESSIONS_KEY,
       JSON.stringify(sessionsArray),
     );
   } catch {

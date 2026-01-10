@@ -11,10 +11,11 @@ export function useHostState(storedSessionId: string | null) {
   const [showCreateModal, setShowCreateModal] = useState(!storedSessionId);
   const [isCreating, setIsCreating] = useState(false);
   const [createErrors, setCreateErrors] = useState<Record<string, string>>({});
-  const [createForm, setCreateForm] = useState<{ teamName: string; venueName: string; gameMode: "classic" | "jeopardy" }>({ 
+  const [createForm, setCreateForm] = useState<{ teamName: string; venueName: string; gameMode: "classic" | "jeopardy"; selectedCategories: string[] }>({ 
     teamName: "", 
     venueName: "", 
-    gameMode: "classic" 
+    gameMode: "classic",
+    selectedCategories: [],
   });
   const [showPromptLibraryModal, setShowPromptLibraryModal] = useState(false);
   const [isUpdatingPromptLibrary, setIsUpdatingPromptLibrary] = useState(false);
@@ -26,6 +27,7 @@ export function useHostState(storedSessionId: string | null) {
   const [isPausingSession, setIsPausingSession] = useState(false);
   const [showEndSessionModal, setShowEndSessionModal] = useState(false);
   const [kickingTeamId, setKickingTeamId] = useState<string | null>(null);
+  const [banningTeamId, setBanningTeamId] = useState<string | null>(null);
   
   const sessionRef = useRef<Session | null>(null);
   const isPerformingActionRef = useRef(false);
@@ -61,6 +63,8 @@ export function useHostState(storedSessionId: string | null) {
     setShowEndSessionModal,
     kickingTeamId,
     setKickingTeamId,
+    banningTeamId,
+    setBanningTeamId,
     sessionRef,
     isPerformingActionRef,
   };

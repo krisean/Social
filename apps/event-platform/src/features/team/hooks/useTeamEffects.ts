@@ -25,8 +25,8 @@ interface UseTeamEffectsProps {
   setFinalTeams: (teams: Team[]) => void;
   setCurrentPhase: (phase: SessionStatus | null) => void;
   toast: (options: { title: string; variant: "success" | "error" | "info" }) => void;
-  addToKickedSessions: (sessionId: string, code: string) => void;
-  isKickedFromCode: (code: string) => boolean;
+  addToBannedSessions: (sessionId: string, code: string) => void;
+  isBannedFromCode: (code: string) => boolean;
   getHasManuallyLeft: () => boolean;
   setHasManuallyLeft: (hasLeft: boolean) => void;
 }
@@ -52,8 +52,8 @@ export function useTeamEffects({
   setFinalTeams,
   setCurrentPhase,
   toast,
-  addToKickedSessions,
-  isKickedFromCode,
+  addToBannedSessions,
+  isBannedFromCode,
   getHasManuallyLeft,
   setHasManuallyLeft,
 }: UseTeamEffectsProps) {
@@ -120,8 +120,8 @@ export function useTeamEffects({
       return;
     }
 
-    // Check if kicked
-    if (isKickedFromCode(session.code)) {
+    // Check if banned
+    if (isBannedFromCode(session.code)) {
       setShowKickedModal(true);
       clearTeamSession();
       setSessionId(null);
@@ -152,7 +152,7 @@ export function useTeamEffects({
     toast,
     clearTeamSession,
     setSessionId,
-    isKickedFromCode,
+    isBannedFromCode,
     setShowKickedModal,
     getHasManuallyLeft,
     setCurrentPhase,
@@ -166,7 +166,7 @@ export function useTeamEffects({
   const handleLeave = useCallback(() => {
     console.log("Leave session clicked - redirecting to join form");
     if (gameState.session) {
-      addToKickedSessions(gameState.session.id, gameState.session.code);
+      addToBannedSessions(gameState.session.id, gameState.session.code);
     }
     clearTeamSession();
     setSessionId(null);
@@ -175,7 +175,7 @@ export function useTeamEffects({
     window.location.href = '/play';
   }, [
     gameState.session,
-    addToKickedSessions,
+    addToBannedSessions,
     clearTeamSession,
     setSessionId,
     setHasManuallyLeft,

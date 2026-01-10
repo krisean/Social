@@ -3,6 +3,80 @@ import { createHandler, requireString, corsResponse, getSession, AppError, shuff
 import { GROUP_SIZE, TOTAL_ROUNDS } from '../_shared/prompts.ts';
 import type { Session, Round, RoundGroup } from '../_shared/types.ts';
 
+/**
+ * Seeded RNG for consistent random values across all clients
+ */
+function seededRandom(seed: string, index: number): number {
+  let hash = 0;
+  const str = seed + index.toString();
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash; // Convert to 32-bit integer
+  }
+  return Math.abs(hash) / 2147483647; // Normalize to 0-1
+}
+
+/**
+ * Generate locked tiles for the grid
+ * Rules:
+ * - At most 1 locked tile per column
+ * - Locked tiles randomly placed in rows within their column
+ * - Uses seeded RNG for consistency across all clients
+ */
+function generateLockedTiles(
+  sessionId: string,
+  categories: Array<{ id: string }>,
+  tilesToLock: number,
+  rows: number
+): Array<{ categoryId: string; promptIndex: number }> {
+  if (tilesToLock === 0) return [];
+  
+  const lockedTiles: Array<{ categoryId: string; promptIndex: number }> = [];
+  
+  // Determine which columns (categories) get locks
+  // For tilesToLock = 1: pick 1 column
+  // For tilesToLock = 2: pick 2 columns
+  const columnsToLock: number[] = [];
+  for (let i = 0; i < tilesToLock; i++) {
+    const rand = seededRandom(sessionId, i);
+    const columnIndex = Math.floor(rand * 3); // 0-2 for first card columns
+    if (!columnsToLock.includes(columnIndex)) {
+      columnsToLock.push(columnIndex);
+    } else {
+      // If column already selected, try next column
+      const nextColumn = (columnIndex + 1) % 3;
+      columnsToLock.push(nextColumn);
+    }
+  }
+  
+  // For each selected column, pick a random row
+  columnsToLock.forEach((columnIndex, lockIndex) => {
+    const rand = seededRandom(sessionId, 100 + lockIndex); // Different seed offset
+    const rowIndex = Math.floor(rand * rows);
+    
+    // Card 1 categories (0-2)
+    const card1CategoryId = categories[columnIndex]?.id;
+    if (card1CategoryId) {
+      lockedTiles.push({
+        categoryId: card1CategoryId,
+        promptIndex: rowIndex,
+      });
+    }
+    
+    // Card 2 categories (3-5) - mirror the lock pattern
+    const card2CategoryId = categories[columnIndex + 3]?.id;
+    if (card2CategoryId) {
+      lockedTiles.push({
+        categoryId: card2CategoryId,
+        promptIndex: rowIndex,
+      });
+    }
+  });
+  
+  return lockedTiles;
+}
+
 async function handleStartSession(req: Request, uid: string, supabase: any): Promise<Response> {
     const { sessionId } = await req.json();
 
@@ -71,6 +145,34 @@ async function handleStartSession(req: Request, uid: string, supabase: any): Pro
     
     console.log('Starting session with mode:', session.settings?.gameMode, 'initialStatus:', initialStatus);
     
+    // Configure dynamic grid based on numGroups × TOTAL_ROUNDS
+    let updatedCategoryGrid = session.category_grid;
+    if (isJeopardyMode && session.category_grid && rounds.length > 0) {
+      const numGroups = rounds[0].groups.length;
+      const categoriesPerCard = 3; // Fixed: 3 categories per card
+      
+      // Calculate per card: totalActiveTiles = numGroups × TOTAL_ROUNDS
+      const totalActiveTiles = numGroups * TOTAL_ROUNDS;
+      const rows = Math.ceil(totalActiveTiles / 3);
+      const totalTilesPerCard = rows * 3;
+      const tilesToLock = totalTilesPerCard - totalActiveTiles; // 0-2
+      
+      // Generate locked tiles using seeded RNG (session ID as seed)
+      const lockedTiles = generateLockedTiles(session.id, session.category_grid.categories, tilesToLock, rows);
+      
+      updatedCategoryGrid = {
+        ...session.category_grid,
+        categoriesPerCard: categoriesPerCard,
+        promptsPerCategory: rows,
+        totalSlots: totalTilesPerCard * 2, // Both cards
+        lockedTiles: lockedTiles,
+      };
+      
+      console.log(`Dynamic grid: ${numGroups} groups × ${TOTAL_ROUNDS} rounds = ${totalActiveTiles} active tiles per card`);
+      console.log(`Grid size: ${rows} rows × 3 cols = ${totalTilesPerCard} tiles per card (${tilesToLock} locked)`);
+      console.log(`Locked tiles:`, lockedTiles);
+    }
+    
     // Select random team for each group in jeopardy mode
     if (isJeopardyMode && rounds.length > 0) {
       try {
@@ -98,6 +200,7 @@ async function handleStartSession(req: Request, uid: string, supabase: any): Pro
       .from('sessions')
       .update({
         status: initialStatus,
+        category_grid: updatedCategoryGrid,
         round_index: 0,
         rounds,
         prompt_cursor: promptCursor,
