@@ -1,17 +1,39 @@
 import type { PromptLibraryId } from "./promptLibraries";
 
+// Re-export core domain types as single source of truth
+export type {
+  SessionStatus,
+  SessionSettings,
+  RoundGroup,
+  RoundDefinition,
+  Session,
+  Team,
+  Answer,
+  Vote,
+  VoteCount,
+  RoundSummary,
+  AnswerWithVotes,
+  LeaderboardEntry,
+  GameState,
+} from "../domain/types/domain.types";
+
+// Re-export CategoryGrid from utils
+export type { CategoryGrid } from "./utils/categoryGrid";
+
+// API Request/Response types (these stay in shared as they're infrastructure concerns)
 export interface CreateSessionRequest {
   teamName: string;
   venueName?: string;
   promptLibraryId?: PromptLibraryId;
   gameMode?: "classic" | "jeopardy";
   selectedCategories?: PromptLibraryId[];
+  totalRounds?: number;
 }
 
 export interface CreateSessionResponse {
   sessionId: string;
   code: string;
-  session: Session;
+  session: any; // Use domain Session type
 }
 
 export interface JoinSessionRequest {
@@ -21,8 +43,8 @@ export interface JoinSessionRequest {
 
 export interface JoinSessionResponse {
   sessionId: string;
-  team: Team;
-  session: Session;
+  team: any; // Use domain Team type
+  session: any; // Use domain Session type
 }
 
 export interface StartGameRequest {
@@ -52,93 +74,7 @@ export interface SessionAnalyticsResponse {
   analytics: SessionAnalytics;
 }
 
-export type SessionStatus = "lobby" | "category-select" | "answer" | "vote" | "results" | "ended";
-
-export interface SessionSettings {
-  answerSecs: number;
-  voteSecs: number;
-  resultsSecs: number;
-  maxTeams: number;
-  gameMode?: "classic" | "jeopardy";
-  categorySelectSecs?: number;
-  selectedCategories?: PromptLibraryId[];
-}
-
-export interface RoundGroup {
-  id: string;
-  prompt: string;
-  teamIds: string[];
-  promptLibraryId?: PromptLibraryId;
-  selectingTeamId?: string;
-  selectedBonus?: {
-    bonusType: 'points' | 'multiplier';
-    bonusValue: number;
-  };
-}
-
-export interface RoundDefinition {
-  prompt?: string;
-  groups: RoundGroup[];
-}
-
-export interface Session {
-  id: string;
-  code: string;
-  hostUid: string;
-  status: SessionStatus;
-  roundIndex: number;
-  rounds: RoundDefinition[];
-  voteGroupIndex: number | null;
-  createdAt: string;
-  startedAt?: string;
-  endedAt?: string;
-  endsAt?: string;
-  settings: SessionSettings;
-  venueName?: string;
-  promptLibraryId?: PromptLibraryId;
-  paused?: boolean;
-  pausedAt?: string;
-  totalPausedMs?: number;
-  endedByHost?: boolean;
-  categoryGrid?: {
-    categories: Array<{
-      id: PromptLibraryId;
-      usedPrompts: number[];
-    }>;
-    totalSlots: number;
-  };
-}
-
-export interface Team {
-  id: string;
-  uid: string;
-  teamName: string;
-  isHost: boolean;
-  score: number;
-  joinedAt: string;
-  lastActiveAt?: string;
-  mascotId?: number;
-}
-
-export interface Answer {
-  id: string;
-  teamId: string;
-  roundIndex: number;
-  groupId: string;
-  text: string;
-  createdAt: string;
-  masked?: boolean;
-}
-
-export interface Vote {
-  id: string;
-  voterId: string;
-  roundIndex: number;
-  groupId: string;
-  answerId: string;
-  createdAt: string;
-}
-
+// Additional shared types
 export interface RoundResults {
   roundIndex: number;
   winningAnswerId?: string;
@@ -166,7 +102,7 @@ export interface SetPromptLibraryRequest {
 }
 
 export interface SetPromptLibraryResponse {
-  session: Session;
+  session: any; // Use domain Session type
 }
 
 export interface PauseSessionRequest {
@@ -182,5 +118,5 @@ export interface CategorySelectionRequest {
 }
 
 export interface CategorySelectionResponse {
-  session: Session;
+  session: any; // Use domain Session type
 }

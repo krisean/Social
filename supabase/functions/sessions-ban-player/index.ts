@@ -54,7 +54,7 @@ serve(async (req) => {
     // Verify the team exists in this session
     const { data: team, error: teamError } = await supabase
       .from("teams")
-      .select("id, team_name")
+      .select("id, team_name, uid")
       .eq("id", teamId)
       .eq("session_id", sessionId)
       .single()
@@ -66,17 +66,21 @@ serve(async (req) => {
       )
     }
 
-    // Check if team is already banned
+    console.log("Team to ban:", { id: team.id, name: team.team_name, uid: team.uid })
+
+    // Check if user is already banned (by UID)
     const { data: existingBan } = await supabase
       .from("banned_teams")
       .select("id")
       .eq("session_id", sessionId)
-      .eq("team_id", teamId)
+      .eq("uid", team.uid)
       .single()
+
+    console.log("Existing ban check:", { existingBan })
 
     if (existingBan) {
       return new Response(
-        JSON.stringify({ error: "Team is already banned from this session" }),
+        JSON.stringify({ error: "User is already banned from this session" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       )
     }
@@ -97,13 +101,14 @@ serve(async (req) => {
       )
     }
 
-    // 2. Add the team to banned_teams table
+    // 2. Add the user to banned_teams table (ban by UID, not team name)
     const { error: banError } = await supabase
       .from("banned_teams")
       .insert({
         session_id: sessionId,
         team_id: teamId,
         team_name: team.team_name,
+        uid: team.uid,
         banned_by: session.host_uid,
         reason: "Banned by host"
       })

@@ -41,7 +41,7 @@ function generateCategoryBonuses() {
 
 async function handleCreateSession(req: Request, supabase: any): Promise<Response> {
   const uid = await getUserId(req); // Still need auth for creating (to be host)
-    const { teamName, venueName, promptLibraryId, gameMode, selectedCategories } = await req.json();
+    const { teamName, venueName, promptLibraryId, gameMode, selectedCategories, totalRounds } = await req.json();
     
     const cleanedTeamName = cleanTeamName(requireString(teamName, 'teamName'));
     const cleanedVenueName = venueName ? cleanTeamName(venueName) : undefined;
@@ -115,6 +115,7 @@ async function handleCreateSession(req: Request, supabase: any): Promise<Respons
           gameMode: mode,
           categorySelectSecs: 15,
           selectedCategories: mode === 'jeopardy' && categoryGrid ? categoryGrid.categories.map((c: { id: string; usedPrompts: number[] }) => c.id) : undefined,
+          totalRounds: totalRounds || TOTAL_ROUNDS,
         },
         venue_name: cleanedVenueName,
       })

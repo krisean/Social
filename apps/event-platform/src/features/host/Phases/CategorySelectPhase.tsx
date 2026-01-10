@@ -126,6 +126,8 @@ export function CategorySelectPhase({
             disabled={true}
             canSelect={false}
             highlightUsed={true}
+            roundIndex={session.roundIndex}
+            totalRounds={session.rounds?.length}
           />
         </div>
       </div>

@@ -3,6 +3,7 @@ import type { Session, Team, SessionStatus } from "../../../shared/types";
 import { useGameState } from "../../../application";
 import { getErrorMessage } from "../../../shared/utils/errors";
 import { joinSession } from "../../session/sessionService";
+import { supabase } from "../../../supabase/client";
 
 interface UseTeamEffectsProps {
   sessionId: string | null;
@@ -165,17 +166,17 @@ export function useTeamEffects({
   // Handle manual leave
   const handleLeave = useCallback(() => {
     console.log("Leave session clicked - redirecting to join form");
-    if (gameState.session) {
-      addToBannedSessions(gameState.session.id, gameState.session.code);
-    }
+    
+    // Don't delete team from database - this allows rejoining during gameplay
+    // if they left by accident or got disconnected
+    // Only clear local session storage
+    
     clearTeamSession();
     setSessionId(null);
     setHasManuallyLeft(true);
     // Redirect to join form
     window.location.href = '/play';
   }, [
-    gameState.session,
-    addToBannedSessions,
     clearTeamSession,
     setSessionId,
     setHasManuallyLeft,

@@ -5,7 +5,7 @@ import { useAuth } from "../../shared/providers/AuthContext";
 import { useCurrentPhase } from "../../shared/providers/CurrentPhaseContext";
 import { useTheme } from "../../shared/providers/ThemeProvider";
 import { useHostSession } from "./useHostSession";
-import { useGameState, transformRoundSummariesForUI } from "../../application";
+import { useGameState, useSessionOrchestrator, transformRoundSummariesForUI } from "../../application";
 import { useInviteLink, useTeamLookup, useActiveGroupAnswers, usePromptLibraries } from "../../shared/hooks";
 import { useHostState, useHostComputations, useHostEffects } from "./hooks";
 import {
@@ -20,6 +20,7 @@ import {
   actionLabel,
   getDefaultPromptLibraryId,
 } from "../../shared/constants";
+import { generateCategoryBonuses } from "../../shared/utils/categoryGrid";
 import {
   LobbyPhase,
   CategorySelectPhase,
@@ -111,6 +112,13 @@ export function HostPage() {
     userId: user?.id 
   });
 
+  // Add session orchestrator for automatic phase advancement
+  const orchestrator = useSessionOrchestrator({
+    sessionId: sessionId || '',
+    autoAdvance: true,
+    enablePauseResume: true
+  });
+
   // Extract data from gameState for compatibility with existing code
   const session = gameState.session;
   const teams = gameState.teams;
@@ -120,7 +128,11 @@ export function HostPage() {
   // Set sessionRef.current to latest session for auto advance actions.
   useEffect(() => {
     sessionRef.current = session ?? null;
-  }, [session]);
+    // Update orchestrator with current session
+    if (session && 'updateSession' in orchestrator) {
+      (orchestrator as any).updateSession(session);
+    }
+  }, [session, orchestrator]);
 
   // Helper to keep isPerformingAction state and ref synchronized
   const triggerPerformingAction = (value: boolean) => {
@@ -203,10 +215,12 @@ export function HostPage() {
     },
     gameMode: createForm.gameMode,
     selectedCategories: createForm.selectedCategories,
+    totalRounds: createForm.totalRounds,
   });
 
   const primaryActionHandler = handlePrimaryAction({
     session,
+    teams,
     isPerformingAction,
     triggerPerformingAction,
     toast: addToast,
@@ -353,10 +367,10 @@ export function HostPage() {
             selectedCategories: newCategories,
           },
           category_grid: {
-            ...session.category_grid,
+            ...session.categoryGrid,
             categories: newCategories.map((id: string) => {
-              const existing = session.category_grid?.categories.find((c: any) => c.id === id);
-              return existing || { id, usedPrompts: [], promptBonuses: [] };
+              const existing = session.categoryGrid?.categories.find((c: any) => c.id === id);
+              return existing || { id, usedPrompts: [], promptBonuses: generateCategoryBonuses() };
             }),
           },
         })
@@ -415,6 +429,8 @@ export function HostPage() {
         })),
         totalSlots: 42,
         categoriesPerCard: 3,
+        promptsPerCategory: session.categoryGrid?.promptsPerCategory || 3,
+        lockedTiles: session.categoryGrid?.lockedTiles || [],
       };
       
       const { error } = await supabase

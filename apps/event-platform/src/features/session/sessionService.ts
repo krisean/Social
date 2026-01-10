@@ -17,6 +17,7 @@ import type {
   Answer,
   Team,
   Session,
+  SessionSettings,
   SessionAnalytics,
   Vote,
 } from "../../shared/types";
@@ -59,12 +60,12 @@ function mapSession(data: any): Session | null {
     createdAt: data.created_at ?? new Date().toISOString(),
     startedAt: data.started_at,
     endsAt: data.ends_at,
-    settings: data.settings ?? {
+    settings: (data.settings ?? {
       answerSecs: 90,
       voteSecs: 90,
       resultsSecs: 12,
       maxTeams: 24,
-    },
+    }) as SessionSettings,
     venueName: data.venue_name,
     promptLibraryId: typeof data.prompt_library_id === "string" ? data.prompt_library_id : undefined,
     categoryGrid: data.category_grid,
@@ -392,17 +393,68 @@ export const joinSession = async (payload: JoinSessionRequest) => {
     "sessions-join",
     { body: payload }
   );
-  if (error) {
-    console.error("Join session error details:", error);
-    // Try to extract error message from the response
-    const errorMessage = (error as any)?.message || error.toString();
-    throw new Error(errorMessage);
-  }
+  
   // Check if data contains an error field (from our Edge Function)
+  // This happens when the function returns a non-2xx status with JSON body
   if (data && 'error' in data) {
     console.error("Join session returned error:", data.error);
     throw new Error((data as any).error);
   }
+  
+  if (error) {
+    console.error("Join session error details:", error);
+    console.error("Error object:", JSON.stringify(error, null, 2));
+    
+    // Try to extract context from the error
+    const context = (error as any)?.context;
+    if (context) {
+      console.error("Error context:", context);
+      
+      // Check if context is a Response object with status
+      if (context instanceof Response) {
+        console.error("Response status:", context.status);
+        if (context.status === 403) {
+          throw new Error("You were banned from this session and cannot rejoin.");
+        } else if (context.status === 400) {
+          throw new Error("Invalid request. Please check your session code and team name.");
+        } else if (context.status === 404) {
+          throw new Error("Session not found. Please check the session code.");
+        }
+      }
+      
+      // If there's context with an error message, use it
+      if (context.error) {
+        throw new Error(context.error);
+      }
+      // If there's a body with error, parse it
+      if (context.body) {
+        try {
+          const body = typeof context.body === 'string' ? JSON.parse(context.body) : context.body;
+          console.error("Error body:", body);
+          if (body.error) {
+            throw new Error(body.error);
+          }
+        } catch (e) {
+          console.error("Failed to parse error body:", e);
+        }
+      }
+    }
+    
+    // Default error messages based on status
+    const status = (error as any)?.status;
+    console.error("Error status:", status);
+    if (status === 403) {
+      throw new Error("You were banned from this session and cannot rejoin.");
+    } else if (status === 400) {
+      throw new Error("Invalid request. Please check your session code and team name.");
+    } else if (status === 404) {
+      throw new Error("Session not found. Please check the session code.");
+    }
+    
+    // Generic error
+    throw new Error("Failed to join session. Please try again.");
+  }
+  
   if (!data) {
     throw new Error("No response data from join session");
   }

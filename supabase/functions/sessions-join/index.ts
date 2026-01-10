@@ -73,9 +73,42 @@ serve(async (req) => {
 
     console.log("Session found:", { id: session.id, status: session.status })
 
-    // Check if session is still joinable (lobby or waiting status)
-    if (session.status !== "waiting" && session.status !== "lobby") {
-      console.error("Session not in joinable status:", session.status)
+    // Check if this team already exists (rejoining)
+    console.log("Checking if team already exists...")
+    const { data: existingTeam, error: existingTeamError } = await supabase
+      .from("teams")
+      .select("id, team_name")
+      .eq("session_id", session.id)
+      .eq("team_name", normalizedTeamName)
+      .single()
+
+    const isRejoining = existingTeam && !existingTeamError
+
+    // If rejoining, allow it regardless of session status
+    if (isRejoining) {
+      console.log("Team is rejoining - allowing access")
+      return new Response(
+        JSON.stringify({ 
+          sessionId: session.id,
+          session: {
+            id: session.id,
+            code: session.code,
+            status: session.status,
+            settings: session.settings
+          },
+          team: {
+            id: existingTeam.id,
+            teamName: normalizedTeamName,
+            uid: userId || null
+          }
+        }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      )
+    }
+
+    // For new teams, check if session is still joinable (lobby or category-select status)
+    if (session.status !== "lobby" && session.status !== "category-select") {
+      console.error("Session not in joinable status for new teams:", session.status)
       return new Response(
         JSON.stringify({ error: "Session is not accepting new teams" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -130,17 +163,16 @@ serve(async (req) => {
       )
     }
 
-    // Check if this team name is banned from this session
-    // We need to check by team name since we don't have a team_id yet
+    // Check if this user (by UID) is banned from this session
     try {
-      const { data: bannedTeams, error: bannedError } = await supabase
+      const { data: bannedUsers, error: bannedError } = await supabase
         .from("banned_teams" as any)
-        .select("id, team_name")
+        .select("id, uid")
         .eq("session_id", session.id)
-        .eq("team_name", normalizedTeamName)
+        .eq("uid", userId)
 
       // Only block if we successfully got data and found a ban
-      if (!bannedError && bannedTeams && bannedTeams.length > 0) {
+      if (!bannedError && bannedUsers && bannedUsers.length > 0) {
         return new Response(
           JSON.stringify({ error: "You were banned from this session and cannot rejoin." }),
           { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }

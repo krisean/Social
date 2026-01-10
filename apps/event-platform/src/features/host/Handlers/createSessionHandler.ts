@@ -19,6 +19,7 @@ interface CreateSessionHandlersDeps {
   onSessionCreated: () => void;
   gameMode: "classic" | "jeopardy";
   selectedCategories: string[];
+  totalRounds?: number;
 }
 
 export const handleCreateSession =
@@ -39,6 +40,7 @@ export const handleCreateSession =
       onSessionCreated,
       gameMode,
       selectedCategories,
+      totalRounds,
     } = deps;
 
     if (isCreating) {
@@ -84,6 +86,7 @@ export const handleCreateSession =
           : undefined,
         gameMode,
         selectedCategories: gameMode === 'jeopardy' ? selectedCategories : undefined,
+        totalRounds: totalRounds || (gameMode === 'jeopardy' ? 1 : 5),
       });
       if (response) {
         setSessionId(response.sessionId);

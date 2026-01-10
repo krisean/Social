@@ -11,11 +11,12 @@ export function useHostState(storedSessionId: string | null) {
   const [showCreateModal, setShowCreateModal] = useState(!storedSessionId);
   const [isCreating, setIsCreating] = useState(false);
   const [createErrors, setCreateErrors] = useState<Record<string, string>>({});
-  const [createForm, setCreateForm] = useState<{ teamName: string; venueName: string; gameMode: "classic" | "jeopardy"; selectedCategories: string[] }>({ 
+  const [createForm, setCreateForm] = useState<{ teamName: string; venueName: string; gameMode: "classic" | "jeopardy"; selectedCategories: string[]; totalRounds?: number }>({ 
     teamName: "", 
     venueName: "", 
     gameMode: "classic",
     selectedCategories: [],
+    totalRounds: 5
   });
   const [showPromptLibraryModal, setShowPromptLibraryModal] = useState(false);
   const [isUpdatingPromptLibrary, setIsUpdatingPromptLibrary] = useState(false);

@@ -106,6 +106,8 @@ export function CategorySelectPhase({
               onSelect={onSelectCategory}
               disabled={isSubmitting}
               canSelect={true}
+              roundIndex={session.roundIndex}
+              totalRounds={session.rounds?.length}
               highlightUsed={true}
             />
             {isSubmitting && (
@@ -138,6 +140,8 @@ export function CategorySelectPhase({
               disabled={true}
               canSelect={false}
               highlightUsed={true}
+              roundIndex={session.roundIndex}
+              totalRounds={session.rounds?.length}
             />
           </div>
         )}

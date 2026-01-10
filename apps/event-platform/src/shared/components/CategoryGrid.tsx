@@ -4,6 +4,13 @@ import type { CategoryGrid as CategoryGridType } from "../utils/categoryGrid";
 import { useTheme } from "../providers/ThemeProvider";
 import { getActiveCard, getCardCategories, getCardRemainingPrompts, getPromptBonus } from "../utils/categoryGrid";
 
+// Extend Window interface for throttle flag
+declare global {
+  interface Window {
+    categoryGridLogThrottle?: boolean;
+  }
+}
+
 interface CategoryGridProps {
   libraries: PromptLibrary[];
   categoryGrid: CategoryGridType;
@@ -12,6 +19,8 @@ interface CategoryGridProps {
   disabled?: boolean;
   canSelect?: boolean;
   highlightUsed?: boolean;
+  roundIndex?: number;
+  totalRounds?: number;
 }
 
 export function CategoryGrid({
@@ -22,11 +31,13 @@ export function CategoryGrid({
   disabled = false,
   canSelect = false,
   highlightUsed = true,
+  roundIndex,
+  totalRounds,
 }: CategoryGridProps) {
   const { isDark } = useTheme();
 
   // Determine active card and get categories for that card
-  const activeCard = getActiveCard(categoryGrid);
+  const activeCard = getActiveCard(categoryGrid, roundIndex, totalRounds);
   const [currentCard, setCurrentCard] = useState<1 | 2>(1);
   
   // Auto-switch to Card 2 when Card 1 is mostly complete
@@ -93,7 +104,40 @@ export function CategoryGrid({
             </div>
             
             {/* Dynamic Prompt Cards in Column */}
-            {Array.from({ length: categoryGrid.promptsPerCategory || 7 }, (_, i) => i).map((promptIndex) => {
+            {(() => {
+              // Calculate unlockedPerCard from session settings (not available here, so calculate from locked tiles)
+              // For now, we'll infer it from the grid structure
+              const lockedTilesCount = categoryGrid.lockedTiles?.length || 0;
+              // If we have locked tiles, we can infer unlockedPerCard from the pattern
+              // This is a temporary solution - ideally unlockedPerCard should be passed as a prop
+              let unlockedPerCard = 1; // Default fallback
+              if (lockedTilesCount === 2) unlockedPerCard = 1; // 1 group, 1 round
+              else if (lockedTilesCount === 1) unlockedPerCard = 2; // 1 group, 2 rounds or 2 groups, 1 round
+              else if (lockedTilesCount === 0) unlockedPerCard = 3; // 1 group, 3 rounds or 3 groups, 1 round
+              
+              const tilesPerCategory = Math.ceil(unlockedPerCard / 3);
+              
+              // Throttle logging to once per second
+              if (!window.categoryGridLogThrottle) {
+                window.categoryGridLogThrottle = true;
+                setTimeout(() => { window.categoryGridLogThrottle = false; }, 1000);
+                
+                const cardCategories = displayLibraries.map(lib => ({
+                  libraryId: lib.id,
+                  lockedTilesCount: categoryGrid.lockedTiles?.filter(t => t.categoryId === lib.id).length || 0
+                }));
+                
+                console.log("Card rendering:", {
+                  currentCard,
+                  unlockedPerCard,
+                  tilesPerCategory,
+                  totalLockedTiles: categoryGrid.lockedTiles?.length || 0,
+                  cardCategories
+                });
+              }
+              
+              return Array.from({ length: tilesPerCategory }, (_, i) => i);
+            })().map((promptIndex) => {
               const isUsed = category?.usedPrompts.includes(promptIndex) ?? false;
               const isLocked = categoryGrid.lockedTiles?.some(
                 tile => tile.categoryId === library.id && tile.promptIndex === promptIndex

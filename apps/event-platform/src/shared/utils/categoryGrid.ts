@@ -59,15 +59,53 @@ export function generateCategoryBonuses(): PromptBonus[] {
 }
 
 /**
+ * Calculate locked tiles based on number of groups and total rounds
+ * Simplified for 1 card (3 categories only)
+ * Example: 1 group, 1 round = 1 unlocked per card, 2 locked per card
+ */
+export function calculateLockedTiles(
+  selectedCategories: PromptLibraryId[],
+  numGroups: number,
+  totalRounds: number
+): Array<{ categoryId: PromptLibraryId; promptIndex: number }> {
+  const unlockedPerCard = numGroups * totalRounds;
+  const lockedPerCard = 3 - unlockedPerCard;
+  
+  const lockedTiles: Array<{ categoryId: PromptLibraryId; promptIndex: number }> = [];
+  
+  if (lockedPerCard === 0) return lockedTiles;
+  
+  // Use only first 3 categories (1 card)
+  const cardCategories = selectedCategories.slice(0, 3);
+  
+  // Randomly select categories for locked tiles
+  const shuffledCategories = [...cardCategories].sort(() => Math.random() - 0.5);
+  const selectedForLocking = shuffledCategories.slice(0, lockedPerCard);
+  
+  // Lock index 0 for selected categories
+  for (const categoryId of selectedForLocking) {
+    lockedTiles.push({ categoryId, promptIndex: 0 });
+  }
+  
+  return lockedTiles;
+}
+
+/**
  * Initialize category grid for jeopardy mode with 6 categories (2 cards of 3)
  * @param selectedCategories - 6 selected prompt library IDs
+ * @param numGroups - Number of groups in the session
+ * @param totalRounds - Total number of rounds to play
  */
 export function initializeCategoryGrid(
-  selectedCategories: PromptLibraryId[]
+  selectedCategories: PromptLibraryId[],
+  numGroups: number = 1,
+  totalRounds: number = 1
 ): CategoryGrid {
   if (selectedCategories.length !== 6) {
     throw new Error('Must select exactly 6 categories (2 cards of 3)');
   }
+  
+  const lockedTiles = calculateLockedTiles(selectedCategories, numGroups, totalRounds);
   
   return {
     categories: selectedCategories.map(id => ({
@@ -75,7 +113,27 @@ export function initializeCategoryGrid(
       usedPrompts: [],
       promptBonuses: generateCategoryBonuses(),
     })),
-    totalSlots: 42, // 6 categories × 7 prompts
+    totalSlots: selectedCategories.length, // Total number of tiles to display
+    categoriesPerCard: 3,
+    lockedTiles,
+  };
+}
+
+/**
+ * Update category grid with locked tiles based on current group count and rounds
+ * This should be called when the game starts to lock tiles appropriately
+ */
+export function updateCategoryGridLocks(
+  grid: CategoryGrid,
+  numGroups: number,
+  totalRounds: number
+): CategoryGrid {
+  const selectedCategories = grid.categories.map(c => c.id);
+  const lockedTiles = calculateLockedTiles(selectedCategories, numGroups, totalRounds);
+  
+  return {
+    ...grid,
+    lockedTiles,
   };
 }
 
@@ -100,46 +158,72 @@ export function markPromptUsed(
 /**
  * Check if a category has available prompts
  */
-export function isCategoryAvailable(
+export function canSelectPrompt(
   grid: CategoryGrid,
   categoryId: PromptLibraryId
 ): boolean {
   const category = grid.categories.find(c => c.id === categoryId);
-  const maxPrompts = grid.promptsPerCategory || 7; // Default to 7 for legacy sessions
-  return category ? category.usedPrompts.length < maxPrompts : false;
+  // For Jeopardy mode, we only display 1 tile per category (index 0)
+  // Check if index 0 is not locked and not used
+  const isIndex0Locked = grid.lockedTiles?.some(t => t.categoryId === categoryId && t.promptIndex === 0) || false;
+  const isIndex0Used = category?.usedPrompts.includes(0) || false;
+  return !isIndex0Locked && !isIndex0Used;
 }
 
 /**
  * Get count of remaining prompts in a category
+ * For Jeopardy mode, only 1 tile per category (index 0)
  */
 export function getRemainingPrompts(
   grid: CategoryGrid,
   categoryId: PromptLibraryId
 ): number {
+  const isIndex0Locked = grid.lockedTiles?.some(t => t.categoryId === categoryId && t.promptIndex === 0) || false;
   const category = grid.categories.find(c => c.id === categoryId);
-  const maxPrompts = grid.promptsPerCategory || 7; // Default to 7 for legacy sessions
-  return category ? maxPrompts - category.usedPrompts.length : 0;
+  const isIndex0Used = category?.usedPrompts.includes(0) || false;
+  
+  return (!isIndex0Locked && !isIndex0Used) ? 1 : 0;
 }
 
 /**
  * Get total remaining prompts across all categories
+ * For Jeopardy mode, only count tiles that are actually displayed (not locked)
  */
-export function getTotalRemainingPrompts(grid: CategoryGrid): number {
-  const maxPrompts = grid.promptsPerCategory || 7; // Default to 7 for legacy sessions
-  return grid.categories.reduce((sum, cat) => 
-    sum + (maxPrompts - cat.usedPrompts.length), 0
-  );
+export function getTotalRemainingPrompts(grid: CategoryGrid, roundIndex?: number, totalRounds?: number): number {
+  // Get the active card categories
+  const activeCard = getActiveCard(grid, roundIndex, totalRounds);
+  const cardCategories = getCardCategories(grid, activeCard);
+  
+  return cardCategories.reduce((sum, cat) => {
+    // For Jeopardy mode, we only display 1 tile per category (index 0)
+    // So we only count that tile if it's not locked and not used
+    const isIndex0Locked = grid.lockedTiles?.some(t => t.categoryId === cat.id && t.promptIndex === 0) || false;
+    const isIndex0Used = cat.usedPrompts.includes(0);
+    
+    // If index 0 is not locked and not used, count it as remaining
+    const remaining = (!isIndex0Locked && !isIndex0Used) ? 1 : 0;
+    
+    return sum + remaining;
+  }, 0);
 }
 
 /**
  * Get remaining prompts for a specific card
+ * For Jeopardy mode, only count index 0 tiles
  */
 export function getCardRemainingPrompts(grid: CategoryGrid, cardNumber: 1 | 2): number {
   const cardCategories = getCardCategories(grid, cardNumber);
-  const maxPrompts = grid.promptsPerCategory || 7; // Default to 7 for legacy sessions
-  return cardCategories.reduce((sum, cat) => 
-    sum + (maxPrompts - cat.usedPrompts.length), 0
-  );
+  
+  return cardCategories.reduce((sum, cat) => {
+    // For Jeopardy mode, check if index 0 is locked or used
+    const isIndex0Locked = grid.lockedTiles?.some(t => t.categoryId === cat.id && t.promptIndex === 0) || false;
+    const isIndex0Used = cat.usedPrompts.includes(0);
+    
+    // Count as remaining only if index 0 is not locked and not used
+    const remaining = (!isIndex0Locked && !isIndex0Used) ? 1 : 0;
+    
+    return sum + remaining;
+  }, 0);
 }
 
 /**
@@ -158,6 +242,7 @@ export function isPromptLocked(
 
 /**
  * Get available prompt indices for a category (excluding locked tiles)
+ * For Jeopardy mode, only index 0 is displayed
  */
 export function getAvailablePromptIndices(
   grid: CategoryGrid,
@@ -166,22 +251,33 @@ export function getAvailablePromptIndices(
   const category = grid.categories.find(c => c.id === categoryId);
   if (!category) return [];
   
-  const maxPrompts = grid.promptsPerCategory || 7; // Default to 7 for legacy sessions
-  const allIndices = Array.from({ length: maxPrompts }, (_, i) => i);
-  return allIndices.filter(i => 
-    !category.usedPrompts.includes(i) && !isPromptLocked(grid, categoryId, i)
-  );
+  // For Jeopardy mode, only check index 0
+  const isIndex0Locked = isPromptLocked(grid, categoryId, 0);
+  const isIndex0Used = category.usedPrompts.includes(0);
+  
+  return (!isIndex0Locked && !isIndex0Used) ? [0] : [];
 }
 
 /**
- * Get which card (1 or 2) should be displayed based on Card 1 completion
- * Card 2 appears when 2+ categories in Card 1 are exhausted
+ * Get which card (1 or 2) should be displayed based on round index or Card 1 completion
+ * Card 2 appears when we're in the second half of rounds OR when 2+ categories in Card 1 are exhausted
+ * For Jeopardy mode, a category is exhausted when index 0 is used
  */
-export function getActiveCard(grid: CategoryGrid): 1 | 2 {
-  const categoriesPerCard = grid.categoriesPerCard || 3; // Default to 3 for legacy sessions
-  const maxPrompts = grid.promptsPerCategory || 7; // Default to 7 for legacy sessions
+export function getActiveCard(grid: CategoryGrid, roundIndex?: number, totalRounds?: number): 1 | 2 {
+  const categoriesPerCard = grid.categoriesPerCard || 3;
+  
+  // If round info is provided, use it to determine card
+  // Second half of rounds = Card 2
+  if (roundIndex !== undefined && totalRounds !== undefined && totalRounds > 0) {
+    const halfwayPoint = Math.floor(totalRounds / 2);
+    if (roundIndex >= halfwayPoint) {
+      return 2;
+    }
+  }
+  
+  // Fallback: Check if Card 1 categories are exhausted
   const card1Categories = grid.categories.slice(0, categoriesPerCard);
-  const exhaustedInCard1 = card1Categories.filter(cat => cat.usedPrompts.length >= maxPrompts).length;
+  const exhaustedInCard1 = card1Categories.filter(cat => cat.usedPrompts.includes(0)).length;
   
   // Switch to Card 2 when 2 or more categories in Card 1 are exhausted
   return exhaustedInCard1 >= 2 ? 2 : 1;

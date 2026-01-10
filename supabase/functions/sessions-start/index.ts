@@ -105,12 +105,20 @@ async function handleStartSession(req: Request, uid: string, supabase: any): Pro
     // Shuffle teams
     const shuffledTeamIds: string[] = shuffleArray(teams.map((t: { id: string }) => t.id));
     
+    // Determine game mode
+    const isJeopardyMode = session.settings?.gameMode === 'jeopardy';
+    
     // Generate rounds with groups
     const rounds: Round[] = [];
     let promptCursor = session.prompt_cursor || 0;
     const promptDeck = session.prompt_deck || [];
     
-    for (let i = 0; i < TOTAL_ROUNDS; i++) {
+    // Use session's totalRounds setting, fallback to TOTAL_ROUNDS for backward compatibility
+    // For Jeopardy mode, double the rounds to account for both cards (Card 1 and Card 2)
+    const baseTotalRounds = session.settings?.totalRounds || TOTAL_ROUNDS;
+    const totalRounds = isJeopardyMode ? baseTotalRounds * 2 : baseTotalRounds;
+    
+    for (let i = 0; i < totalRounds; i++) {
       const groups: RoundGroup[] = [];
       const teamsForRound = [...shuffledTeamIds];
       
@@ -140,19 +148,20 @@ async function handleStartSession(req: Request, uid: string, supabase: any): Pro
     }
     
     // Determine initial phase based on game mode
-    const isJeopardyMode = session.settings?.gameMode === 'jeopardy';
     const initialStatus = isJeopardyMode ? 'category-select' : 'answer';
     
     console.log('Starting session with mode:', session.settings?.gameMode, 'initialStatus:', initialStatus);
     
-    // Configure dynamic grid based on numGroups × TOTAL_ROUNDS
+    // Configure dynamic grid based on numGroups × totalRounds
     let updatedCategoryGrid = session.category_grid;
     if (isJeopardyMode && session.category_grid && rounds.length > 0) {
       const numGroups = rounds[0].groups.length;
       const categoriesPerCard = 3; // Fixed: 3 categories per card
       
-      // Calculate per card: totalActiveTiles = numGroups × TOTAL_ROUNDS
-      const totalActiveTiles = numGroups * TOTAL_ROUNDS;
+      // Calculate per card: totalActiveTiles = numGroups × baseTotalRounds (rounds per card)
+      // Since totalRounds is already doubled for Jeopardy, divide by 2 to get rounds per card
+      const roundsPerCard = totalRounds / 2;
+      const totalActiveTiles = numGroups * roundsPerCard;
       const rows = Math.ceil(totalActiveTiles / 3);
       const totalTilesPerCard = rows * 3;
       const tilesToLock = totalTilesPerCard - totalActiveTiles; // 0-2
@@ -168,7 +177,7 @@ async function handleStartSession(req: Request, uid: string, supabase: any): Pro
         lockedTiles: lockedTiles,
       };
       
-      console.log(`Dynamic grid: ${numGroups} groups × ${TOTAL_ROUNDS} rounds = ${totalActiveTiles} active tiles per card`);
+      console.log(`Dynamic grid: ${numGroups} groups × ${totalRounds} rounds = ${totalActiveTiles} active tiles per card`);
       console.log(`Grid size: ${rows} rows × 3 cols = ${totalTilesPerCard} tiles per card (${tilesToLock} locked)`);
       console.log(`Locked tiles:`, lockedTiles);
     }
