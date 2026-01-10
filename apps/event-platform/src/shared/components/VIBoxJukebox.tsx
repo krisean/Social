@@ -183,7 +183,7 @@ export function VIBoxJukebox({
     return sessionId;
   };
 
-  // Refresh queue when modal opens (Deployed: 2025-01-10)
+  // Refresh queue when modal opens (Deployed: 2025-01-10 v3f1baa0)
   useEffect(() => {
     if (isOpen) {
       // Load queue immediately when modal opens
