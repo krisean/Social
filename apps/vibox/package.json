@@ -9,8 +9,5 @@
   },
   "keywords": ["music", "jukebox", "medieval", "pirate", "tavern"],
   "author": "Social",
-  "license": "MIT",
-  "devDependencies": {
-    "http.server": "^1.0.0"
-  }
+  "license": "MIT"
 }
