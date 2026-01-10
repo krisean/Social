@@ -226,6 +226,7 @@ export function VIBoxJukebox({
           is_played: false,
           session_id: getSessionId(),
           device_type: getDeviceType(),
+          added_by: 'Real-time Test', // Fixed: Provide required field
           created_at: new Date().toISOString()
         });
       
