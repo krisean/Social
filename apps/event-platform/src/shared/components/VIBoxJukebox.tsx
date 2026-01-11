@@ -260,9 +260,67 @@ export function VIBoxJukebox({
     console.log('🔍 VIBox Debug - Modal state changed, isOpen:', isOpen);
     
     if (isOpen) {
-      console.log('🔍 VIBox Debug - Modal opened, reloading queue to ensure fresh data');
-      // When modal opens, reload the queue to get the latest data
-      // This ensures we have fresh data even if realtime events were missed
+      console.log('🔍 VIBox Debug - Modal opened, re-establishing realtime subscription');
+      // When modal opens, re-establish the realtime subscription to ensure event reception
+      // This fixes the issue where events aren't received when modal opens
+      
+      // Remove existing subscription if any
+      if (queueChannelRef.current) {
+        console.log('🔍 VIBox Debug - Removing existing subscription');
+        supabase.removeChannel(queueChannelRef.current);
+      }
+      
+      // Set up fresh subscription
+      const setupFreshSubscription = async () => {
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        if (!session) {
+          const { error } = await supabase.auth.signInAnonymously();
+          if (error) {
+            console.error('🔍 VIBox Debug - Failed to authenticate for fresh subscription:', error);
+            return;
+          }
+        }
+        
+        console.log('🔍 VIBox Debug - Creating fresh realtime subscription');
+        queueChannelRef.current = supabase
+          .channel('vibox-queue-changes-fresh')
+          .on(
+            'postgres_changes',
+            {
+              event: '*',
+              schema: 'public',
+              table: 'vibox_queue',
+            },
+            async (payload) => {
+              console.log('🔍 VIBox Debug - FRESH REALTIME EVENT RECEIVED!', { 
+                eventType: payload.eventType,
+                payload: payload,
+                timestamp: new Date().toISOString()
+              });
+              log.info('FRESH REALTIME EVENT', { 
+                eventType: payload.eventType,
+                payload: payload 
+              });
+              // Reload queue immediately
+              const response = await viboxApi.getQueue();
+              if (response.success && response.data) {
+                setQueue(response.data.queue);
+                console.log('🔍 VIBox Debug - Queue updated from fresh event:', response.data.count);
+              }
+            }
+          )
+          .subscribe((status, err) => {
+            console.log('🔍 VIBox Debug - Fresh subscription status:', { status, error: err?.message });
+            if (status === 'SUBSCRIBED') {
+              console.log('✅ VIBox Debug - Fresh realtime subscription active!');
+            }
+          });
+      };
+      
+      setupFreshSubscription();
+      
+      // Also reload queue to get current state
       const reloadQueue = async () => {
         try {
           const response = await viboxApi.getQueue();
@@ -278,7 +336,12 @@ export function VIBoxJukebox({
       };
       reloadQueue();
     } else {
-      console.log('🔍 VIBox Debug - Modal closed');
+      console.log('🔍 VIBox Debug - Modal closed, cleaning up fresh subscription');
+      // Clean up fresh subscription when modal closes
+      if (queueChannelRef.current) {
+        supabase.removeChannel(queueChannelRef.current);
+        queueChannelRef.current = null;
+      }
     }
   }, [isOpen]);
 
