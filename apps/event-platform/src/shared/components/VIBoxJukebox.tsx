@@ -142,6 +142,13 @@ export function VIBoxJukebox({
         )
         .subscribe((status, err) => {
           const envInfo = getEnvironmentInfo();
+          console.log('🔍 VIBox Debug - Realtime subscription status:', { 
+            status, 
+            error: err?.message,
+            ...envInfo,
+            timestamp: new Date().toISOString(),
+            websocketConnected: status === 'SUBSCRIBED'
+          });
           log.info('Realtime subscription status', { 
             status, 
             error: err?.message,
@@ -149,24 +156,32 @@ export function VIBoxJukebox({
             timestamp: new Date().toISOString(),
             websocketConnected: status === 'SUBSCRIBED'
           });
-          if (err) log.error('Realtime subscription error', { error: err });
+          if (err) {
+            console.error('🔍 VIBox Debug - Realtime subscription error:', err);
+            log.error('Realtime subscription error', { error: err });
+          }
           
           if (status === 'SUBSCRIBED') {
+            console.log('✅ VIBox Debug - Realtime connected successfully!');
             log.info('Realtime connected - polling disabled', envInfo);
             if (pollingInterval) clearInterval(pollingInterval);
             retryCount = 0; // Reset retry count on successful connection
           } else if (status === 'CHANNEL_ERROR') {
+            console.error('❌ VIBox Debug - Realtime channel error, will retry');
             log.error('Realtime channel error - enabling fallback polling', envInfo);
             if (retryCount < maxRetries) {
               retryCount++;
+              console.log(`🔄 VIBox Debug - Retrying realtime connection (${retryCount}/${maxRetries})`);
               log.info(`Retrying realtime connection (${retryCount}/${maxRetries})`);
               retryTimeout = setTimeout(() => {
                 setupRealtime();
               }, 2000 * retryCount); // Exponential backoff
             }
           } else if (status === 'TIMED_OUT') {
+            console.warn('⏰ VIBox Debug - Realtime connection timed out');
             log.warn('Realtime connection timed out - using fallback polling', envInfo);
           } else if (status === 'CLOSED') {
+            console.warn('🔌 VIBox Debug - Realtime connection closed');
             log.warn('Realtime connection closed - attempting reconnection', envInfo);
           }
         });
@@ -178,17 +193,27 @@ export function VIBoxJukebox({
 
     // Test realtime connectivity for debugging
     let stopMonitoring: (() => void) | undefined;
-    if (getEnvironmentInfo().isVercel) {
+    const envInfo = getEnvironmentInfo();
+    
+    // ALWAYS log these for debugging
+    console.log('🔍 VIBox Debug - Environment:', envInfo);
+    console.log('🔍 VIBox Debug - Component mounting, isOpen:', isOpen);
+    
+    if (envInfo.isVercel) {
+      console.log('🌐 Vercel environment detected - running diagnostics');
       log.info('🌐 Vercel environment detected - running realtime diagnostics');
       testRealtimeConnectivity().then(result => {
+        console.log('🔍 VIBox Debug - Realtime test result:', result);
         log.info('🔍 Realtime diagnostics completed', result);
         if (!result.success) {
+          console.warn('⚠️ VIBox Debug - Realtime connectivity issues detected:', result);
           log.warn('⚠️ Realtime connectivity issues detected on Vercel', result);
         }
       });
       
       // Start monitoring for Vercel deployments
       stopMonitoring = startRealtimeMonitoring((result) => {
+        console.log('📊 VIBox Debug - Monitoring result:', result);
         if (!result.success) {
           log.warn('📊 Realtime monitoring detected issue', result);
         }

@@ -16,6 +16,10 @@ class Logger {
   }
 
   private shouldLog(level: LogLevel): boolean {
+    // TEMPORARY: Enable all logs for Vercel debugging
+    if (import.meta.env.MODE === 'production') {
+      return true; // Enable all logs temporarily
+    }
     if (!this.isDevelopment && level !== 'error') {
       return false;
     }
