@@ -283,6 +283,20 @@ export function VIBoxJukebox({
         }
         
         console.log('🔍 VIBox Debug - Creating fresh realtime subscription');
+        
+        // Create immediate fetch function like the game does
+        const fetchQueueImmediately = async () => {
+          try {
+            const response = await viboxApi.getQueue();
+            if (response.success && response.data) {
+              setQueue(response.data.queue);
+              console.log('🔍 VIBox Debug - Queue refetched immediately:', response.data.count);
+            }
+          } catch (error) {
+            console.error('🔍 VIBox Debug - Error refetching queue:', error);
+          }
+        };
+        
         queueChannelRef.current = supabase
           .channel('vibox-queue-changes-fresh')
           .on(
@@ -292,7 +306,7 @@ export function VIBoxJukebox({
               schema: 'public',
               table: 'vibox_queue',
             },
-            async (payload) => {
+            (payload) => {
               console.log('🔍 VIBox Debug - FRESH REALTIME EVENT RECEIVED!', { 
                 eventType: payload.eventType,
                 payload: payload,
@@ -302,11 +316,20 @@ export function VIBoxJukebox({
                 eventType: payload.eventType,
                 payload: payload 
               });
-              // Reload queue immediately
-              const response = await viboxApi.getQueue();
-              if (response.success && response.data) {
-                setQueue(response.data.queue);
-                console.log('🔍 VIBox Debug - Queue updated from fresh event:', response.data.count);
+              
+              // Use the same pattern as the game - immediate refetch
+              if (payload.eventType === 'DELETE') {
+                console.log('🔍 VIBox Debug - Queue item deleted, refetching immediately');
+                fetchQueueImmediately();
+              } else if (payload.eventType === 'INSERT') {
+                console.log('🔍 VIBox Debug - Queue item added, refetching after short delay');
+                setTimeout(fetchQueueImmediately, 50); // Very short delay like the game
+              } else if (payload.eventType === 'UPDATE') {
+                console.log('🔍 VIBox Debug - Queue item updated, refetching after short delay');
+                setTimeout(fetchQueueImmediately, 50);
+              } else {
+                console.log('🔍 VIBox Debug - Unknown event type, refetching immediately');
+                fetchQueueImmediately();
               }
             }
           )
