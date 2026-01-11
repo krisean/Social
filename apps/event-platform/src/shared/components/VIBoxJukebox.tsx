@@ -66,307 +66,54 @@ export function VIBoxJukebox({
 
 
   
-  // Load queue from Supabase and set up real-time subscription
+  // Pure realtime approach - no polling
   useEffect(() => {
-    let pollingInterval: NodeJS.Timeout;
-    let retryTimeout: NodeJS.Timeout;
-    let retryCount = 0;
-    const maxRetries = 3;
+    console.log('🔍 VIBox Debug - Setting up pure realtime');
     
-    // ALWAYS log when this effect runs
-    console.log('🔍 VIBox Debug - Realtime effect running, isOpen:', isOpen);
-    
-    const loadQueue = async () => {
-      if (isQueueLoading) return; // Prevent concurrent loads
-      
-      setIsQueueLoading(true);
-      try {
-        const response = await viboxApi.getQueue();
+    const fetchQueue = () => {
+      console.log('🔍 VIBox Debug - Fetching queue');
+      viboxApi.getQueue().then((response) => {
         if (response.success && response.data) {
           setQueue(response.data.queue);
-          console.log('🔍 VIBox Debug - Queue loaded in effect:', response.data.count);
-          log.info('Queue loaded', { count: response.data.count });
-        } else {
-          log.error('Error loading queue', { error: response.error });
-        }
-      } catch (error) {
-        log.error('Error loading queue', { error });
-      } finally {
-        setIsQueueLoading(false);
-      }
-    };
-
-    const loadQueueDebounced = async () => {
-      if (debounceTimeoutRef.current) {
-        clearTimeout(debounceTimeoutRef.current);
-      }
-      
-      debounceTimeoutRef.current = setTimeout(async () => {
-        log.debug('Debounced queue reload');
-        await loadQueue();
-      }, 300);
-    };
-
-    const setupRealtime = async () => {
-      // Ensure we're authenticated first
-      const { data: { session } } = await supabase.auth.getSession();
-      log.info('Auth session', { authenticated: !!session });
-      
-      if (!session) {
-        log.info('Signing in anonymously for realtime');
-        const { error } = await supabase.auth.signInAnonymously();
-        if (error) {
-          log.error('Failed to authenticate', { error });
-          return;
-        }
-        log.info('Anonymous auth successful');
-      }
-
-      const envInfo = getEnvironmentInfo();
-      log.info('Setting up realtime for vibox_queue table', envInfo);
-
-      // Set up real-time subscription with status callbacks
-      queueChannelRef.current = supabase
-        .channel('vibox-queue-changes')
-        .on(
-          'postgres_changes',
-          {
-            event: '*',
-            schema: 'public',
-            table: 'vibox_queue',
-          },
-          async (payload) => {
-            console.log('🔍 VIBox Debug - REALTIME EVENT RECEIVED!', { 
-              eventType: payload.eventType,
-              payload: payload,
-              timestamp: new Date().toISOString()
-            });
-            log.info('REALTIME EVENT', { 
-              eventType: payload.eventType,
-              payload: payload 
-            });
-            // Use debounced reload for realtime updates
-            await loadQueueDebounced();
-          }
-        )
-        .subscribe((status, err) => {
-          const envInfo = getEnvironmentInfo();
-          console.log('🔍 VIBox Debug - Realtime subscription status:', { 
-            status, 
-            error: err?.message,
-            ...envInfo,
-            timestamp: new Date().toISOString(),
-            websocketConnected: status === 'SUBSCRIBED'
-          });
-          log.info('Realtime subscription status', { 
-            status, 
-            error: err?.message,
-            ...envInfo,
-            timestamp: new Date().toISOString(),
-            websocketConnected: status === 'SUBSCRIBED'
-          });
-          if (err) {
-            console.error('🔍 VIBox Debug - Realtime subscription error:', err);
-            log.error('Realtime subscription error', { error: err });
-          }
-          
-          if (status === 'SUBSCRIBED') {
-            console.log('✅ VIBox Debug - Realtime connected successfully!');
-            log.info('Realtime connected - polling disabled', envInfo);
-            if (pollingInterval) clearInterval(pollingInterval);
-            retryCount = 0; // Reset retry count on successful connection
-          } else if (status === 'CHANNEL_ERROR') {
-            console.error('❌ VIBox Debug - Realtime channel error, will retry');
-            log.error('Realtime channel error - enabling fallback polling', envInfo);
-            if (retryCount < maxRetries) {
-              retryCount++;
-              console.log(`🔄 VIBox Debug - Retrying realtime connection (${retryCount}/${maxRetries})`);
-              log.info(`Retrying realtime connection (${retryCount}/${maxRetries})`);
-              retryTimeout = setTimeout(() => {
-                setupRealtime();
-              }, 2000 * retryCount); // Exponential backoff
-            }
-          } else if (status === 'TIMED_OUT') {
-            console.warn('⏰ VIBox Debug - Realtime connection timed out');
-            log.warn('Realtime connection timed out - using fallback polling', envInfo);
-          } else if (status === 'CLOSED') {
-            console.warn('🔌 VIBox Debug - Realtime connection closed');
-            log.warn('Realtime connection closed - attempting reconnection', envInfo);
-          }
-        });
-    };
-
-    // Load queue immediately on mount, then setup realtime
-    loadQueue();
-    setupRealtime();
-
-    // Test realtime connectivity for debugging
-    let stopMonitoring: (() => void) | undefined;
-    const envInfo = getEnvironmentInfo();
-    
-    // ALWAYS log these for debugging
-    console.log('🔍 VIBox Debug - Environment:', envInfo);
-    console.log('🔍 VIBox Debug - Component mounting, isOpen:', isOpen);
-    
-    if (envInfo.isVercel) {
-      console.log('🌐 Vercel environment detected - running diagnostics');
-      log.info('🌐 Vercel environment detected - running realtime diagnostics');
-      testRealtimeConnectivity().then(result => {
-        console.log('🔍 VIBox Debug - Realtime test result:', result);
-        log.info('🔍 Realtime diagnostics completed', result);
-        if (!result.success) {
-          console.warn('⚠️ VIBox Debug - Realtime connectivity issues detected:', result);
-          log.warn('⚠️ Realtime connectivity issues detected on Vercel', result);
+          console.log('🔍 VIBox Debug - Queue fetched:', response.data.count, 'items');
         }
       });
-      
-      // Start monitoring for Vercel deployments
-      stopMonitoring = startRealtimeMonitoring((result) => {
-        console.log('📊 VIBox Debug - Monitoring result:', result);
-        if (!result.success) {
-          log.warn('📊 Realtime monitoring detected issue', result);
-        }
-      }, 60000); // Check every minute
-    }
+    };
 
-    // Fallback: Poll every 5 seconds if realtime doesn't connect (reduced frequency)
-    pollingInterval = setInterval(() => {
-      log.debug('Polling queue (fallback)');
-      loadQueue();
-    }, 5000);
+    // Initial fetch
+    fetchQueue();
+    
+    // Setup realtime subscription
+    const channel = supabase
+      .channel('vibox-queue')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'vibox_queue',
+        },
+        (payload) => {
+          console.log('🔍 VIBox Debug - Realtime event received:', payload.eventType);
+          // Immediate fetch for realtime events
+          fetchQueue();
+        }
+      )
+      .subscribe((status, err) => {
+        console.log('🔍 VIBox Debug - Realtime status:', status, err?.message);
+        
+        if (status === 'SUBSCRIBED') {
+          console.log('✅ VIBox Debug - Realtime connected successfully');
+        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          console.error('❌ VIBox Debug - Realtime failed:', status, err?.message);
+        }
+      });
 
     return () => {
-      if (queueChannelRef.current) {
-        log.info('Unsubscribing from queue changes');
-        supabase.removeChannel(queueChannelRef.current);
-      }
-      if (pollingInterval) {
-        clearInterval(pollingInterval);
-      }
-      if (retryTimeout) {
-        clearTimeout(retryTimeout);
-      }
-      if (debounceTimeoutRef.current) {
-        clearTimeout(debounceTimeoutRef.current);
-      }
-      if (stopMonitoring) {
-        stopMonitoring();
-      }
+      console.log('🔍 VIBox Debug - Cleaning up realtime subscription');
+      channel.unsubscribe();
     };
-  }, []); // Keep empty dependency for initial setup
-
-  // Separate effect for when modal opens/closes
-  useEffect(() => {
-    console.log('🔍 VIBox Debug - Modal state changed, isOpen:', isOpen);
-    
-    if (isOpen) {
-      console.log('🔍 VIBox Debug - Modal opened, re-establishing realtime subscription');
-      // When modal opens, re-establish the realtime subscription to ensure event reception
-      // This fixes the issue where events aren't received when modal opens
-      
-      // Remove existing subscription if any
-      if (queueChannelRef.current) {
-        console.log('🔍 VIBox Debug - Removing existing subscription');
-        supabase.removeChannel(queueChannelRef.current);
-      }
-      
-      // Set up fresh subscription
-      const setupFreshSubscription = async () => {
-        const { data: { session } } = await supabase.auth.getSession();
-        
-        if (!session) {
-          const { error } = await supabase.auth.signInAnonymously();
-          if (error) {
-            console.error('🔍 VIBox Debug - Failed to authenticate for fresh subscription:', error);
-            return;
-          }
-        }
-        
-        console.log('🔍 VIBox Debug - Creating fresh realtime subscription');
-        
-        // Create immediate fetch function like the game does
-        const fetchQueueImmediately = async () => {
-          try {
-            const response = await viboxApi.getQueue();
-            if (response.success && response.data) {
-              setQueue(response.data.queue);
-              console.log('🔍 VIBox Debug - Queue refetched immediately:', response.data.count);
-            }
-          } catch (error) {
-            console.error('🔍 VIBox Debug - Error refetching queue:', error);
-          }
-        };
-        
-        queueChannelRef.current = supabase
-          .channel('vibox-queue-changes-fresh')
-          .on(
-            'postgres_changes',
-            {
-              event: '*',
-              schema: 'public',
-              table: 'vibox_queue',
-            },
-            (payload) => {
-              console.log('🔍 VIBox Debug - FRESH REALTIME EVENT RECEIVED!', { 
-                eventType: payload.eventType,
-                payload: payload,
-                timestamp: new Date().toISOString()
-              });
-              log.info('FRESH REALTIME EVENT', { 
-                eventType: payload.eventType,
-                payload: payload 
-              });
-              
-              // Use the same pattern as the game - immediate refetch
-              if (payload.eventType === 'DELETE') {
-                console.log('🔍 VIBox Debug - Queue item deleted, refetching immediately');
-                fetchQueueImmediately();
-              } else if (payload.eventType === 'INSERT') {
-                console.log('🔍 VIBox Debug - Queue item added, refetching after short delay');
-                setTimeout(fetchQueueImmediately, 50); // Very short delay like the game
-              } else if (payload.eventType === 'UPDATE') {
-                console.log('🔍 VIBox Debug - Queue item updated, refetching after short delay');
-                setTimeout(fetchQueueImmediately, 50);
-              } else {
-                console.log('🔍 VIBox Debug - Unknown event type, refetching immediately');
-                fetchQueueImmediately();
-              }
-            }
-          )
-          .subscribe((status, err) => {
-            console.log('🔍 VIBox Debug - Fresh subscription status:', { status, error: err?.message });
-            if (status === 'SUBSCRIBED') {
-              console.log('✅ VIBox Debug - Fresh realtime subscription active!');
-            }
-          });
-      };
-      
-      setupFreshSubscription();
-      
-      // Also reload queue to get current state
-      const reloadQueue = async () => {
-        try {
-          const response = await viboxApi.getQueue();
-          if (response.success && response.data) {
-            setQueue(response.data.queue);
-            console.log('🔍 VIBox Debug - Queue reloaded on modal open:', response.data.count);
-            log.info('Queue reloaded on modal open', { count: response.data.count });
-          }
-        } catch (error) {
-          console.error('🔍 VIBox Debug - Error reloading queue on modal open:', error);
-          log.error('Error reloading queue on modal open', { error });
-        }
-      };
-      reloadQueue();
-    } else {
-      console.log('🔍 VIBox Debug - Modal closed, cleaning up fresh subscription');
-      // Clean up fresh subscription when modal closes
-      if (queueChannelRef.current) {
-        supabase.removeChannel(queueChannelRef.current);
-        queueChannelRef.current = null;
-      }
-    }
-  }, [isOpen]);
+  }, []);
 
   // Load pre-loaded tracks and metadata from public directory on mount
   useEffect(() => {
