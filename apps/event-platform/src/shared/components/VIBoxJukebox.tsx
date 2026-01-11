@@ -73,6 +73,9 @@ export function VIBoxJukebox({
     let retryCount = 0;
     const maxRetries = 3;
     
+    // ALWAYS log when this effect runs
+    console.log('🔍 VIBox Debug - Realtime effect running, isOpen:', isOpen);
+    
     const loadQueue = async () => {
       if (isQueueLoading) return; // Prevent concurrent loads
       
@@ -81,6 +84,7 @@ export function VIBoxJukebox({
         const response = await viboxApi.getQueue();
         if (response.success && response.data) {
           setQueue(response.data.queue);
+          console.log('🔍 VIBox Debug - Queue loaded in effect:', response.data.count);
           log.info('Queue loaded', { count: response.data.count });
         } else {
           log.error('Error loading queue', { error: response.error });
@@ -132,6 +136,11 @@ export function VIBoxJukebox({
             table: 'vibox_queue',
           },
           async (payload) => {
+            console.log('🔍 VIBox Debug - REALTIME EVENT RECEIVED!', { 
+              eventType: payload.eventType,
+              payload: payload,
+              timestamp: new Date().toISOString()
+            });
             log.info('REALTIME EVENT', { 
               eventType: payload.eventType,
               payload: payload 
@@ -244,7 +253,34 @@ export function VIBoxJukebox({
         stopMonitoring();
       }
     };
-  }, []);
+  }, []); // Keep empty dependency for initial setup
+
+  // Separate effect for when modal opens/closes
+  useEffect(() => {
+    console.log('🔍 VIBox Debug - Modal state changed, isOpen:', isOpen);
+    
+    if (isOpen) {
+      console.log('🔍 VIBox Debug - Modal opened, reloading queue to ensure fresh data');
+      // When modal opens, reload the queue to get the latest data
+      // This ensures we have fresh data even if realtime events were missed
+      const reloadQueue = async () => {
+        try {
+          const response = await viboxApi.getQueue();
+          if (response.success && response.data) {
+            setQueue(response.data.queue);
+            console.log('🔍 VIBox Debug - Queue reloaded on modal open:', response.data.count);
+            log.info('Queue reloaded on modal open', { count: response.data.count });
+          }
+        } catch (error) {
+          console.error('🔍 VIBox Debug - Error reloading queue on modal open:', error);
+          log.error('Error reloading queue on modal open', { error });
+        }
+      };
+      reloadQueue();
+    } else {
+      console.log('🔍 VIBox Debug - Modal closed');
+    }
+  }, [isOpen]);
 
   // Load pre-loaded tracks and metadata from public directory on mount
   useEffect(() => {
