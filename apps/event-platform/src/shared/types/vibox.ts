@@ -53,3 +53,38 @@ export interface ViboxQueueUpdate {
   completion_percentage?: number;
   skip_count?: number;
 }
+
+export interface Track {
+  id: string;
+  title: string;
+  artist: string;
+  duration: number;
+  file?: File;
+  url: string;
+  isPreloaded?: boolean;
+  genre?: string;
+  primaryVibe?: string;
+  secondaryVibe?: string;
+}
+
+export interface TrackMetadata {
+  file: string;
+  artist: string;
+  primaryVibe: string;
+  secondaryVibe: string;
+  genre: string;
+}
+
+export interface VibeHierarchy {
+  vibes: {
+    [primaryVibe: string]: {
+      total: number;
+      secondaryVibes: {
+        [secondaryVibe: string]: Array<{
+          file: string;
+          genre: string;
+        }>;
+      };
+    };
+  };
+}

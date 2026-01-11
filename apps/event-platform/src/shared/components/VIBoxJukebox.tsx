@@ -2,129 +2,32 @@ import { useState, useRef, useEffect } from "react";
 import { Button, Card, Modal } from "@social/ui";
 import { useTheme } from "../providers/ThemeProvider";
 import { supabase } from "../../supabase/client";
-import type { ViboxQueueItem, ViboxQueueInsert, ViboxQueueUpdate } from "../types/vibox";
+import type { ViboxQueueItem, ViboxQueueInsert, Track, TrackMetadata, VibeHierarchy } from "../types/vibox";
 import type { RealtimeChannel } from "@supabase/supabase-js";
+import { viboxApi } from "../api/vibox";
+import {
+  PlayIcon,
+  PauseIcon,
+  SkipBackIcon,
+  SkipForwardIcon,
+  VolumeIcon,
+  MusicIcon,
+  ChevronRightIcon,
+  ChevronDownIcon,
+  TrashIcon,
+  UploadIcon,
+  ListIcon,
+  SparklesIcon,
+  FileTextIcon,
+  FolderIcon
+} from "./icons/VIBoxIcons";
+import { getDeviceType } from "../utils/device";
+import { getSessionId } from "../utils/session";
+import { getEnvironmentInfo } from "../utils/environment";
+import { log } from "../utils/logger";
+import { getNextTrackByVibe, getPreviousTrackByVibe, getNextTrackLinear, getPreviousTrackLinear } from "../utils/vibeNavigation";
+import { handleQueueError, handleQueueSuccess, handleQueueInfo } from "../utils/errorHandlers";
 
-// Heroicons-style SVG Icon Components
-const PlayIcon = ({ className = "w-4 h-4" }) => (
-  <svg className={className} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
-    <path strokeLinecap="round" strokeLinejoin="round" d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.348a1.125 1.125 0 010 1.971l-11.54 6.347a1.125 1.125 0 01-1.667-.985V5.653z" />
-  </svg>
-);
-const PauseIcon = ({ className = "w-4 h-4" }) => (
-  <svg className={className} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
-    <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 5.25v13.5m-7.5-13.5v13.5" />
-  </svg>
-);
-const SkipBackIcon = ({ className = "w-4 h-4" }) => (
-  <svg className={className} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
-    <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-    <path strokeLinecap="round" strokeLinejoin="round" d="M11.25 9.75L6.75 12l4.5 2.25V9.75z" />
-    <path strokeLinecap="round" strokeLinejoin="round" d="M18.75 9.75L14.25 12l4.5 2.25V9.75z" />
-  </svg>
-);
-const SkipForwardIcon = ({ className = "w-4 h-4" }) => (
-  <svg className={className} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
-    <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-    <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9.75L20.25 12l-4.5 2.25V9.75z" />
-    <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 9.75L12.75 12l-4.5 2.25V9.75z" />
-  </svg>
-);
-
-const VolumeIcon = ({ className = "w-4 h-4" }) => (
-  <svg className={className} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
-    <path strokeLinecap="round" strokeLinejoin="round" d="M19.114 5.636a9 9 0 010 12.728M16.463 8.288a5.25 5.25 0 010 7.424M6.75 8.25l4.72-4.72a.75.75 0 011.28.53v15.88a.75.75 0 01-1.28.53L6.75 15.75V8.25z" />
-  </svg>
-);
-const MusicIcon = ({ className = "w-4 h-4" }) => (
-  <svg className={className} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
-    <path strokeLinecap="round" strokeLinejoin="round" d="M9 9h10.5M9 15h10.5M9 12h6" />
-  </svg>
-);
-const ChevronRightIcon = ({ className = "w-4 h-4" }) => (
-  <svg className={className} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
-    <path strokeLinecap="round" strokeLinejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
-  </svg>
-);
-const ChevronDownIcon = ({ className = "w-4 h-4" }) => (
-  <svg className={className} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
-    <path strokeLinecap="round" strokeLinejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
-  </svg>
-);
-const TrashIcon = ({ className = "w-4 h-4" }) => (
-  <svg className={className} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
-    <path strokeLinecap="round" strokeLinejoin="round" d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6h14zM10 11v6M14 11v6" />
-  </svg>
-);
-const UploadIcon = ({ className = "w-4 h-4" }) => (
-  <svg className={className} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
-    <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
-  </svg>
-);
-const ListIcon = ({ className = "w-4 h-4" }) => (
-  <svg className={className} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
-    <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
-  </svg>
-);
-const SparklesIcon = ({ className = "w-4 h-4" }) => (
-  <svg className={className} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
-    <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09ZM18.259 8.715 18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456ZM16.894 20.567 16.5 21.75l-.394-1.183a2.25 2.25 0 00-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 001.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 001.423 1.423l1.183.394-1.183.394a2.25 2.25 0 00-1.423 1.423Z" />
-  </svg>
-);
-const FileTextIcon = ({ className = "w-4 h-4" }) => (
-  <svg className={className} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
-    <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9Z" />
-  </svg>
-);
-const FolderIcon = ({ className = "w-4 h-4" }) => (
-  <svg className={className} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
-    <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 12.75V12A2.25 2.25 0 014.5 9.75h15c.847 0 1.548.434 1.97 1.087l.258.365A2.25 2.25 0 0121.75 12v6.75A2.25 2.25 0 0119.5 21h-15a2.25 2.25 0 01-2.25-2.25v-6.75Z" />
-    <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 12.75h3.75a.75.75 0 01.75.75v.008c0 .414.336.75.75.75h.008a.75.75 0 01.75-.75v-.008a.75.75 0 01.75-.75h3.75m-9 6.75h.008v.008h-.008v-.008Z" />
-  </svg>
-);
-
-interface Track {
-  id: string;
-  title: string;
-  artist: string;
-  duration: number;
-  file?: File;
-  url: string;
-  isPreloaded?: boolean;
-  genre?: string;
-  primaryVibe?: string;
-  secondaryVibe?: string;
-}
-
-// Legacy interface for backward compatibility
-interface QueueItem {
-  id: string;
-  track: Track;
-  addedBy: string;
-  addedAt: number;
-}
-
-interface TrackMetadata {
-  file: string;
-  artist: string;
-  primaryVibe: string;
-  secondaryVibe: string;
-  genre: string;
-}
-
-interface VibeHierarchy {
-  vibes: {
-    [primaryVibe: string]: {
-      total: number;
-      secondaryVibes: {
-        [secondaryVibe: string]: Array<{
-          file: string;
-          genre: string;
-        }>;
-      };
-    };
-  };
-}
 
 interface VIBoxJukeboxProps {
   isOpen: boolean;
@@ -147,7 +50,6 @@ export function VIBoxJukebox({
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [volume, setVolume] = useState(0.7);
-  const [isLoading] = useState(false);
   const [vibeHierarchy, setVibeHierarchy] = useState<VibeHierarchy | null>(null);
   const [trackMetadata, setTrackMetadata] = useState<Map<string, TrackMetadata>>(new Map());
   const [expandedPrimaryVibes, setExpandedPrimaryVibes] = useState<Set<string>>(new Set());
@@ -161,58 +63,6 @@ export function VIBoxJukebox({
   const queueChannelRef = useRef<RealtimeChannel | null>(null);
   const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Helper function to get device type
-  const getDeviceType = (): string => {
-    const ua = navigator.userAgent;
-    if (/(tablet|ipad|playbook|silk)|(android(?!.*mobi))/i.test(ua)) {
-      return 'tablet';
-    }
-    if (/Mobile|Android|iP(hone|od)|IEMobile|BlackBerry|Kindle|Silk-Accelerated|(hpw|web)OS|Opera M(obi|ini)/.test(ua)) {
-      return 'mobile';
-    }
-    return 'desktop';
-  };
-
-  // Helper function to get session ID
-  const getSessionId = (): string => {
-    let sessionId = sessionStorage.getItem('vibox-session-id');
-    if (!sessionId) {
-      sessionId = `session-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-      sessionStorage.setItem('vibox-session-id', sessionId);
-    }
-    return sessionId;
-  };
-
-  // Refresh queue when modal opens (Deployed: 2025-01-10 v3f1baa0)
-  useEffect(() => {
-      isLocalhost,
-      hostname: window.location?.hostname,
-      userAgent: navigator.userAgent
-    });
-    if (isOpen) {
-      // Load queue immediately when modal opens
-      const loadQueueOnOpen = async () => {
-        try {
-          const { data, error } = await supabase
-            .from('vibox_queue' as any)
-            .select('*')
-            .eq('is_played', false)
-            .order('position', { ascending: true });
-
-          if (error) throw error;
-          if (data) {
-            setQueue(data as unknown as ViboxQueueItem[]);
-            console.log('📋 Queue refreshed on open:', data?.length || 0, 'items');
-            console.log('🔄 Queue items on open:', data.map((item: any) => ({ id: item.id, track: item.track_title, position: item.position })));
-          }
-        } catch (error) {
-          console.error('Error loading queue on open:', error);
-        }
-      };
-      
-      loadQueueOnOpen();
-    }
-  }, [isOpen]);
 
   
   // Load queue from Supabase and set up real-time subscription
@@ -220,68 +70,52 @@ export function VIBoxJukebox({
     let pollingInterval: NodeJS.Timeout;
     
     const loadQueue = async () => {
-      // Clear existing debounce
-      if (debounceTimeoutRef.current) {
-        clearTimeout(debounceTimeoutRef.current);
-      }
-      
-      // For initial load, skip debounce to load immediately
       if (isQueueLoading) return; // Prevent concurrent loads
       
       setIsQueueLoading(true);
       try {
-        const { data, error } = await supabase
-          .from('vibox_queue' as any)
-          .select('*')
-          .eq('is_played', false)
-          .order('position', { ascending: true });
-
-        if (error) throw error;
-        if (data) setQueue(data as unknown as ViboxQueueItem[]);
-        console.log('📋 Queue loaded:', data?.length || 0, 'items');
+        const response = await viboxApi.getQueue();
+        if (response.success && response.data) {
+          setQueue(response.data.queue);
+          log.info('Queue loaded', { count: response.data.count });
+        } else {
+          log.error('Error loading queue', { error: response.error });
+        }
       } catch (error) {
-        console.error('Error loading queue:', error);
+        log.error('Error loading queue', { error });
       } finally {
         setIsQueueLoading(false);
       }
     };
 
     const loadQueueDebounced = async () => {
-      console.log('🔄 loadQueueDebounced called');
-      // Clear existing debounce
       if (debounceTimeoutRef.current) {
         clearTimeout(debounceTimeoutRef.current);
       }
       
-      // Debounce to prevent rapid reloads for realtime updates
       debounceTimeoutRef.current = setTimeout(async () => {
-        console.log('🔄 Executing debounced queue reload');
+        log.debug('Debounced queue reload');
         await loadQueue();
-        setIsQueueLoading(false); // Reset loading state
-      }, 300); // 300ms debounce
+      }, 300);
     };
 
     const setupRealtime = async () => {
       // Ensure we're authenticated first
       const { data: { session } } = await supabase.auth.getSession();
-      console.log('🔐 Auth session:', session ? 'authenticated' : 'not authenticated');
+      log.info('Auth session', { authenticated: !!session });
       
       if (!session) {
-        console.log('🔐 Signing in anonymously for realtime...');
-        const { data, error } = await supabase.auth.signInAnonymously();
+        log.info('Signing in anonymously for realtime');
+        const { error } = await supabase.auth.signInAnonymously();
         if (error) {
-          console.error('❌ Failed to authenticate:', error);
+          log.error('Failed to authenticate', { error });
           return;
         }
-        console.log('✅ Anonymous auth successful');
+        log.info('Anonymous auth successful');
       }
 
-      // Check Supabase configuration
-      console.log('🌐 Setting up realtime for vibox_queue table...', {
-        environment: isVercel ? 'Vercel' : 'Localhost',
-        url: window.location?.href
-        hostname: window.location?.hostname
-      });
+      const envInfo = getEnvironmentInfo();
+      log.info('Setting up realtime for vibox_queue table', envInfo);
 
       // Set up real-time subscription with status callbacks
       queueChannelRef.current = supabase
@@ -294,32 +128,20 @@ export function VIBoxJukebox({
             table: 'vibox_queue',
           },
           async (payload) => {
-            console.log('🎵 REALTIME EVENT:', payload.eventType, payload);
-            console.log('🎵 Payload details:', {
-              event: payload.eventType,
-              table: payload.table,
-              schema: payload.schema,
-              new: payload.new,
-              old: payload.old
+            log.info('REALTIME EVENT', { 
+              eventType: payload.eventType,
+              payload: payload 
             });
             // Use debounced reload for realtime updates
             await loadQueueDebounced();
           }
         )
         .subscribe((status, err) => {
-          console.log('🔌 Realtime subscription status:', status, {
-            environment: isVercel ? 'Vercel' : 'Localhost',
-            url: window.location?.href,
-            hostname: window.location?.hostname
-          });
-          if (err) console.error('❌ Realtime subscription error:', err);
+          log.info('Realtime subscription status', { status, ...getEnvironmentInfo() });
+          if (err) log.error('Realtime subscription error', { error: err });
           
-          // If subscription is successful, clear polling
           if (status === 'SUBSCRIBED') {
-            console.log('✅ Realtime connected - polling disabled', {
-              environment: isVercel ? 'Vercel' : 'Localhost',
-              timestamp: new Date().toISOString()
-            });
+            log.info('Realtime connected - polling disabled');
             if (pollingInterval) clearInterval(pollingInterval);
           }
         });
@@ -331,13 +153,13 @@ export function VIBoxJukebox({
 
     // Fallback: Poll every 5 seconds if realtime doesn't connect (reduced frequency)
     pollingInterval = setInterval(() => {
-      console.log('🔄 Polling queue (fallback)');
+      log.debug('Polling queue (fallback)');
       loadQueue();
     }, 5000);
 
     return () => {
       if (queueChannelRef.current) {
-        console.log('🔌 Unsubscribing from queue changes');
+        log.info('Unsubscribing from queue changes');
         supabase.removeChannel(queueChannelRef.current);
       }
       if (pollingInterval) {
@@ -363,7 +185,7 @@ export function VIBoxJukebox({
             metadataMap.set(track.file, track);
           });
           setTrackMetadata(metadataMap);
-          console.log('Loaded metadata for', metadataMap.size, 'tracks');
+          log.info('Loaded metadata', { trackCount: metadataMap.size });
         }
 
         // Load hierarchical vibe structure
@@ -371,14 +193,14 @@ export function VIBoxJukebox({
         if (vibeResponse.ok) {
           const vibeData = await vibeResponse.json();
           setVibeHierarchy(vibeData);
-          console.log('Loaded vibe hierarchy:', Object.keys(vibeData.vibes));
+          log.info('Loaded vibe hierarchy', { vibeKeys: Object.keys(vibeData.vibes) });
         }
 
         // Try to fetch the track list from a JSON file
         const response = await fetch('/vibox/tracks.json');
         if (response.ok) {
           const audioFiles = await response.json();
-          console.log('Loading', audioFiles.length, 'audio files');
+          log.info('Loading audio files', { count: audioFiles.length });
           
           const preloadedTracks: Track[] = audioFiles.map((filename: string) => {
             const fileName = filename.replace(/\.[^/.]+$/, "");
@@ -397,8 +219,8 @@ export function VIBoxJukebox({
             };
           });
 
-          console.log('Created', preloadedTracks.length, 'track objects');
-          console.log('Sample track:', preloadedTracks[0]);
+          log.info('Created track objects', { count: preloadedTracks.length });
+          log.debug('Sample track', { track: preloadedTracks[0] });
 
           if (preloadedTracks.length > 0) {
             setTracks(prev => [...preloadedTracks, ...prev]);
@@ -409,7 +231,7 @@ export function VIBoxJukebox({
           }
         }
       } catch (error) {
-        console.error('Error loading tracks:', error);
+        log.error('Error loading tracks', { error });
       }
     };
 
@@ -521,58 +343,41 @@ export function VIBoxJukebox({
         session_id: getSessionId(),
       };
 
-      const { error } = await supabase
-        .from('vibox_queue' as any)
-        .insert(queueInsert);
+      const response = await viboxApi.addToQueue(queueInsert);
 
-      if (error) throw error;
+      if (!response.success) {
+        throw new Error(response.error || 'Failed to add to queue');
+      }
 
-      toast({ 
-        title: `Added "${track.title}" to queue`, 
-        variant: "success" 
-      });
+      handleQueueSuccess(response.message || `Added "${track.title}" to queue`, toast);
     } catch (error) {
-      console.error('Error adding to queue:', error);
-      toast({ 
-        title: "Failed to add to queue", 
-        variant: "error" 
-      });
+      handleQueueError(error, 'add to queue', toast);
     }
   };
 
   const removeFromQueue = async (queueItemId: string) => {
     try {
-      const { error } = await supabase
-        .from('vibox_queue' as any)
-        .delete()
-        .eq('id', queueItemId);
-
-      if (error) throw error;
+      const response = await viboxApi.removeFromQueue(queueItemId);
+      
+      if (!response.success) {
+        throw new Error(response.error || 'Failed to remove from queue');
+      }
     } catch (error) {
-      console.error('Error removing from queue:', error);
-      toast({ 
-        title: "Failed to remove from queue", 
-        variant: "error" 
-      });
+      handleQueueError(error, 'remove from queue', toast);
     }
   };
 
   const clearQueue = async () => {
     try {
-      const { error } = await supabase
-        .from('vibox_queue' as any)
-        .delete()
-        .eq('is_played', false);
+      const response = await viboxApi.clearQueue();
+      
+      if (!response.success) {
+        throw new Error(response.error || 'Failed to clear queue');
+      }
 
-      if (error) throw error;
-
-      toast({ title: "Queue cleared", variant: "info" });
+      handleQueueInfo(response.message || "Queue cleared", toast);
     } catch (error) {
-      console.error('Error clearing queue:', error);
-      toast({ 
-        title: "Failed to clear queue", 
-        variant: "error" 
-      });
+      handleQueueError(error, 'clear queue', toast);
     }
   };
 
@@ -597,17 +402,13 @@ export function VIBoxJukebox({
       
       // Mark as played instead of removing
       try {
-        const { error } = await supabase
-          .from('vibox_queue' as any)
-          .update({ 
-            is_played: true,
-            played_at: new Date().toISOString()
-          })
-          .eq('id', nextItem.id);
-
-        if (error) throw error;
+        const response = await viboxApi.markPlayed(nextItem.id);
+        
+        if (!response.success) {
+          handleQueueError(response.error, 'mark track as played', toast);
+        }
       } catch (error) {
-        console.error('Error marking track as played:', error);
+        handleQueueError(error, 'mark track as played', toast);
       }
     }
   };
@@ -638,70 +439,16 @@ export function VIBoxJukebox({
     
     // If we're in vibe mode, follow the vibe order
     if (viewMode === 'vibes' && vibeHierarchy) {
-      const currentTrackFile = currentTrack.url.split('/').pop();
-      
-      // Find which vibe category the current track is in
-      for (const [primaryVibe, primaryData] of Object.entries(vibeHierarchy.vibes)) {
-        for (const [secondaryVibe, songs] of Object.entries(primaryData.secondaryVibes)) {
-          const songIndex = songs.findIndex(s => s.file === currentTrackFile);
-          
-          if (songIndex !== -1) {
-            // Found the current track, find the next one
-            const nextSongIndex = songIndex + 1;
-            
-            if (nextSongIndex < songs.length) {
-              // Next song in same secondary vibe
-              const nextSong = songs[nextSongIndex];
-              const nextTrack = tracks.find(t => t.url.includes(nextSong.file));
-              if (nextTrack) {
-                playTrack(nextTrack);
-                return;
-              }
-            } else {
-              // Move to next secondary vibe
-              const secondaryVibes = Object.entries(primaryData.secondaryVibes);
-              const currentSecondaryIndex = secondaryVibes.findIndex(([sv]) => sv === secondaryVibe);
-              const nextSecondaryIndex = currentSecondaryIndex + 1;
-              
-              if (nextSecondaryIndex < secondaryVibes.length) {
-                // Next secondary vibe, first song
-                const nextSecondary = secondaryVibes[nextSecondaryIndex][1];
-                if (nextSecondary.length > 0) {
-                  const nextSong = nextSecondary[0];
-                  const nextTrack = tracks.find(t => t.url.includes(nextSong.file));
-                  if (nextTrack) {
-                    playTrack(nextTrack);
-                    return;
-                  }
-                }
-              } else {
-                // Move to next primary vibe
-                const primaryVibes = Object.entries(vibeHierarchy.vibes);
-                const currentPrimaryIndex = primaryVibes.findIndex(([pv]) => pv === primaryVibe);
-                const nextPrimaryIndex = (currentPrimaryIndex + 1) % primaryVibes.length;
-                const nextPrimary = primaryVibes[nextPrimaryIndex][1];
-                
-                // First secondary vibe, first song
-                const firstSecondary = Object.entries(nextPrimary.secondaryVibes)[0][1];
-                if (firstSecondary.length > 0) {
-                  const nextSong = firstSecondary[0];
-                  const nextTrack = tracks.find(t => t.url.includes(nextSong.file));
-                  if (nextTrack) {
-                    playTrack(nextTrack);
-                    return;
-                  }
-                }
-              }
-            }
-          }
-        }
+      const nextTrack = getNextTrackByVibe(currentTrack, tracks, vibeHierarchy);
+      if (nextTrack) {
+        playTrack(nextTrack);
+        return;
       }
     }
     
-    // Fallback to original behavior if not in vibe mode or vibe lookup fails
-    const currentIndex = tracks.findIndex(t => t.id === currentTrack.id);
-    const nextIndex = (currentIndex + 1) % tracks.length;
-    playTrack(tracks[nextIndex]);
+    // Fallback to linear behavior
+    const nextTrack = getNextTrackLinear(currentTrack, tracks);
+    playTrack(nextTrack);
   };
 
   
@@ -710,71 +457,16 @@ export function VIBoxJukebox({
     
     // If we're in vibe mode, follow the vibe order in reverse
     if (viewMode === 'vibes' && vibeHierarchy) {
-      const currentTrackFile = currentTrack.url.split('/').pop();
-      
-      // Find which vibe category the current track is in
-      for (const [primaryVibe, primaryData] of Object.entries(vibeHierarchy.vibes)) {
-        for (const [secondaryVibe, songs] of Object.entries(primaryData.secondaryVibes)) {
-          const songIndex = songs.findIndex(s => s.file === currentTrackFile);
-          
-          if (songIndex !== -1) {
-            // Found the current track, find the previous one
-            const prevSongIndex = songIndex - 1;
-            
-            if (prevSongIndex >= 0) {
-              // Previous song in same secondary vibe
-              const prevSong = songs[prevSongIndex];
-              const prevTrack = tracks.find(t => t.url.includes(prevSong.file));
-              if (prevTrack) {
-                playTrack(prevTrack);
-                return;
-              }
-            } else {
-              // Move to previous secondary vibe
-              const secondaryVibes = Object.entries(primaryData.secondaryVibes);
-              const currentSecondaryIndex = secondaryVibes.findIndex(([sv]) => sv === secondaryVibe);
-              const prevSecondaryIndex = currentSecondaryIndex - 1;
-              
-              if (prevSecondaryIndex >= 0) {
-                // Previous secondary vibe, last song
-                const prevSecondary = secondaryVibes[prevSecondaryIndex][1];
-                if (prevSecondary.length > 0) {
-                  const prevSong = prevSecondary[prevSecondary.length - 1];
-                  const prevTrack = tracks.find(t => t.url.includes(prevSong.file));
-                  if (prevTrack) {
-                    playTrack(prevTrack);
-                    return;
-                  }
-                }
-              } else {
-                // Move to previous primary vibe
-                const primaryVibes = Object.entries(vibeHierarchy.vibes);
-                const currentPrimaryIndex = primaryVibes.findIndex(([pv]) => pv === primaryVibe);
-                const prevPrimaryIndex = currentPrimaryIndex === 0 ? primaryVibes.length - 1 : currentPrimaryIndex - 1;
-                const prevPrimary = primaryVibes[prevPrimaryIndex][1];
-                
-                // Last secondary vibe, last song
-                const secondaryVibes = Object.entries(prevPrimary.secondaryVibes);
-                const lastSecondary = secondaryVibes[secondaryVibes.length - 1][1];
-                if (lastSecondary.length > 0) {
-                  const prevSong = lastSecondary[lastSecondary.length - 1];
-                  const prevTrack = tracks.find(t => t.url.includes(prevSong.file));
-                  if (prevTrack) {
-                    playTrack(prevTrack);
-                    return;
-                  }
-                }
-              }
-            }
-          }
-        }
+      const prevTrack = getPreviousTrackByVibe(currentTrack, tracks, vibeHierarchy);
+      if (prevTrack) {
+        playTrack(prevTrack);
+        return;
       }
     }
     
-    // Fallback to original behavior if not in vibe mode or vibe lookup fails
-    const currentIndex = tracks.findIndex(t => t.id === currentTrack.id);
-    const prevIndex = currentIndex === 0 ? tracks.length - 1 : currentIndex - 1;
-    playTrack(tracks[prevIndex]);
+    // Fallback to linear behavior
+    const prevTrack = getPreviousTrackLinear(currentTrack, tracks);
+    playTrack(prevTrack);
   };
 
   const removeTrack = (trackId: string) => {
@@ -863,7 +555,7 @@ export function VIBoxJukebox({
               {allowUploads && (
                 <Button
                   onClick={() => fileInputRef.current?.click()}
-                  disabled={isLoading}
+                  disabled={false}
                 >
                   Add Tracks
                 </Button>
@@ -1205,16 +897,12 @@ export function VIBoxJukebox({
                                   {/* Songs */}
                                   {isSecondaryExpanded && (
                                     <div className="ml-6 space-y-1">
-                                      {songs.map((song, idx) => {
+                                      {songs.map((song) => {
                                         const track = tracks.find(t => {
                                           const urlFilename = t.url.split('/').pop();
                                           return urlFilename === song.file || t.url.includes(song.file);
                                         });
                                         if (!track) {
-                                          console.log('Track not found for:', song.file, 'Available tracks:', tracks.length);
-                                          if (idx === 0) {
-                                            console.log('Sample available track URL:', tracks[0]?.url);
-                                          }
                                           return null;
                                         }
 
