@@ -25,6 +25,7 @@ import { getDeviceType } from "../utils/device";
 import { getSessionId } from "../utils/session";
 import { getEnvironmentInfo } from "../utils/environment";
 import { log } from "../utils/logger";
+import { testRealtimeConnectivity, startRealtimeMonitoring } from "../utils/realtimeDebug";
 import { getNextTrackByVibe, getPreviousTrackByVibe, getNextTrackLinear, getPreviousTrackLinear } from "../utils/vibeNavigation";
 import { handleQueueError, handleQueueSuccess, handleQueueInfo } from "../utils/errorHandlers";
 
@@ -68,6 +69,9 @@ export function VIBoxJukebox({
   // Load queue from Supabase and set up real-time subscription
   useEffect(() => {
     let pollingInterval: NodeJS.Timeout;
+    let retryTimeout: NodeJS.Timeout;
+    let retryCount = 0;
+    const maxRetries = 3;
     
     const loadQueue = async () => {
       if (isQueueLoading) return; // Prevent concurrent loads
@@ -137,12 +141,33 @@ export function VIBoxJukebox({
           }
         )
         .subscribe((status, err) => {
-          log.info('Realtime subscription status', { status, ...getEnvironmentInfo() });
+          const envInfo = getEnvironmentInfo();
+          log.info('Realtime subscription status', { 
+            status, 
+            error: err?.message,
+            ...envInfo,
+            timestamp: new Date().toISOString(),
+            websocketConnected: status === 'SUBSCRIBED'
+          });
           if (err) log.error('Realtime subscription error', { error: err });
           
           if (status === 'SUBSCRIBED') {
-            log.info('Realtime connected - polling disabled');
+            log.info('Realtime connected - polling disabled', envInfo);
             if (pollingInterval) clearInterval(pollingInterval);
+            retryCount = 0; // Reset retry count on successful connection
+          } else if (status === 'CHANNEL_ERROR') {
+            log.error('Realtime channel error - enabling fallback polling', envInfo);
+            if (retryCount < maxRetries) {
+              retryCount++;
+              log.info(`Retrying realtime connection (${retryCount}/${maxRetries})`);
+              retryTimeout = setTimeout(() => {
+                setupRealtime();
+              }, 2000 * retryCount); // Exponential backoff
+            }
+          } else if (status === 'TIMED_OUT') {
+            log.warn('Realtime connection timed out - using fallback polling', envInfo);
+          } else if (status === 'CLOSED') {
+            log.warn('Realtime connection closed - attempting reconnection', envInfo);
           }
         });
     };
@@ -150,6 +175,25 @@ export function VIBoxJukebox({
     // Load queue immediately on mount, then setup realtime
     loadQueue();
     setupRealtime();
+
+    // Test realtime connectivity for debugging
+    let stopMonitoring: (() => void) | undefined;
+    if (getEnvironmentInfo().isVercel) {
+      log.info('🌐 Vercel environment detected - running realtime diagnostics');
+      testRealtimeConnectivity().then(result => {
+        log.info('🔍 Realtime diagnostics completed', result);
+        if (!result.success) {
+          log.warn('⚠️ Realtime connectivity issues detected on Vercel', result);
+        }
+      });
+      
+      // Start monitoring for Vercel deployments
+      stopMonitoring = startRealtimeMonitoring((result) => {
+        if (!result.success) {
+          log.warn('📊 Realtime monitoring detected issue', result);
+        }
+      }, 60000); // Check every minute
+    }
 
     // Fallback: Poll every 5 seconds if realtime doesn't connect (reduced frequency)
     pollingInterval = setInterval(() => {
@@ -165,8 +209,14 @@ export function VIBoxJukebox({
       if (pollingInterval) {
         clearInterval(pollingInterval);
       }
+      if (retryTimeout) {
+        clearTimeout(retryTimeout);
+      }
       if (debounceTimeoutRef.current) {
         clearTimeout(debounceTimeoutRef.current);
+      }
+      if (stopMonitoring) {
+        stopMonitoring();
       }
     };
   }, []);
