@@ -3,6 +3,20 @@
  * Centralized theming for light and dark modes
  */
 
+// ==================== COLOR PALETTE ====================
+// Light Mode Colors:
+// - Primary: #10b981 (emerald-500)
+// - Background: #f8fafc (slate-50) with amber/orange gradient
+// - Text: #0f172a (slate-900)
+// - VIBox: #d97706 (amber-600) to #92400e (amber-900)
+//
+// Dark Mode Colors:
+// - Primary: #10b981 (emerald-500) 
+// - Background: #0a0a0a to #0a0a1a (dark with purple/blue tints)
+// - Text: #ffffff (white)
+// - VIBox: #f0abfc (pink-400) with dark gradient
+// ====================================================
+
 export interface ThemeColors {
   background: {
     gradient: {
@@ -50,6 +64,14 @@ export interface ThemeColors {
   button: {
     ghostText: string;
     ghostHover: string;
+    primary: string;
+    danger: string;
+    success: string;
+  };
+  player: {
+    background: string;
+    border: string;
+    progress: string;
   };
 }
 
@@ -82,9 +104,9 @@ export const lightTheme: Theme = {
       heading: '#1e293b',      // slate-800
     },
     glass: {
-      background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.28), rgba(255, 255, 255, 0.05))',
-      border: 'rgba(255, 255, 255, 0.35)',
-      shadow: '0 18px 40px rgba(5, 7, 19, 0.35)',
+      background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0.02))',
+      border: 'rgba(255, 255, 255, 0.25)',
+      shadow: '0 18px 40px rgba(5, 7, 19, 0.45)',
     },
     matte: {
       background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.65), rgba(255, 255, 255, 0.18))',
@@ -107,6 +129,14 @@ export const lightTheme: Theme = {
     button: {
       ghostText: '#475569',    // slate-600
       ghostHover: '#334155',   // slate-700
+      primary: '#10b981',      // emerald-500
+      danger: '#ef4444',       // red-500
+      success: '#22c55e',      // green-500
+    },
+    player: {
+      background: '#1f2937',   // gray-800
+      border: '#374151',       // gray-700
+      progress: '#6b7280',      // gray-500
     },
   },
 };
@@ -135,9 +165,9 @@ export const darkTheme: Theme = {
       heading: '#f0abfc',      // pink-400
     },
     glass: {
-      background: 'linear-gradient(135deg, rgba(10, 10, 10, 0.7), rgba(26, 10, 26, 0.3))',
-      border: 'rgba(255, 0, 255, 0.3)',
-      shadow: '0 18px 40px rgba(255, 0, 255, 0.2)',
+      background: 'linear-gradient(135deg, rgba(10, 10, 10, 0.85), rgba(26, 10, 26, 0.4))',
+      border: 'rgba(255, 0, 255, 0.2)',
+      shadow: '0 18px 40px rgba(255, 0, 255, 0.15)',
     },
     matte: {
       background: 'linear-gradient(135deg, rgba(10, 10, 10, 0.9), rgba(26, 10, 26, 0.6))',
@@ -160,6 +190,14 @@ export const darkTheme: Theme = {
     button: {
       ghostText: '#a8dadc',    // cyan-300
       ghostHover: '#67e8f9',   // cyan-300 lighter
+      primary: '#10b981',      // emerald-500
+      danger: '#ef4444',       // red-500
+      success: '#22c55e',      // green-500
+    },
+    player: {
+      background: '#111827',   // gray-900
+      border: '#374151',       // gray-700
+      progress: '#6b7280',      // gray-500
     },
   },
 };

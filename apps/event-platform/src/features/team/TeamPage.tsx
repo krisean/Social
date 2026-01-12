@@ -4,7 +4,7 @@ import { Button, Card, Modal } from "@social/ui";
 import { useToast } from "../../shared/hooks";
 import { BackgroundAnimation } from "../../components/BackgroundAnimation";
 import { HowToPlayModal } from "../howToPlay/HowToPlayModal";
-import { VIBoxJukebox } from "../../shared/components/VIBoxJukebox";
+import { VIBoxJukebox } from "../../shared/components/vibox/VIBoxJukebox";
 import { transformRoundSummariesForUI, transformLeaderboardForUI } from "../../application";
 import { useActiveGroupAnswers } from "../../shared/hooks";
 import { useTeamState, useTeamEffects, useTeamPhaseRenderer, useTeamHandlers, useTeamComputations, useTeamTimers, useTeamSessionManagement, useTeamQueryParams, useTeamKickedPlayerDetection, useTeamAnswerInitialization } from "./hooks";

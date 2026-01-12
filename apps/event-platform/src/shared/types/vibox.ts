@@ -44,6 +44,7 @@ export interface ViboxQueueInsert {
   device_type?: string;
   user_agent?: string;
   session_id?: string;
+  team_uid?: string;
 }
 
 export interface ViboxQueueUpdate {

@@ -50,6 +50,9 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     root.style.setProperty('--color-card-selected', theme.colors.card.selected);
     root.style.setProperty('--color-card-selected-border', theme.colors.card.selectedBorder);
     
+    // Play button color (using tertiary text which is cyan-300 in dark mode)
+    root.style.setProperty('--color-play-button', theme.colors.text.tertiary);
+    
     // Badge colors
     root.style.setProperty('--color-badge-card1-bg', theme.colors.badge.card1Background);
     root.style.setProperty('--color-badge-card1-text', theme.colors.badge.card1Text);
@@ -59,6 +62,14 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     // Button colors
     root.style.setProperty('--color-button-ghost-text', theme.colors.button.ghostText);
     root.style.setProperty('--color-button-ghost-hover', theme.colors.button.ghostHover);
+    root.style.setProperty('--color-button-primary', theme.colors.button.primary);
+    root.style.setProperty('--color-button-danger', theme.colors.button.danger);
+    root.style.setProperty('--color-button-success', theme.colors.button.success);
+    
+    // Player colors
+    root.style.setProperty('--color-player-background', theme.colors.player.background);
+    root.style.setProperty('--color-player-border', theme.colors.player.border);
+    root.style.setProperty('--color-player-progress', theme.colors.player.progress);
 
     // Update color-scheme for native browser elements
     root.style.colorScheme = theme.name === 'dark' ? 'dark' : 'light';

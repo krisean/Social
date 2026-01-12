@@ -41,7 +41,7 @@ import {
 import { handleBanTeam } from "./Handlers/banPlayerHandler";
 import { PromptLibrarySelector } from "./components/PromptLibrarySelector";
 import { BannedTeamsManager } from "./components/BannedTeamsManager";
-import { VIBoxJukebox } from "../../shared/components/VIBoxJukebox";
+import { VIBoxJukebox } from "../../shared/components/vibox/VIBoxJukebox";
 import type {
   PromptLibraryId,
 } from "../../shared/promptLibraries";
