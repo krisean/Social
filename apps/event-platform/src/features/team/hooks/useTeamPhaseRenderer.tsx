@@ -3,6 +3,7 @@ import type { Session, Team, Answer, Vote, RoundGroup } from "../../../shared/ty
 import type { RoundSummary } from "../../../application/utils/transformers";
 import {
   LobbyPhase,
+  CategorySelectPhase,
   AnswerPhase,
   VotePhase,
   ResultsPhase,
@@ -19,12 +20,13 @@ interface UseTeamPhaseRendererProps {
   currentTeam: Team | null;
   myGroup: RoundGroup | null;
   roundGroups: RoundGroup[];
-  prompts: string[];
   myAnswer: Answer | null;
   answerText: string;
   setAnswerText: (text: string) => void;
   handleSubmitAnswer: () => void;
   isSubmittingAnswer: boolean;
+  handleSelectCategory: (categoryId: string, promptIndex: number) => void;
+  isSubmittingCategorySelection: boolean;
   totalSeconds: number;
   activeGroup: RoundGroup | null;
   activeGroupIndex: number;
@@ -58,12 +60,13 @@ export function useTeamPhaseRenderer({
   currentTeam,
   myGroup,
   roundGroups,
-  prompts,
   myAnswer,
   answerText,
   setAnswerText,
   handleSubmitAnswer,
   isSubmittingAnswer,
+  handleSelectCategory,
+  isSubmittingCategorySelection,
   totalSeconds,
   activeGroup,
   activeGroupIndex,
@@ -96,13 +99,22 @@ export function useTeamPhaseRenderer({
     switch (session.status) {
       case "lobby":
         return <LobbyPhase teams={teams} />;
+      case "category-select":
+        return (
+          <CategorySelectPhase
+            session={session}
+            currentTeam={currentTeam}
+            myGroup={myGroup}
+            onSelectCategory={handleSelectCategory}
+            isSubmitting={isSubmittingCategorySelection}
+          />
+        );
       case "answer":
         return (
           <AnswerPhase
             session={session}
             myGroup={myGroup}
             roundGroups={roundGroups}
-            prompts={prompts}
             myAnswer={myAnswer}
             answerText={answerText}
             setAnswerText={setAnswerText}
@@ -119,7 +131,6 @@ export function useTeamPhaseRenderer({
             roundGroups={roundGroups}
             activeGroupIndex={activeGroupIndex}
             totalGroups={totalGroups}
-            prompts={prompts}
             activeGroupAnswers={activeGroupAnswers}
             voteCounts={voteCounts}
             myActiveVote={myActiveVote}
@@ -164,11 +175,19 @@ export function useTeamPhaseRenderer({
     }
   }, [
     session,
+    teams,
+    currentTeam,
+    myGroup,
+    handleSelectCategory,
+    isSubmittingCategorySelection,
     activeGroup,
     roundGroups,
     activeGroupIndex,
     totalGroups,
-    prompts,
+    myAnswer,
+    answerText,
+    handleSubmitAnswer,
+    isSubmittingAnswer,
     activeGroupAnswers,
     voteCounts,
     myActiveVote,
@@ -176,9 +195,7 @@ export function useTeamPhaseRenderer({
     handleVote,
     isSubmittingVote,
     voteSummaryActive,
-    teams,
     totalSeconds,
-    currentTeam,
     isVotingOnOwnGroup,
     finalLeaderboard,
     votesForMe,

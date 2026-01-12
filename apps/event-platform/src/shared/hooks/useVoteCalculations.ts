@@ -1,13 +1,14 @@
 import { useMemo } from "react";
+import type { Session, RoundGroup, Answer, RoundSummary } from "../../domain/types/domain.types";
 
 interface UseVoteCalculationsProps {
-  session: any;
+  session: Session;
   now: number;
-  activeGroup: any;
-  activeGroupAnswers: any[];
+  activeGroup: RoundGroup;
+  activeGroupAnswers: Answer[];
   voteCounts: Map<string, number>;
-  myAnswer?: any;
-  roundSummaries?: any[];
+  myAnswer?: Answer;
+  roundSummaries?: RoundSummary[];
 }
 
 /**
@@ -57,7 +58,7 @@ export function useVoteCalculations({
     if (!myAnswer || !roundSummaries) return 0;
     const basePoints = (voteCounts.get(myAnswer.id) ?? 0) * 100;
     const wonGroup = roundSummaries.some((summary) =>
-      summary.winners.some((winner) => winner.id === myAnswer.id),
+      summary.winners.some((winner) => winner.answer.id === myAnswer.id),
     );
     return basePoints + (wonGroup ? 1000 : 0);
   }, [myAnswer, voteCounts, roundSummaries]);

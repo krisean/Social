@@ -17,6 +17,9 @@ interface CreateSessionHandlersDeps {
   setHostSession: (sessionInfo: { sessionId: string; code: string }) => void;
   setShowCreateModal: React.Dispatch<React.SetStateAction<boolean>>;
   onSessionCreated: () => void;
+  gameMode: "classic" | "jeopardy";
+  selectedCategories: string[];
+  totalRounds?: number;
 }
 
 export const handleCreateSession =
@@ -35,6 +38,9 @@ export const handleCreateSession =
       setHostSession,
       setShowCreateModal,
       onSessionCreated,
+      gameMode,
+      selectedCategories,
+      totalRounds,
     } = deps;
 
     if (isCreating) {
@@ -78,6 +84,9 @@ export const handleCreateSession =
         venueName: parsed.data.venueName
           ? maskProfanity(parsed.data.venueName)
           : undefined,
+        gameMode,
+        selectedCategories: gameMode === 'jeopardy' ? selectedCategories : undefined,
+        totalRounds: totalRounds || (gameMode === 'jeopardy' ? 1 : 5),
       });
       if (response) {
         setSessionId(response.sessionId);

@@ -44,6 +44,12 @@ export function useSessionOrchestrator(config: SessionOrchestratorConfig): UseSe
   const performAutoAdvance = useCallback(async () => {
     if (!sessionId || !sessionRef.current) return false;
 
+    // Don't auto-advance if session is paused
+    if (sessionRef.current.paused) {
+      console.log('Auto-advance: Session is paused, skipping');
+      return false;
+    }
+
     try {
       const result = await advanceSessionPhase({ sessionId });
       
@@ -60,9 +66,20 @@ export function useSessionOrchestrator(config: SessionOrchestratorConfig): UseSe
 
   // Setup auto-advance timer
   useEffect(() => {
-    if (!sessionRef.current) return;
+    if (!sessionRef.current) {
+      console.log("Auto-advance: No session in ref");
+      return;
+    }
 
     const session = sessionRef.current;
+    
+    console.log("Auto-advance setup:", {
+      status: session.status,
+      endsAt: session.endsAt,
+      paused: session.paused,
+      isAutoAdvanceEnabled,
+      isTimedPhase: SessionStateMachine.isTimedPhase(session.status)
+    });
     
     // Clear existing timers
     clearTimers();
@@ -76,6 +93,12 @@ export function useSessionOrchestrator(config: SessionOrchestratorConfig): UseSe
         session.paused || 
         !session.endsAt || 
         !SessionStateMachine.isTimedPhase(session.status)) {
+      console.log("Auto-advance: Not setting up timer", {
+        isAutoAdvanceEnabled,
+        paused: session.paused,
+        hasEndsAt: !!session.endsAt,
+        isTimedPhase: SessionStateMachine.isTimedPhase(session.status)
+      });
       setAutoAdvanceIn(null);
       return;
     }
@@ -83,6 +106,11 @@ export function useSessionOrchestrator(config: SessionOrchestratorConfig): UseSe
     const now = Date.now();
     const endTime = new Date(session.endsAt).getTime();
     const remainingMs = endTime - now;
+    
+    console.log("Auto-advance: Setting up timer", {
+      remainingMs,
+      remainingSeconds: Math.ceil(remainingMs / 1000)
+    });
 
     // If phase already ended, try to advance immediately
     if (remainingMs <= 0) {

@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import type { Session } from "../../../shared/types";
 import type { PromptLibraryId, PromptLibrary } from "../../../shared/promptLibraries";
-import { promptLibraries, defaultPromptLibrary, defaultPromptLibraryId } from "../../../shared/constants";
+import { usePromptLibraries } from "../../../shared/hooks/usePromptLibraries";
 import { transformLeaderboardSimple } from "../../../application";
 
 interface UseHostComputationsProps {
@@ -20,21 +20,24 @@ export function useHostComputations({
   // Transform leaderboard
   const leaderboard = transformLeaderboardSimple(gameState.leaderboard);
 
+  // Get prompt libraries dynamically from database
+  const { data: promptLibraries } = usePromptLibraries();
+
   // Prompt library map
   const promptLibraryMap = useMemo(() => {
     const map = new Map<PromptLibraryId, PromptLibrary>();
-    promptLibraries.forEach((library) => {
+    promptLibraries?.forEach((library) => {
       map.set(library.id, library);
     });
     return map;
-  }, []);
+  }, [promptLibraries]);
 
   // Current prompt library
-  const selectedPromptLibraryId = session?.promptLibraryId ?? defaultPromptLibraryId;
+  const selectedPromptLibraryId = session?.promptLibraryId ?? 'classic';
   const currentPromptLibrary = useMemo(
     () =>
-      promptLibraryMap.get(selectedPromptLibraryId) ?? defaultPromptLibrary,
-    [selectedPromptLibraryId, promptLibraryMap],
+      promptLibraryMap.get(selectedPromptLibraryId) ?? promptLibraries?.[0] ?? null,
+    [selectedPromptLibraryId, promptLibraryMap, promptLibraries],
   );
 
   // Host's current vote for the active group

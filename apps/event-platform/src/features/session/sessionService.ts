@@ -12,13 +12,15 @@ import type {
   TransitionPhaseRequest,
   SetPromptLibraryRequest,
   SetPromptLibraryResponse,
+  CategorySelectionRequest,
+  CategorySelectionResponse,
   Answer,
   Team,
   Session,
+  SessionSettings,
   SessionAnalytics,
   Vote,
 } from "../../shared/types";
-import { prompts } from "../../shared/constants";
 
 // Helper to convert Supabase session to our Session type
 function mapSession(data: any): Session | null {
@@ -35,8 +37,10 @@ function mapSession(data: any): Session | null {
           if (round && typeof round === "object" && Array.isArray(round.groups)) {
             const groups = round.groups.map((group: any, index: number) => ({
               id: typeof group.id === "string" ? group.id : `g${index}`,
-              prompt: typeof group.prompt === "string" ? group.prompt : prompts[index % prompts.length] ?? "",
+              prompt: typeof group.prompt === "string" ? group.prompt : "",
               teamIds: Array.isArray(group.teamIds) ? group.teamIds.filter((value: any): value is string => typeof value === "string") : [],
+              selectingTeamId: group.selectingTeamId,
+              promptLibraryId: group.promptLibraryId,
             }));
             return {
               prompt: typeof round.prompt === "string" ? round.prompt : groups[0]?.prompt,
@@ -56,14 +60,15 @@ function mapSession(data: any): Session | null {
     createdAt: data.created_at ?? new Date().toISOString(),
     startedAt: data.started_at,
     endsAt: data.ends_at,
-    settings: data.settings ?? {
+    settings: (data.settings ?? {
       answerSecs: 90,
       voteSecs: 90,
       resultsSecs: 12,
       maxTeams: 24,
-    },
+    }) as SessionSettings,
     venueName: data.venue_name,
     promptLibraryId: typeof data.prompt_library_id === "string" ? data.prompt_library_id : undefined,
+    categoryGrid: data.category_grid,
     paused: data.paused ?? false,
     pausedAt: data.paused_at,
     totalPausedMs: data.total_paused_ms ?? 0,
@@ -123,10 +128,18 @@ export async function fetchSession(sessionId: string) {
     .eq("id", sessionId)
     .single();
   
-  if (error) {
-    console.error("Error fetching session:", error);
-    return null;
-  }
+  if (error) throw error;
+  if (!data) throw new Error("Session not found");
+  
+  console.log('Fetched session data:', {
+    id: data.id,
+    status: data.status,
+    gameMode: data.settings?.gameMode,
+    hasCategoryGrid: !!data.categoryGrid,
+    hasCategoryGridSnake: !!data.category_grid,
+    categoryGridKeys: data.categoryGrid ? Object.keys(data.categoryGrid) : 'none',
+    rawCategoryGrid: data.category_grid || data.categoryGrid
+  });
   
   return mapSession(data);
 }
@@ -380,7 +393,71 @@ export const joinSession = async (payload: JoinSessionRequest) => {
     "sessions-join",
     { body: payload }
   );
-  if (error) throw error;
+  
+  // Check if data contains an error field (from our Edge Function)
+  // This happens when the function returns a non-2xx status with JSON body
+  if (data && 'error' in data) {
+    console.error("Join session returned error:", data.error);
+    throw new Error((data as any).error);
+  }
+  
+  if (error) {
+    console.error("Join session error details:", error);
+    console.error("Error object:", JSON.stringify(error, null, 2));
+    
+    // Try to extract context from the error
+    const context = (error as any)?.context;
+    if (context) {
+      console.error("Error context:", context);
+      
+      // Check if context is a Response object with status
+      if (context instanceof Response) {
+        console.error("Response status:", context.status);
+        if (context.status === 403) {
+          throw new Error("You were banned from this session and cannot rejoin.");
+        } else if (context.status === 400) {
+          throw new Error("Invalid request. Please check your session code and team name.");
+        } else if (context.status === 404) {
+          throw new Error("Session not found. Please check the session code.");
+        }
+      }
+      
+      // If there's context with an error message, use it
+      if (context.error) {
+        throw new Error(context.error);
+      }
+      // If there's a body with error, parse it
+      if (context.body) {
+        try {
+          const body = typeof context.body === 'string' ? JSON.parse(context.body) : context.body;
+          console.error("Error body:", body);
+          if (body.error) {
+            throw new Error(body.error);
+          }
+        } catch (e) {
+          console.error("Failed to parse error body:", e);
+        }
+      }
+    }
+    
+    // Default error messages based on status
+    const status = (error as any)?.status;
+    console.error("Error status:", status);
+    if (status === 403) {
+      throw new Error("You were banned from this session and cannot rejoin.");
+    } else if (status === 400) {
+      throw new Error("Invalid request. Please check your session code and team name.");
+    } else if (status === 404) {
+      throw new Error("Session not found. Please check the session code.");
+    }
+    
+    // Generic error
+    throw new Error("Failed to join session. Please try again.");
+  }
+  
+  if (!data) {
+    throw new Error("No response data from join session");
+  }
   return data;
 };
 
@@ -451,6 +528,15 @@ export const kickPlayer = async (payload: KickTeamRequest) => {
   return data;
 };
 
+export const banPlayer = async (payload: KickTeamRequest) => {
+  const { data, error } = await supabase.functions.invoke<{ success: boolean }>(
+    "sessions-ban-player",
+    { body: payload }
+  );
+  if (error) throw error;
+  return data;
+};
+
 export const endSession = async (payload: TransitionPhaseRequest) => {
   const { data, error } = await supabase.functions.invoke<{ session: Session }>(
     "sessions-end",
@@ -478,5 +564,24 @@ export const pauseSession = async (payload: { sessionId: string; pause: boolean 
     { body: payload }
   );
   if (error) throw error;
+  return data;
+};
+
+export const selectCategory = async (
+  payload: CategorySelectionRequest
+): Promise<CategorySelectionResponse> => {
+  const { data, error } = await supabase.functions.invoke<CategorySelectionResponse>(
+    "sessions-select-category",
+    { body: payload }
+  );
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  if (!data) {
+    throw new Error("No data returned from category selection");
+  }
+
   return data;
 };

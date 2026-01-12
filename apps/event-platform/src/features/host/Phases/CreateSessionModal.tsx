@@ -1,13 +1,15 @@
 import React from "react";
 import { Button, FormField, Modal } from "@social/ui";
 import { useTheme } from "../../../shared/providers/ThemeProvider";
+import { usePromptLibraries } from "../../../shared/hooks/usePromptLibraries";
+import type { PromptLibraryId } from "../../../shared/promptLibraries";
 
 interface CreateSessionModalProps {
   open: boolean;
   onClose: () => void;
-  createForm: { teamName: string; venueName: string };
+  createForm: { teamName: string; venueName: string; gameMode: "classic" | "jeopardy"; selectedCategories: PromptLibraryId[]; totalRounds?: number };
   setCreateForm: React.Dispatch<
-    React.SetStateAction<{ teamName: string; venueName: string }>
+    React.SetStateAction<{ teamName: string; venueName: string; gameMode: "classic" | "jeopardy"; selectedCategories: PromptLibraryId[]; totalRounds?: number }>
   >;
   createErrors: Record<string, string>;
   isCreating: boolean;
@@ -26,6 +28,22 @@ export function CreateSessionModal({
   onSubmit,
 }: CreateSessionModalProps) {
   const { isDark } = useTheme();
+  const { data: libraries, isLoading: librariesLoading } = usePromptLibraries();
+
+  const toggleCategory = (categoryId: PromptLibraryId) => {
+    setCreateForm((prev) => {
+      const selected = prev.selectedCategories;
+      if (selected.includes(categoryId)) {
+        return { ...prev, selectedCategories: selected.filter(id => id !== categoryId) };
+      } else if (selected.length < 6) {
+        return { ...prev, selectedCategories: [...selected, categoryId] };
+      }
+      return prev;
+    });
+  };
+
+  const canSubmit = createForm.gameMode === "classic" || (createForm.gameMode === "jeopardy" && createForm.selectedCategories.length === 6);
+
   return (
     <Modal
       open={open}
@@ -41,7 +59,7 @@ export function CreateSessionModal({
             form="create-session-form"
             type="submit"
             isLoading={isCreating}
-            disabled={!canCreateSession || isCreating}
+            disabled={!canCreateSession || isCreating || !canSubmit}
             title={
               !canCreateSession
                 ? "Please wait for authentication to complete"
@@ -89,6 +107,129 @@ export function CreateSessionModal({
           error={createErrors.venueName}
           isDark={isDark}
         />
+        <div className="space-y-2">
+          <label className={`text-sm font-semibold ${!isDark ? 'text-slate-700' : 'text-cyan-100'}`}>
+            Game Mode
+          </label>
+          <div className="grid grid-cols-2 gap-3">
+            <button
+              type="button"
+              onClick={() => setCreateForm((prev) => ({ ...prev, gameMode: "classic" }))}
+              className={`
+                p-4 rounded-xl border-2 text-left transition-all
+                ${createForm.gameMode === "classic"
+                  ? "border-brand-primary bg-brand-light"
+                  : !isDark ? "border-slate-300 bg-white hover:border-slate-400" : "border-slate-600 bg-slate-800 hover:border-slate-500"
+                }
+              `}
+            >
+              <div className={`font-semibold mb-1 ${!isDark ? 'text-slate-900' : 'text-cyan-100'}`}>
+                Classic
+              </div>
+              <div className={`text-xs ${!isDark ? 'text-slate-600' : 'text-cyan-300'}`}>
+                Traditional gameplay with one prompt library
+              </div>
+            </button>
+            <button
+              type="button"
+              onClick={() => setCreateForm((prev) => ({ ...prev, gameMode: "jeopardy" }))}
+              className={`
+                p-4 rounded-xl border-2 text-left transition-all
+                ${createForm.gameMode === "jeopardy"
+                  ? "border-brand-primary bg-brand-light"
+                  : !isDark ? "border-slate-300 bg-white hover:border-slate-400" : "border-slate-600 bg-slate-800 hover:border-slate-500"
+                }
+              `}
+            >
+              <div className={`font-semibold mb-1 ${!isDark ? 'text-slate-900' : 'text-cyan-100'}`}>
+                Jeopardy
+              </div>
+              <div className={`text-xs ${!isDark ? 'text-slate-600' : 'text-cyan-300'}`}>
+                Teams select categories each round
+              </div>
+            </button>
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <label className={`text-sm font-semibold ${!isDark ? 'text-slate-700' : 'text-cyan-100'}`}>
+            Number of Rounds
+          </label>
+          <div className="flex gap-2">
+            {(createForm.gameMode === "jeopardy" ? [1, 2, 3, 4, 5] : [3, 5, 7, 10, 15]).map((rounds) => (
+              <button
+                key={rounds}
+                type="button"
+                onClick={() => setCreateForm((prev) => ({ ...prev, totalRounds: rounds }))}
+                className={`
+                  flex-1 py-2 px-3 rounded-lg border-2 font-semibold transition-all
+                  ${(createForm.totalRounds || (createForm.gameMode === "jeopardy" ? 1 : 5)) === rounds
+                    ? "border-brand-primary bg-brand-light"
+                    : !isDark ? "border-slate-300 bg-white hover:border-slate-400" : "border-slate-600 bg-slate-800 hover:border-slate-500"
+                  }
+                `}
+              >
+                {rounds}
+              </button>
+            ))}
+          </div>
+          <p className={`text-xs ${!isDark ? 'text-slate-500' : 'text-cyan-400'}`}>
+            Each team will answer {createForm.totalRounds || (createForm.gameMode === "jeopardy" ? 1 : 5)} prompt{(createForm.totalRounds || (createForm.gameMode === "jeopardy" ? 1 : 5)) !== 1 ? 's' : ''} per round
+          </p>
+        </div>
+
+        {createForm.gameMode === "jeopardy" && (
+          <div className="space-y-2">
+            <label className={`text-sm font-semibold ${!isDark ? 'text-slate-700' : 'text-cyan-100'}`}>
+              Select 6 Categories (2 Bingo Cards)
+            </label>
+            <p className={`text-xs mb-3 ${!isDark ? 'text-slate-600' : 'text-cyan-300'}`}>
+              {createForm.selectedCategories.length}/6 categories selected • Card 1: {Math.min(createForm.selectedCategories.length, 3)}/3 • Card 2: {Math.max(0, createForm.selectedCategories.length - 3)}/3
+            </p>
+            <p className={`text-xs mb-3 ${!isDark ? 'text-slate-500' : 'text-cyan-400'}`}>
+              Locked tiles will be calculated based on number of teams × rounds
+            </p>
+            {librariesLoading ? (
+              <div className={`text-center py-8 ${!isDark ? 'text-slate-600' : 'text-cyan-300'}`}>
+                Loading categories...
+              </div>
+            ) : (
+              <div className="grid grid-cols-3 gap-2 max-h-64 overflow-y-auto">
+                {libraries?.map((library) => {
+                  const isSelected = createForm.selectedCategories.includes(library.id);
+                  const canSelect = isSelected || createForm.selectedCategories.length < 6;
+
+                  return (
+                    <button
+                      key={library.id}
+                      type="button"
+                      onClick={() => canSelect && toggleCategory(library.id)}
+                      disabled={!canSelect}
+                      className={`
+                        relative rounded-lg p-3 text-center transition-all
+                        ${isSelected
+                          ? "border-brand-primary bg-brand-light scale-95"
+                          : canSelect
+                            ? (!isDark ? "border-slate-300 bg-white hover:border-slate-400" : "border-slate-600 bg-slate-800 hover:border-slate-500")
+                            : "opacity-30 cursor-not-allowed border-slate-200 bg-slate-50"
+                        }
+                      `}
+                    >
+                      <div className="text-xl mb-1">{library.emoji}</div>
+                      <div className={`text-xs font-semibold ${!isDark ? 'text-slate-900' : 'text-cyan-100'}`}>
+                        {library.name}
+                      </div>
+                      {isSelected && (
+                        <div className="text-brand-primary text-xs mt-1">✓</div>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
         <p className={`text-xs ${!isDark ? 'text-slate-600' : 'text-slate-400'}`}>
           You'll get a 6-character room code and QR to share with teams.
           Anonymous sign-in keeps things lightweight.

@@ -10,7 +10,6 @@ interface VotePhaseProps {
   roundGroups: RoundGroup[];
   activeGroupIndex: number;
   totalGroups: number;
-  prompts: string[];
   activeGroupAnswers: Answer[];
   voteCounts: Map<string, number>;
   myActiveVote: Vote | null;
@@ -41,7 +40,6 @@ export function VotePhase({
   roundGroups,
   activeGroupIndex,
   totalGroups,
-  prompts,
   activeGroupAnswers,
   voteCounts: _voteCounts,
   myActiveVote,
@@ -57,7 +55,7 @@ export function VotePhase({
   const promptValue =
     activeGroup?.prompt ??
     roundGroups[activeGroupIndex]?.prompt ??
-    prompts[session.roundIndex % prompts.length];
+    "Loading prompt...";
   const groupLabel = totalGroups
     ? `Group ${activeGroupIndex + 1} of ${totalGroups}`
     : "No groups";

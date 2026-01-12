@@ -20,6 +20,7 @@ export function useTeamState(teamSession: { sessionId: string; code: string; tea
   const [answerText, setAnswerText] = useState("");
   const [isSubmittingAnswer, setIsSubmittingAnswer] = useState(false);
   const [isSubmittingVote, setIsSubmittingVote] = useState(false);
+  const [isSubmittingCategorySelection, setIsSubmittingCategorySelection] = useState(false);
   const [autoJoinAttempted, setAutoJoinAttempted] = useState(false);
   const [showHowToPlay, setShowHowToPlay] = useState(false);
   const [howToPlayInitialPhase, setHowToPlayInitialPhase] = useState<Session["status"] | null>(null);
@@ -37,6 +38,7 @@ export function useTeamState(teamSession: { sessionId: string; code: string; tea
   const [finalTeams, setFinalTeams] = useState<Team[]>([]);
   const [showKickedModal, setShowKickedModal] = useState(false);
   const [showSessionEndedModal, setShowSessionEndedModal] = useState(false);
+  const [showVIBoxModal, setShowVIBoxModal] = useState(false);
   const [now, setNow] = useState(Date.now());
   
   const scoreboardRef = useRef<HTMLDivElement | null>(null);
@@ -57,6 +59,8 @@ export function useTeamState(teamSession: { sessionId: string; code: string; tea
     setIsSubmittingAnswer,
     isSubmittingVote,
     setIsSubmittingVote,
+    isSubmittingCategorySelection,
+    setIsSubmittingCategorySelection,
     autoJoinAttempted,
     setAutoJoinAttempted,
     showHowToPlay,
@@ -73,6 +77,8 @@ export function useTeamState(teamSession: { sessionId: string; code: string; tea
     setShowKickedModal,
     showSessionEndedModal,
     setShowSessionEndedModal,
+    showVIBoxModal,
+    setShowVIBoxModal,
     now,
     setNow,
     scoreboardRef,

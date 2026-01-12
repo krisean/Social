@@ -264,78 +264,7 @@ importers:
         specifier: ^7.1.7
         version: 7.3.0(@types/node@22.19.3)(jiti@1.21.7)
 
-  apps/vibox-247:
-    dependencies:
-      '@social/ai':
-        specifier: workspace:*
-        version: link:../../packages/ai
-      '@social/db':
-        specifier: workspace:*
-        version: link:../../packages/db
-      '@social/game-vibox':
-        specifier: workspace:*
-        version: link:../../packages/games/vibox
-      '@social/payments':
-        specifier: workspace:*
-        version: link:../../packages/payments
-      '@social/ui':
-        specifier: workspace:*
-        version: link:../../packages/ui
-      '@supabase/supabase-js':
-        specifier: ^2.47.10
-        version: 2.89.0
-      '@tanstack/react-query':
-        specifier: ^5.90.2
-        version: 5.90.12(react@18.3.1)
-      clsx:
-        specifier: ^2.1.1
-        version: 2.1.1
-      date-fns:
-        specifier: ^4.1.0
-        version: 4.1.0
-      react:
-        specifier: ^18.3.1
-        version: 18.3.1
-      react-dom:
-        specifier: ^18.3.1
-        version: 18.3.1(react@18.3.1)
-      react-router-dom:
-        specifier: ^7.9.4
-        version: 7.11.0(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
-      zod:
-        specifier: ^3.24.1
-        version: 3.25.76
-    devDependencies:
-      '@types/node':
-        specifier: ^22.10.2
-        version: 22.19.3
-      '@types/react':
-        specifier: ^18.3.18
-        version: 18.3.27
-      '@types/react-dom':
-        specifier: ^18.3.5
-        version: 18.3.7(@types/react@18.3.27)
-      '@vitejs/plugin-react':
-        specifier: ^5.0.4
-        version: 5.1.2(vite@7.3.0(@types/node@22.19.3)(jiti@1.21.7))
-      autoprefixer:
-        specifier: ^10.4.21
-        version: 10.4.23(postcss@8.5.6)
-      eslint:
-        specifier: ^9.36.0
-        version: 9.39.2(jiti@1.21.7)
-      postcss:
-        specifier: ^8.5.6
-        version: 8.5.6
-      tailwindcss:
-        specifier: ^3.4.17
-        version: 3.4.19
-      typescript:
-        specifier: ^5.7.2
-        version: 5.9.3
-      vite:
-        specifier: ^7.1.7
-        version: 7.3.0(@types/node@22.19.3)(jiti@1.21.7)
+  apps/vibox: {}
 
   apps/web:
     dependencies:

@@ -20,8 +20,6 @@ interface VotePhaseProps {
   }[];
   sessionEndsAt: string | undefined;
   voteSecs: number;
-  prompts: string[];
-  sessionRoundIndex: number;
   sessionPaused?: boolean;
 }
 
@@ -38,8 +36,6 @@ export function VotePhase({
   roundSummaries,
   sessionEndsAt,
   voteSecs,
-  prompts,
-  sessionRoundIndex,
   sessionPaused = false,
 }: VotePhaseProps) {
   const { isDark } = useTheme();
@@ -57,7 +53,7 @@ export function VotePhase({
         <h3 className={`text-2xl font-bold text-brand-primary`}>
           {activeGroup?.prompt ??
             roundGroups[activeGroupIndex]?.prompt ??
-            prompts[sessionRoundIndex % prompts.length]}
+            "Loading prompt..."}
         </h3>
         <p className={`text-sm ${!isDark ? 'text-slate-600' : 'text-brand-primary'}`}>
           Everyone votes on the answers from this group.

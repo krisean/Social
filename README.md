@@ -57,7 +57,7 @@ social/
 ├── apps/
 │   ├── event-platform/    # Game host dashboard + player PWAs
 │   ├── pubFeed/           # Pub Feed social game PWA
-│   ├── vibox-247/         # VIBox game PWA
+│   ├── vibox/         # VIBox game PWA
 │   ├── dashboard/         # Venue analytics dashboard
 │   └── web/               # Marketing site
 ├── packages/
@@ -115,7 +115,7 @@ pnpm supabase:gen-types
 ### Apps
 - **event-platform:** Host controls + shared game engine
 - **pubFeed:** Pub Feed social game PWA
-- **vibox-247:** VIBox AI jukebox
+- **vibox:** VIBox AI jukebox
 - **dashboard:** Venue analytics
 - **web:** Marketing site
 

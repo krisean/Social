@@ -5,7 +5,8 @@ import { BackgroundAnimation } from "../../components/BackgroundAnimation";
 import { transformRoundSummariesForUI } from "../../application";
 import { useInviteLink, useTeamLookup, useSessionTimers, useVoteCalculations, usePhaseTimer, useGameStateIntegration, useActiveGroupData } from "../../shared/hooks";
 import { useTheme } from "../../shared/providers/ThemeProvider";
-import { phaseSubtitle, prompts, phaseHeadline } from "../../shared/constants";
+import { phaseSubtitle, phaseHeadline } from "../../shared/constants";
+import classicPrompts from "../../shared/prompts.json";
 import type { Team } from "../../shared/types";
 import {
   LobbyPhase,
@@ -156,13 +157,13 @@ export function PresenterPage() {
         return (
           activeGroup?.prompt ??
           roundGroups[activeGroupIndex]?.prompt ??
-          prompts[session.roundIndex % prompts.length]
+          classicPrompts[session.roundIndex % classicPrompts.length]
         );
       case "results":
         return "Round results";
       default:
         return (
-          roundGroups[0]?.prompt ?? prompts[session.roundIndex % prompts.length]
+          roundGroups[0]?.prompt ?? classicPrompts[session.roundIndex % classicPrompts.length]
         );
     }
   }, [

@@ -119,7 +119,7 @@ apps/
 │   └── package.json
 ├── dashboard/                   # Admin dashboard
 ├── topcomment-247/             # Legacy TopComment app
-└── vibox-247/                  # Legacy ViBox app
+└── vibox/                  # Legacy ViBox app
 ```
 
 ## Key Concepts
