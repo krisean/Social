@@ -52,7 +52,7 @@ export const phaseHeadline: Record<Session["status"], string> = {
 };
 
 export const phaseSubtitle: Record<Session["status"], string> = {
-  lobby: "Or visit game.barscores.ca and enter the room code.",
+  lobby: "Or visit event.playnow.social/play and enter the room code.",
   "category-select": "Random teams are choosing prompt categories for this round.",
   answer: "Type fast! You have 90 seconds to drop your best answer.",
   vote: "Pick the funniest or boldest idea. No voting for your own team.",

@@ -15,6 +15,7 @@
     "@social/db": "workspace:*",
     "@social/game-topcomment": "workspace:*",
     "@social/utils": "workspace:*",
+    "@social/vibox-client": "workspace:*",
     "@supabase/supabase-js": "^2.47.10",
     "@tanstack/react-query": "^5.90.2",
     "clsx": "^2.1.1",

@@ -161,3 +161,4 @@ logs/*.txt
 *.sql.dump
 *.sqlite
 *.sqlite3
+.vercel
