@@ -10,7 +10,7 @@ export default function FinalCTA() {
         </p>
 
         <div className="final-actions">
-          <a className="btn btn-primary" href="https://playnow.social">View the Demo</a>
+          <a className="btn btn-primary" href="https://event.playnow.social">View the Demo</a>
         </div>
       </div>
     </section>

@@ -16,7 +16,7 @@ export default function Hero() {
           </p>
 
           <div className="cta-row">
-            <a className="btn btn-primary" href="https://playnow.social">View the Demo</a>
+            <a className="btn btn-primary" href="https://event.playnow.social">View the Demo</a>
           </div>
         </div>
 

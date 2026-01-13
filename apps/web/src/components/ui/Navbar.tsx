@@ -65,7 +65,7 @@ export default function Navbar() {
         
         <div className="actions">
           <ThemeToggle />
-          <a href="https://playnow.social" className="brand-name">
+          <a href="https://event.playnow.social" className="brand-name">
             Demö
           </a>
         </div>
