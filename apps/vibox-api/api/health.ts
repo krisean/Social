@@ -24,12 +24,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const statusCode = error ? 503 : 200;
 
-    res.status(statusCode).json({
+    return res.status(statusCode).json({
       success: !error,
       data: health,
     } as ApiResponse<typeof health>);
   } catch (error) {
-    res.status(503).json({
+    return res.status(503).json({
       success: false,
       error: error instanceof Error ? error.message : 'Health check failed',
       data: {

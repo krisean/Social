@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
-import { ViboxClient, ViboxQueueItem } from '@social/vibox-client';
+import { ViboxClient } from '@social/vibox-client';
+import type { ViboxQueueItem } from '@social/vibox-client';
 
 const viboxClient = new ViboxClient({
   apiUrl: import.meta.env.VITE_VIBOX_API_URL || 'http://localhost:3000',

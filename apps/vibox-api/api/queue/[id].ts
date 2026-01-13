@@ -19,11 +19,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (req.method === 'DELETE') {
       return await removeFromQueue(id, res);
     } else {
-      res.status(405).json({ success: false, error: 'Method not allowed' });
+      return res.status(405).json({ success: false, error: 'Method not allowed' });
     }
   } catch (error) {
     console.error('Queue item handler error:', error);
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       error: error instanceof Error ? error.message : 'Internal server error',
     } as ApiResponse);
@@ -43,7 +43,7 @@ async function removeFromQueue(id: string, res: VercelResponse) {
     } as ApiResponse);
   }
 
-  res.status(200).json({
+  return res.status(200).json({
     success: true,
     message: 'Track removed from queue',
   } as ApiResponse);

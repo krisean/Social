@@ -41,14 +41,14 @@ export function useComments(postId: string): UseCommentsResult {
       createdAt: row.created_at,
       updatedAt: row.updated_at,
       author: {
-        id: row.feed_users.id,
-        username: row.feed_users.username,
-        displayName: row.feed_users.display_name || undefined,
-        avatarUrl: row.feed_users.avatar_url || undefined,
-        isAnonymous: row.feed_users.is_anonymous,
-        authUserId: row.feed_users.auth_user_id || undefined,
-        createdAt: row.feed_users.created_at,
-        lastActiveAt: row.feed_users.last_active_at,
+        id: row.users.id,
+        username: row.users.username,
+        displayName: row.users.display_name || undefined,
+        avatarUrl: row.users.avatar_url || undefined,
+        isAnonymous: row.users.is_anonymous,
+        authUserId: row.users.auth_user_id || undefined,
+        createdAt: row.users.created_at,
+        lastActiveAt: row.users.last_active_at,
       }
     };
   }, []);
@@ -60,7 +60,7 @@ export function useComments(postId: string): UseCommentsResult {
       setError(null);
 
       const data = await supabaseFetch(
-        `/rest/v1/feed_comments?post_id=eq.${postId}&parent_comment_id=is.null&select=*,feed_users(*),feed_comment_likes(user_id)&order=created_at.asc`
+        `/rest/v1/feed_comments?post_id=eq.${postId}&parent_comment_id=is.null&select=*,users(*),feed_comment_likes(user_id)&order=created_at.asc`
       );
 
       if (data) {
@@ -94,7 +94,7 @@ export function useComments(postId: string): UseCommentsResult {
           // Try to find recently created comments by this user on this post
           const oneMinuteAgo = new Date(Date.now() - 60000).toISOString();
           const searchData = await supabaseFetch(
-            `/rest/v1/feed_comments?author_id=eq.${userRef.current}&post_id=eq.${optimistic.postId}&created_at=gte.${oneMinuteAgo}&select=*,feed_users(*),feed_comment_likes(user_id)&order=created_at.desc&limit=5`
+            `/rest/v1/feed_comments?author_id=eq.${userRef.current}&post_id=eq.${optimistic.postId}&created_at=gte.${oneMinuteAgo}&select=*,users(*),feed_comment_likes(user_id)&order=created_at.desc&limit=5`
           );
 
           if (searchData && searchData.length > 0) {
@@ -142,7 +142,7 @@ export function useComments(postId: string): UseCommentsResult {
 
           try {
             const data = await supabaseFetch(
-              `/rest/v1/feed_comments?id=eq.${payload.new.id}&select=*,feed_users(*),feed_comment_likes(user_id)`
+              `/rest/v1/feed_comments?id=eq.${payload.new.id}&select=*,users(*),feed_comment_likes(user_id)`
             );
 
             if (data && data[0]) {
@@ -190,7 +190,7 @@ export function useComments(postId: string): UseCommentsResult {
 
             try {
               const data = await supabaseFetch(
-                `/rest/v1/feed_comments?id=eq.${commentId}&select=*,feed_users(*),feed_comment_likes(user_id)`
+                `/rest/v1/feed_comments?id=eq.${commentId}&select=*,users(*),feed_comment_likes(user_id)`
               );
 
               if (data && data[0]) {

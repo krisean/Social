@@ -12,18 +12,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     } else if (req.method === 'DELETE' && req.url?.includes('/clear')) {
       return await clearQueue(req, res);
     } else {
-      res.status(405).json({ success: false, error: 'Method not allowed' });
+      return res.status(405).json({ success: false, error: 'Method not allowed' });
     }
   } catch (error) {
     console.error('Queue handler error:', error);
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       error: error instanceof Error ? error.message : 'Internal server error',
     });
   }
 }
 
-async function getQueue(req: VercelRequest, res: VercelResponse) {
+async function getQueue(_req: VercelRequest, res: VercelResponse) {
   const { data: queue, error } = await supabase
     .from('vibox_queue')
     .select('*')
@@ -37,7 +37,7 @@ async function getQueue(req: VercelRequest, res: VercelResponse) {
     } as ApiResponse);
   }
 
-  res.status(200).json({
+  return res.status(200).json({
     success: true,
     data: {
       queue: queue || [],
@@ -46,7 +46,7 @@ async function getQueue(req: VercelRequest, res: VercelResponse) {
   } as ApiResponse<{ queue: ViboxQueueItem[]; count: number }>);
 }
 
-async function clearQueue(req: VercelRequest, res: VercelResponse) {
+async function clearQueue(_req: VercelRequest, res: VercelResponse) {
   const { data, error } = await supabase
     .from('vibox_queue')
     .delete()
@@ -60,7 +60,7 @@ async function clearQueue(req: VercelRequest, res: VercelResponse) {
     } as ApiResponse);
   }
 
-  res.status(200).json({
+  return res.status(200).json({
     success: true,
     data: {
       clearedCount: data?.length || 0,

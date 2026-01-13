@@ -6,15 +6,17 @@
 // ==================== COLOR PALETTE ====================
 // Light Mode Colors:
 // - Primary: #10b981 (emerald-500)
-// - Background: #f8fafc (slate-50) with amber/orange gradient
-// - Text: #0f172a (slate-900)
-// - VIBox: #d97706 (amber-600) to #92400e (amber-900)
+// - Background: #d97706 → #ea580c → #92400e (amber-600 → orange-700 → amber-900) with #fef3c7 amber foam
+// - Text: #0f172a (slate-900) hierarchy with #1e293b slate-800 headings
+// - Cards: #f8fafc (slate-50) with amber accents (#fef3c7 selected, #f59e0b border)
+// - Bubbles: White with glass effect
 //
 // Dark Mode Colors:
-// - Primary: #10b981 (emerald-500) 
-// - Background: #0a0a0a to #0a0a1a (dark with purple/blue tints)
-// - Text: #ffffff (white)
-// - VIBox: #f0abfc (pink-400) with dark gradient
+// - Primary: #ff00ff (true neon fuchsia/magenta)
+// - Background: #0a0a0a → #1a0a1a → #0a0a1a with #e879f9 fuchsia foam
+// - Text: #ffffff hierarchy with #f0abfc pink-400 headings and #a8dadc cyan-300 tertiary
+// - Cards: #1e293b (slate-800) with purple/cyan accents
+// - Bubbles: #ff00ff → #06b6d4 pink/cyan gradient
 // ====================================================
 
 export interface ThemeColors {
@@ -182,7 +184,7 @@ export const darkTheme: Theme = {
       selectedBorder: '#f59e0b', // amber-500 (brand-primary)
     },
     badge: {
-      card1Background: '#dbeafe', // blue-100
+      card1Background: '#1e293b', // blue-100
       card1Text: '#1e40af',       // blue-800
       card2Background: '#e9d5ff', // purple-100
       card2Text: '#6b21a8',       // purple-800
@@ -190,7 +192,7 @@ export const darkTheme: Theme = {
     button: {
       ghostText: '#a8dadc',    // cyan-300
       ghostHover: '#67e8f9',   // cyan-300 lighter
-      primary: '#10b981',      // emerald-500
+      primary: '#ff00ff',      // true neon fuchsia/magenta
       danger: '#ef4444',       // red-500
       success: '#22c55e',      // green-500
     },

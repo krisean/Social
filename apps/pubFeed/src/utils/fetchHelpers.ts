@@ -63,7 +63,9 @@ export async function supabasePost(path: string, body: any, returnRepresentation
   });
   
   if (!response.ok) {
-    throw new Error(`HTTP error! status: ${response.status}`);
+    const errorText = await response.text();
+    console.error('[supabasePost] Error response:', errorText);
+    throw new Error(`HTTP error! status: ${response.status} - ${errorText}`);
   }
   
   return returnRepresentation ? response.json() : null;

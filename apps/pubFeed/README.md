@@ -32,7 +32,7 @@ src/
 
 New tables in `20250103000000_create_feed_schema.sql`:
 
-- `feed_users` - User profiles (supports anonymous)
+- `users` - User profiles (supports anonymous)
 - `feed_posts` - Content posts (extensible via metadata)
 - `feed_likes` - Like/reaction system
 - `venues` - Venue information and feature flags
@@ -102,7 +102,7 @@ const ContentCardRegistry = {
 2. Options: Sign Up / Sign In / Continue as Guest
 3. Anonymous users get generated username (e.g., `HappyPanda123`)
 4. Session persists via Supabase Auth
-5. `feed_users` record created automatically
+5. `users` record created automatically
 
 ## Real-time Updates
 

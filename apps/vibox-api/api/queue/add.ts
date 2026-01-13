@@ -37,14 +37,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       } as ApiResponse);
     }
 
-    res.status(201).json({
+    return res.status(201).json({
       success: true,
       data: { queueItem },
       message: 'Track added to queue',
     } as ApiResponse<{ queueItem: ViboxQueueItem }>);
   } catch (error) {
     console.error('Add to queue error:', error);
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       error: error instanceof Error ? error.message : 'Internal server error',
     } as ApiResponse);

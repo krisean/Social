@@ -12,7 +12,7 @@ const barConfig = {
   // Bar Information
   name: "SÖCIAL",
   subtitle: "PUB",
-  websiteUrl: "https://barscores.ca",
+  websiteUrl: "https://playnow.social",
   websiteLabel: "Visit Söcial Website",
   
   // Logo Configuration
@@ -207,32 +207,78 @@ export function EntryPage() {
       <main className="relative min-h-screen px-4 py-10 sm:px-6">
         <div className="relative z-10 mx-auto flex w-full max-w-4xl flex-col gap-6">
           <Card className="text-center space-y-4 backdrop-blur" isDark={isDark}>
-            <div className="mx-auto flex justify-center">
-              <a
-                href={barConfig.websiteUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className={`inline-flex rounded-full p-4 transition ${!isDark ? barConfig.logo.styles.light.background : barConfig.logo.styles.dark.background} ${!isDark ? barConfig.logo.styles.light.shadow : barConfig.logo.styles.dark.shadow} ${!isDark ? barConfig.logo.styles.light.hoverBackground : barConfig.logo.styles.dark.hoverBackground}`}
-                aria-label={barConfig.websiteLabel}
-              >
-                <img
-                  src={barConfig.logo.primaryUrl}
-                  alt={barConfig.logo.altText}
-                  className="h-24 w-24 object-contain"
-                  onError={(e) => {
-                    const img = e.currentTarget;
-                    img.style.display = "none";
+            {/* New Pub Söcial Branding */}
+            <div className="mx-auto flex justify-center mb-6">
+              <div className="flex items-center gap-4">
+                {/* Martini SVG Icon */}
+                <svg 
+                  width="72" 
+                  height="72" 
+                  viewBox="0 0 32 32" 
+                  fill="none" 
+                  xmlns="http://www.w3.org/2000/svg"
+                  className={`${!isDark ? 'text-cyan-500' : 'text-cyan-300'}`}
+                  style={{
+                    filter: !isDark 
+                      ? 'drop-shadow(0 0 2px #06b6d4) drop-shadow(0 0 4px rgba(6, 182, 212, 0.1))'
+                      : 'drop-shadow(0 0 2px #67e8f9) drop-shadow(0 0 4px rgba(103, 232, 249, 0.1))'
                   }}
-                />
-              </a>
+                >
+                  {/* Cocktail glass outline */}
+                  <path 
+                    d="M22.9996 7H12.9996H7.00061L11.2406 11.24L18.0006 18L28.9996 7H22.9996Z" 
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                  />
+                  
+                  {/* Glass bowl */}
+                  <path 
+                    d="M13 7H7L11.24 11.24C10.16 12.33 8.66 13 7 13C3.69 13 1 10.31 1 7C1 3.69 3.69 1 7 1C10.31 1 13 3.69 13 7Z" 
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                  />
+                  
+                  {/* Glass stem and base */}
+                  <path 
+                    d="M11 30.9998H25M18 30.9998V17.9998L29 6.99981H7.00002L16 15.9998" 
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                  
+                  {/* Decorative olive/cherry on rim */}
+                  <path 
+                    d="M12.2051 4.01351C11.1701 2.21251 9.22612 0.999512 7.00012 0.999512C3.68612 0.999512 1.00012 3.68651 1.00012 6.99951C1.00012 10.3135 3.68612 12.9995 7.00012 12.9995C8.65612 12.9995 10.1561 12.3275 11.2421 11.2425M29 0.999812L23 6.99981" 
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+                
+                {/* Brand Name */}
+                <h1 
+                  className={`text-6xl font-black`}
+                  style={{
+                    color: '#ff00ff',
+                    filter: 'drop-shadow(0 0 2px #ff00ff) drop-shadow(0 0 4px rgba(255, 0, 255, 0.1))'
+                  }}
+                >
+                  Pub Söcial
+                </h1>
+              </div>
             </div>
+            
             <div className="space-y-3">
-              <span className={`text-xs font-semibold uppercase tracking-[0.5em] ${!isDark ? 'text-amber-500' : 'text-cyan-400'}`}>
-                {barConfig.subtitle}
-              </span>
-              <h1 className={`text-5xl font-black sm:text-6xl ${!isDark ? 'text-slate-900' : 'text-pink-400'}`}>
-                {barConfig.name}
-              </h1>
+              {/* Commented out PUB subtitle */}
+              {/* <span className={`text-xs font-semibold uppercase tracking-[0.5em] ${!isDark ? 'text-amber-500' : 'text-cyan-400'}`}>
+                PUB
+              </span> */}
               <p className={`text-base sm:text-lg ${!isDark ? 'text-slate-600' : 'text-cyan-300'}`}>
                 {barConfig.content.description}
               </p>

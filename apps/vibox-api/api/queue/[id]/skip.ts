@@ -37,14 +37,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       } as ApiResponse);
     }
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       data: { queueItem },
       message: 'Track skipped',
     } as ApiResponse<{ queueItem: ViboxQueueItem }>);
   } catch (error) {
     console.error('Skip track error:', error);
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       error: error instanceof Error ? error.message : 'Internal server error',
     } as ApiResponse);

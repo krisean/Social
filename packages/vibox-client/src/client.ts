@@ -20,7 +20,8 @@ export class ViboxClient {
   async getQueue(): Promise<ApiResponse<{ queue: ViboxQueueItem[]; count: number }>> {
     try {
       const response = await fetch(`${this.apiUrl}/api/queue`);
-      return await response.json();
+      const data = await response.json() as ApiResponse<{ queue: ViboxQueueItem[]; count: number }>;
+      return data;
     } catch (error) {
       return {
         success: false,
@@ -36,7 +37,8 @@ export class ViboxClient {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(track),
       });
-      return await response.json();
+      const data = await response.json() as ApiResponse<{ queueItem: ViboxQueueItem }>;
+      return data;
     } catch (error) {
       return {
         success: false,
@@ -50,7 +52,8 @@ export class ViboxClient {
       const response = await fetch(`${this.apiUrl}/api/queue/${id}`, {
         method: 'DELETE',
       });
-      return await response.json();
+      const data = await response.json() as ApiResponse;
+      return data;
     } catch (error) {
       return {
         success: false,
@@ -62,8 +65,6 @@ export class ViboxClient {
   async markPlayed(
     id: string,
     options?: {
-      play_duration?: number;
-      completion_percentage?: number;
       was_skipped?: boolean;
     }
   ): Promise<ApiResponse<{ queueItem: ViboxQueueItem }>> {
@@ -73,7 +74,8 @@ export class ViboxClient {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(options || {}),
       });
-      return await response.json();
+      const data = await response.json() as ApiResponse<{ queueItem: ViboxQueueItem }>;
+      return data;
     } catch (error) {
       return {
         success: false,
@@ -87,7 +89,8 @@ export class ViboxClient {
       const response = await fetch(`${this.apiUrl}/api/queue/${id}/skip`, {
         method: 'PUT',
       });
-      return await response.json();
+      const data = await response.json() as ApiResponse<{ queueItem: ViboxQueueItem }>;
+      return data;
     } catch (error) {
       return {
         success: false,
@@ -101,7 +104,8 @@ export class ViboxClient {
       const response = await fetch(`${this.apiUrl}/api/queue/clear`, {
         method: 'DELETE',
       });
-      return await response.json();
+      const data = await response.json() as ApiResponse<{ clearedCount: number }>;
+      return data;
     } catch (error) {
       return {
         success: false,
@@ -155,7 +159,8 @@ export class ViboxClient {
   async getHealth(): Promise<ApiResponse> {
     try {
       const response = await fetch(`${this.apiUrl}/api/health`);
-      return await response.json();
+      const data = await response.json() as ApiResponse;
+      return data;
     } catch (error) {
       return {
         success: false,
