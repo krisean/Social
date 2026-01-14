@@ -1,6 +1,10 @@
 # VIBox Master Setup Script
 # Cleans UUIDs, moves files, and generates all metadata in one go
 
+# Ensure UTF-8 encoding throughout the script
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+$OutputEncoding = [System.Text.Encoding]::UTF8
+
 Write-Host "🎵 VIBox Master Setup Starting..." -ForegroundColor Cyan
 
 # Step 1: Clean existing metadata files
@@ -220,7 +224,7 @@ Get-ChildItem "$audioMetaDir\*.mp3.txt" | ForEach-Object {
     }
     
     # Set artist to Söcial for all tracks
-    $artist = "S`u00f6cial"
+    $artist = "Söcial"
     
     # Extract vibe from first line
     $firstLine = ($content -split '\r?\n')[0]
@@ -277,8 +281,10 @@ Get-ChildItem "$audioMetaDir\*.mp3.txt" | ForEach-Object {
 
 # Export metadata files - wrap in object with tracks property
 $metadataObject = @{ tracks = $tracks }
-$metadataJson = $metadataObject | ConvertTo-Json -Depth 10
+# Use -Compress to avoid extra whitespace and ensure proper UTF-8 handling
+$metadataJson = $metadataObject | ConvertTo-Json -Depth 10 -Compress
 $dataPath = Resolve-Path (Join-Path $viboxDir "data") | Select-Object -ExpandProperty Path
+# Ensure UTF-8 without BOM
 [System.IO.File]::WriteAllText((Join-Path $dataPath "tracks-metadata.json"), $metadataJson, [System.Text.UTF8Encoding]::new($false))
 
 # Create hierarchical structure
@@ -297,7 +303,9 @@ $tracks | Group-Object -Property primaryVibe | ForEach-Object {
     )
 }
 
-$hierarchicalJson = $hierarchical | ConvertTo-Json -Depth 10
+# Use -Compress to avoid extra whitespace and ensure proper UTF-8 handling
+$hierarchicalJson = $hierarchical | ConvertTo-Json -Depth 10 -Compress
+# Ensure UTF-8 without BOM
 [System.IO.File]::WriteAllText((Join-Path $dataPath "vibes-hierarchical.json"), $hierarchicalJson, [System.Text.UTF8Encoding]::new($false))
 
 Write-Host "✅ Created metadata files with $($tracks.Count) tracks" -ForegroundColor Green

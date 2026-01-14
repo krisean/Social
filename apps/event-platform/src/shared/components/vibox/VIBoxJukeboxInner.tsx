@@ -199,7 +199,7 @@ export function VIBoxJukeboxInner({
         }
 
         // Try to fetch the track list from a JSON file
-        const response = await fetch('/tracks.json');
+        const response = await fetch('/vibox/data/tracks.json');
         if (response.ok) {
           const audioFiles = await response.json();
           log.info('Loading audio files', { count: audioFiles.length });
@@ -1004,7 +1004,19 @@ export function VIBoxJukeboxInner({
           <div className="px-4 py-3">
             <div className="flex items-center justify-between mb-3">
               <div className="w-8"></div>
-              <h1 className={`font-semibold [--tw-text-opacity:1] text-[var(--color-text-primary)]`}>VIBox Jukebox</h1>
+              <div className="flex items-center gap-2">
+                {/* VIBox Logo */}
+                <img 
+                  src="/src/shared/components/vibox/viboxLogo.png" 
+                  alt="VIBox Logo" 
+                  className="w-8 h-8"
+                />
+                <img 
+                  src="/src/shared/components/vibox/viboxLong2.png" 
+                  alt="Vibox Jukebox" 
+                  className="h-8 w-auto"
+                />
+              </div>
               <div className="w-8"></div>
             </div>
             <div className="flex items-center justify-center gap-2 w-full">

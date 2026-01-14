@@ -9,7 +9,17 @@ $audioFiles = Get-ChildItem $audioDir | Where-Object {
     @('.mp3', '.wav', '.flac', '.aac') -contains [System.IO.Path]::GetExtension($_.Name).ToLower()
 } | Select-Object -ExpandProperty Name | Sort-Object
 
-$tracksJson = $audioFiles | ConvertTo-Json -Depth 10
+$tracksJson = [System.Text.StringBuilder]::new()
+$tracksJson.Append("[`r`n") | Out-Null
+for ($i = 0; $i -lt $audioFiles.Count; $i++) {
+    $tracksJson.Append("    `"$($audioFiles[$i].Replace('"', '\"'))`"") | Out-Null
+    if ($i -lt $audioFiles.Count - 1) {
+        $tracksJson.Append(",") | Out-Null
+    }
+    $tracksJson.Append("`r`n") | Out-Null
+}
+$tracksJson.Append("]") | Out-Null
+$tracksJson = $tracksJson.ToString()
 $tracksJson | Out-File -FilePath $tracksJsonPath -Encoding UTF8
 
 Write-Host "✅ Updated tracks.json with $($audioFiles.Count) files" -ForegroundColor Green
