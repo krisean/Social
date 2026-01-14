@@ -70,6 +70,7 @@ export interface Track {
 
 export interface TrackMetadata {
   file: string;
+  title: string;
   artist: string;
   primaryVibe: string;
   secondaryVibe: string;
