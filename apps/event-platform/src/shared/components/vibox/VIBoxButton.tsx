@@ -50,12 +50,12 @@ export function VIBoxButton({
       }}
     >
       <img 
-        src="/src/shared/components/vibox/viboxToken.png" 
+        src="/viboxToken.png" 
         alt="VIBox Token" 
         className={`${sizeClasses[size]} w-auto mr-1 scale-150 transition-all duration-300 ease-in-out hover:rotate-12`}
       />
       <img 
-        src="/src/shared/components/vibox/viboxLong2.png" 
+        src="/viboxLong2.png" 
         alt="VIBox" 
         className={`${sizeClasses[size]} w-auto -mt-1 transition-all duration-300 ease-in-out hover:scale-110`}
       />

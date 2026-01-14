@@ -1007,12 +1007,12 @@ export function VIBoxJukeboxInner({
               <div className="flex items-center gap-2">
                 {/* VIBox Logo */}
                 <img 
-                  src="/src/shared/components/vibox/viboxLogo.png" 
+                  src="/viboxLogo.png" 
                   alt="VIBox Logo" 
                   className="w-8 h-8"
                 />
                 <img 
-                  src="/src/shared/components/vibox/viboxLong2.png" 
+                  src="/viboxLong2.png" 
                   alt="Vibox Jukebox" 
                   className="h-8 w-auto"
                 />
