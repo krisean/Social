@@ -3,8 +3,13 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../shared/providers/AuthContext";
 import { useTheme } from "../../shared/providers/ThemeProvider";
 import { Button, FormField, Card } from "@social/ui";
+import { ensureVenueAccountProfile } from "../../supabase/client";
 
-export function AuthPage() {
+interface AuthPageProps {
+  variant?: "player" | "venue";
+}
+
+export function AuthPage({ variant = "player" }: AuthPageProps) {
   const { isDark } = useTheme();
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState("");
@@ -16,8 +21,22 @@ export function AuthPage() {
     message: string;
     type: "success" | "error";
   } | null>(null);
-  const { signIn, signUp, signInAnonymously } = useAuth();
+  const { signIn, signUp, signInAnonymously, refreshVenueAccount } = useAuth();
   const navigate = useNavigate();
+  const isVenueVariant = variant === "venue";
+  const allowSignUp = true;
+  const allowGuestMode = !isVenueVariant;
+  const redirectPath = isVenueVariant ? "/host" : "/";
+
+  const syncVenueAccount = async (nameHint?: string) => {
+    if (!isVenueVariant) {
+      return;
+    }
+    await ensureVenueAccountProfile({
+      fullName: nameHint?.trim() || undefined,
+    });
+    await refreshVenueAccount();
+  };
 
   // Auto-dismiss notifications after 3 seconds
   useEffect(() => {
@@ -34,10 +53,14 @@ export function AuthPage() {
     setLoading(true);
 
     try {
-      if (isLogin) {
+      if (isLogin || !allowSignUp) {
         await signIn(email, password);
-        setNotification({ message: "Sign in successful!", type: "success" });
-        setTimeout(() => navigate("/"), 2000);
+        await syncVenueAccount(displayName || email);
+        setNotification({
+          message: isVenueVariant ? "Venue sign in successful!" : "Sign in successful!",
+          type: "success",
+        });
+        setTimeout(() => navigate(redirectPath), 2000);
       } else {
         if (password !== confirmPassword) {
           setNotification({ message: "Passwords do not match", type: "error" });
@@ -53,11 +76,12 @@ export function AuthPage() {
           return;
         }
         await signUp(email, password, displayName);
+        await syncVenueAccount(displayName || email);
         setNotification({
           message: "Account created successfully!",
           type: "success",
         });
-        setTimeout(() => navigate("/"), 2000);
+        setTimeout(() => navigate(redirectPath), 2000);
       }
     } catch (error: unknown) {
       let errorMessage = "Authentication failed";
@@ -90,11 +114,12 @@ export function AuthPage() {
   };
 
   const handleGuestMode = async () => {
+    if (!allowGuestMode) return;
     setLoading(true);
     try {
       await signInAnonymously();
       setNotification({ message: "Signed in as guest", type: "success" });
-      setTimeout(() => navigate("/"), 2000);
+      setTimeout(() => navigate(redirectPath), 2000);
     } catch (error: unknown) {
       const authError =
         typeof error === "object" && error
@@ -108,6 +133,20 @@ export function AuthPage() {
       setLoading(false);
     }
   };
+
+  const headerTitle = isVenueVariant
+    ? isLogin
+      ? "Venue Login"
+      : "Unlock Venue Access"
+    : isLogin
+      ? "Welcome Back"
+      : "Join Söcial";
+
+  const headerSubtitle = isVenueVariant
+    ? "Sign in with your venue credentials to host games"
+    : isLogin
+      ? "Sign in to save your game history"
+      : "Create an account to track your wins";
 
   return (
     <main className={`flex min-h-screen flex-col items-center justify-center px-6 py-10 ${!isDark ? 'bg-amber-50' : 'bg-slate-950'}`}>
@@ -144,18 +183,16 @@ export function AuthPage() {
             />
           </div>
           <h1 className="text-3xl font-black text-brand-primary sm:text-4xl">
-            {isLogin ? "Welcome Back" : "Join Söcial"}
+            {headerTitle}
           </h1>
           <p className={`mt-2 ${!isDark ? 'text-slate-600' : 'text-slate-400'}`}>
-            {isLogin
-              ? "Sign in to save your game history"
-              : "Create an account to track your wins"}
+            {headerSubtitle}
           </p>
         </header>
 
         <Card className="p-6" isDark={isDark}>
           <form onSubmit={handleSubmit} className="space-y-4">
-            {!isLogin && (
+            {!isLogin && allowSignUp && (
               <FormField
                 label="Display Name"
                 type="text"
@@ -187,7 +224,7 @@ export function AuthPage() {
               isDark={isDark}
             />
 
-            {!isLogin && (
+            {!isLogin && allowSignUp && (
               <FormField
                 label="Confirm Password"
                 type="password"
@@ -204,6 +241,7 @@ export function AuthPage() {
             </Button>
           </form>
 
+          {allowGuestMode && (
           <div className="mt-6 space-y-3">
             <div className="relative">
               <div className="absolute inset-0 flex items-center">
@@ -225,26 +263,38 @@ export function AuthPage() {
               Continue as Guest
             </Button>
           </div>
+          )}
 
-          <div className="mt-6 text-center">
-            <button
-              type="button"
-              onClick={() => setIsLogin(!isLogin)}
-              className={`text-sm underline ${!isDark ? 'text-brand-primary hover:text-brand-dark' : 'text-cyan-400 hover:text-cyan-300'}`}
-            >
-              {isLogin
-                ? "Don't have an account? Sign up"
-                : "Already have an account? Sign in"}
-            </button>
-          </div>
+          {allowSignUp && (
+            <div className="mt-6 text-center">
+              <button
+                type="button"
+                onClick={() => setIsLogin(!isLogin)}
+                className={`text-sm underline ${!isDark ? 'text-brand-primary hover:text-brand-dark' : 'text-cyan-400 hover:text-cyan-300'}`}
+              >
+                {isLogin
+                  ? "Don't have an account? Sign up"
+                  : "Already have an account? Sign in"}
+              </button>
+            </div>
+          )}
         </Card>
 
-        <div className={`mt-6 text-center text-sm ${!isDark ? 'text-slate-500' : 'text-slate-400'}`}>
-          <p>
-            Guest mode allows you to play without an account, but your progress
-            won't be saved.
-          </p>
-        </div>
+        {allowGuestMode ? (
+          <div className={`mt-6 text-center text-sm ${!isDark ? 'text-slate-500' : 'text-slate-400'}`}>
+            <p>
+              Guest mode allows you to play without an account, but your progress
+              won't be saved.
+            </p>
+          </div>
+        ) : (
+          <div className={`mt-6 text-center text-sm ${!isDark ? 'text-slate-500' : 'text-slate-400'}`}>
+            <p>
+              Venue access is reserved for approved partners. Need an account?
+              Contact your Söcial representative.
+            </p>
+          </div>
+        )}
       </div>
     </main>
   );

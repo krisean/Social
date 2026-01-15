@@ -34,14 +34,14 @@ export function useFeed(venueId: string): UseFeedResult {
       contentType: row.content_type,
       content: row.content,
       author: {
-        id: row.feed_users.id,
-        username: row.feed_users.username,
-        displayName: row.feed_users.display_name || undefined,
-        avatarUrl: row.feed_users.avatar_url || undefined,
-        isAnonymous: row.feed_users.is_anonymous,
-        authUserId: row.feed_users.auth_user_id || undefined,
-        createdAt: row.feed_users.created_at,
-        lastActiveAt: row.feed_users.last_active_at,
+        id: row.users.id,
+        username: row.users.username,
+        displayName: row.users.display_name || undefined,
+        avatarUrl: row.users.avatar_url || undefined,
+        isAnonymous: row.users.is_anonymous,
+        authUserId: row.users.auth_user_id || undefined,
+        createdAt: row.users.created_at,
+        lastActiveAt: row.users.last_active_at,
       },
       venueId: row.venue_id,
       createdAt: row.created_at,
@@ -63,7 +63,7 @@ export function useFeed(venueId: string): UseFeedResult {
 
       // Use direct fetch helper
       const data = await supabaseFetch(
-        `/rest/v1/feed_posts?venue_id=eq.${venueId}&select=*,feed_users(*),feed_likes(user_id)&order=created_at.desc&limit=50`
+        `/rest/v1/feed_posts?venue_id=eq.${venueId}&select=*,users(*),feed_likes(user_id)&order=created_at.desc&limit=50`
       );
 
       if (data) {
@@ -114,7 +114,7 @@ export function useFeed(venueId: string): UseFeedResult {
 
           try {
             const data = await supabaseFetch(
-              `/rest/v1/feed_posts?id=eq.${payload.new.id}&select=*,feed_users(*),feed_likes(user_id)`
+              `/rest/v1/feed_posts?id=eq.${payload.new.id}&select=*,users(*),feed_likes(user_id)`
             );
             
             if (data && data[0]) {
@@ -141,7 +141,7 @@ export function useFeed(venueId: string): UseFeedResult {
 
           try {
             const data = await supabaseFetch(
-              `/rest/v1/feed_posts?id=eq.${payload.new.id}&select=*,feed_users(*),feed_likes(user_id)`
+              `/rest/v1/feed_posts?id=eq.${payload.new.id}&select=*,users(*),feed_likes(user_id)`
             );
             
             if (data && data[0]) {
@@ -170,7 +170,7 @@ export function useFeed(venueId: string): UseFeedResult {
 
             try {
               const data = await supabaseFetch(
-                `/rest/v1/feed_posts?id=eq.${postId}&select=*,feed_users(*),feed_likes(user_id)`
+                `/rest/v1/feed_posts?id=eq.${postId}&select=*,users(*),feed_likes(user_id)`
               );
 
               if (data && data[0]) {

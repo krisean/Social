@@ -7,7 +7,6 @@ interface AnswerPhaseProps {
   session: Session;
   myGroup: RoundGroup | null;
   roundGroups: RoundGroup[];
-  prompts: string[];
   myAnswer: Answer | null;
   answerText: string;
   setAnswerText: (text: string) => void;
@@ -20,7 +19,6 @@ export function AnswerPhase({
   session,
   myGroup,
   roundGroups,
-  prompts,
   myAnswer,
   answerText,
   setAnswerText,
@@ -33,7 +31,7 @@ export function AnswerPhase({
   const promptFallback =
     myGroup?.prompt ??
     roundGroups[0]?.prompt ??
-    prompts[session.roundIndex % prompts.length];
+    "Loading prompt...";
   const characterCount = Math.min(answerText.length, CHAR_LIMIT);
   const limitReached = characterCount >= CHAR_LIMIT;
 

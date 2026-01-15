@@ -21,6 +21,7 @@ async function handleEndSession(req: Request, uid: string, supabase: any): Promi
         status: 'ended',
         ended_at: new Date().toISOString(),
         ends_at: null,
+        ended_by_host: true, // Flag that host manually ended the session
       })
       .eq('id', sessionId)
       .select()

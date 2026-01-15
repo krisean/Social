@@ -62,7 +62,7 @@ social/
 ├── apps/                        # Applications (to be created)
 │   ├── event-platform/          # TODO: Migrate from client/
 │   ├── topcomment-247/          # TODO: Create Facebook wall UI
-│   ├── vibox-247/               # TODO: Create jukebox UI
+│   ├── vibox/               # TODO: Create jukebox UI
 │   ├── web/                     # TODO: Create landing page
 │   └── dashboard/               # TODO: Create analytics dashboard
 ├── packages/                    # ✅ All packages complete!

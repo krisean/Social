@@ -1,5 +1,5 @@
 import type { Session } from "../../../shared/types";
-import type { Toast } from "@social/ui";
+import type { Toast } from "../../../shared/hooks/useToast";
 import { endSession } from "../../session/sessionService";
 import type { SessionAnalytics } from "../../../shared/types";
 
@@ -31,12 +31,12 @@ export const handleEndSession = (deps: EndSessionDeps) => async () => {
     if (session.status !== "ended") {
       await endSession({ sessionId: session.id });
     }
-    toast("Session ended", "info");
+    toast({ title: "Session ended", variant: "info" });
     setAnalytics(null);
     setHostGroupVotes({});
   } catch (error: unknown) {
     console.log(error);
-    toast("Could not end session. Please try again.", "error");
+    toast({ title: "Could not end session. Please try again.", variant: "error" });
   } finally {
     setIsEndingSession(false);
   }

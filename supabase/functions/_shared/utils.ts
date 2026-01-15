@@ -1,5 +1,6 @@
 // Shared utilities for Edge Functions
 
+// @ts-ignore - ESM import from URL is valid in Supabase Edge Functions runtime
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 export class AppError extends Error {
@@ -15,7 +16,9 @@ export class AppError extends Error {
 
 export function createSupabaseClient(req: Request) {
   return createClient(
+    // @ts-ignore - Deno global is available in Supabase Edge Functions runtime
     Deno.env.get('SUPABASE_URL') ?? '',
+    // @ts-ignore - Deno global is available in Supabase Edge Functions runtime
     Deno.env.get('SUPABASE_ANON_KEY') ?? '',
     {
       global: {
@@ -27,7 +30,9 @@ export function createSupabaseClient(req: Request) {
 
 export function createServiceClient() {
   return createClient(
+    // @ts-ignore - Deno global is available in Supabase Edge Functions runtime
     Deno.env.get('SUPABASE_URL') ?? '',
+    // @ts-ignore - Deno global is available in Supabase Edge Functions runtime
     Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
   );
 }

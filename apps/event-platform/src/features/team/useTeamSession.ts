@@ -5,6 +5,7 @@ type TeamSession = {
   teamId: string;
   teamName: string;
   code: string;
+  uid?: string;
 };
 
 const TEAM_SESSION_KEY = "sidebets_team_session";

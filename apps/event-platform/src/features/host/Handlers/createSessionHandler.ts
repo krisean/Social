@@ -1,5 +1,5 @@
 import type { FormEvent } from "react";
-import type { Toast } from "@social/ui";
+import type { Toast } from "../../../shared/hooks/useToast";
 import { createSession } from "../../session/sessionService";
 import { createSessionSchema } from "../../../shared/schemas";
 import { maskProfanity } from "../../../shared/utils/profanity";
@@ -9,6 +9,7 @@ import type { User } from "@supabase/supabase-js";
 interface CreateSessionHandlersDeps {
   user: User | null;
   authLoading: boolean;
+  isVenueAccount: boolean;
   toast: Toast;
   setCreateErrors: React.Dispatch<React.SetStateAction<Record<string, string>>>;
   isCreating: boolean; // Added this prop
@@ -17,6 +18,9 @@ interface CreateSessionHandlersDeps {
   setHostSession: (sessionInfo: { sessionId: string; code: string }) => void;
   setShowCreateModal: React.Dispatch<React.SetStateAction<boolean>>;
   onSessionCreated: () => void;
+  gameMode: "classic" | "jeopardy";
+  selectedCategories: string[];
+  totalRounds?: number;
 }
 
 export const handleCreateSession =
@@ -27,6 +31,7 @@ export const handleCreateSession =
     const {
       user,
       authLoading,
+      isVenueAccount,
       toast,
       setCreateErrors,
       isCreating,
@@ -35,6 +40,9 @@ export const handleCreateSession =
       setHostSession,
       setShowCreateModal,
       onSessionCreated,
+      gameMode,
+      selectedCategories,
+      totalRounds,
     } = deps;
 
     if (isCreating) {
@@ -43,17 +51,20 @@ export const handleCreateSession =
     }
 
     if (authLoading) {
-      toast("Hang tight - finishing sign-in before creating your room", "info");
+      toast({ title: "Hang tight - finishing sign-in before creating your room", variant: "info" });
       return;
     }
     if (!user) {
-      toast("Sign-in failed - refresh the page and try again once connected", "error");
+      toast({ title: "Sign-in failed - refresh the page and try again once connected", variant: "error" });
+      return;
+    }
+    if (!isVenueAccount) {
+      toast({ title: "Only venue accounts can host games. Please sign in with your venue credentials.", variant: "error" });
       return;
     }
 
     const formData = new FormData(event.currentTarget);
     const values = {
-      teamName: String(formData.get("teamName") ?? ""),
       venueName: String(formData.get("venueName") ?? ""),
     };
 
@@ -74,20 +85,22 @@ export const handleCreateSession =
 
     try {
       const response = await createSession({
-        teamName: maskProfanity(parsed.data.teamName),
         venueName: parsed.data.venueName
           ? maskProfanity(parsed.data.venueName)
           : undefined,
+        gameMode,
+        selectedCategories: gameMode === 'jeopardy' ? selectedCategories : undefined,
+        totalRounds: totalRounds || (gameMode === 'jeopardy' ? 1 : 5),
       });
       if (response) {
         setSessionId(response.sessionId);
         setHostSession({ sessionId: response.sessionId, code: response.code });
         setShowCreateModal(false);
         onSessionCreated();
-        toast(`Game room ready! Share code ${response.session.code} to invite teams`, "success");
+        toast({ title: `Game room ready! Share code ${response.session.code} to invite teams`, variant: "success" });
       }
     } catch (error: unknown) {
-      toast(getErrorMessage(error, "Could not create session. Please try again in a moment."), "error");
+      toast({ title: getErrorMessage(error, "Could not create session. Please try again in a moment."), variant: "error" });
     } finally {
       setIsCreating(false);
     }

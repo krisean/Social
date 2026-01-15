@@ -1,11 +1,13 @@
-import { useEffect, useMemo, useState } from "react";
 import { useParams, Link } from "react-router-dom";
+import { useMemo, useState, useEffect } from "react";
 import { Timer, Card } from "@social/ui";
 import { BackgroundAnimation } from "../../components/BackgroundAnimation";
-import { useSession, useTeams, useAnswers, useVotes } from "../session/hooks";
+import { transformRoundSummariesForUI } from "../../application";
+import { useInviteLink, useTeamLookup, useSessionTimers, useVoteCalculations, usePhaseTimer, useGameStateIntegration, useActiveGroupData } from "../../shared/hooks";
 import { useTheme } from "../../shared/providers/ThemeProvider";
-import { phaseSubtitle, prompts, phaseHeadline } from "../../shared/constants";
-import type { Answer } from "../../shared/types";
+import { phaseSubtitle, phaseHeadline } from "../../shared/constants";
+import classicPrompts from "../../shared/prompts.json";
+import type { Team } from "../../shared/types";
 import {
   LobbyPhase,
   AnswerPhase,
@@ -21,19 +23,25 @@ export function PresenterPage() {
   const sessionId = params.sessionId ?? "";
   const { isDark } = useTheme();
 
-  const { session, hasSnapshot } = useSession(sessionId);
-  const teams = useTeams(sessionId);
-  const answers = useAnswers(sessionId, session?.roundIndex);
-  const votes = useVotes(sessionId, session?.roundIndex);
-  const [now, setNow] = useState(Date.now());
+  // Use shared game state integration hook
+  const {
+    gameState,
+    session,
+    teams,
+    answers,
+    hasSnapshot,
+    roundGroups,
+    totalGroups,
+    activeGroup,
+    activeGroupIndex,
+    voteCounts,
+  } = useGameStateIntegration({ sessionId });
+
+  // Use shared timer hook
+  const { now } = useSessionTimers();
+
+  // Pause message cycling (presenter-specific logic)
   const [pauseMessageIndex, setPauseMessageIndex] = useState(0);
-
-  useEffect(() => {
-    const interval = window.setInterval(() => setNow(Date.now()), 500);
-    return () => window.clearInterval(interval);
-  }, []);
-
-  // Cycle through pause messages every 10 seconds when paused
   useEffect(() => {
     if (!session?.paused) {
       setPauseMessageIndex(0);
@@ -60,117 +68,40 @@ export function PresenterPage() {
 
     const interval = window.setInterval(() => {
       setPauseMessageIndex(prev => (prev + 1) % pauseMessages.length);
-    }, 15000); // Change every 15 seconds
+    }, 15000);
 
     return () => window.clearInterval(interval);
   }, [session?.paused]);
 
-  const voteCounts = useMemo(() => {
-    const counts = new Map<string, number>();
-    votes.forEach((vote) => {
-      counts.set(vote.answerId, (counts.get(vote.answerId) ?? 0) + 1);
-    });
-    return counts;
-  }, [votes]);
+  const teamLookup = useTeamLookup(teams);
+  const inviteLink = useInviteLink(session);
 
-  const teamLookup = useMemo(() => {
-    const map = new Map<string, string>();
-    teams.forEach((team) => {
-      map.set(team.id, team.teamName);
-    });
-    return map;
-  }, [teams]);
+  // Use shared active group data hook
+  const { activeGroupAnswers } = useActiveGroupData({ answers, session, activeGroup });
 
-  const inviteLink = useMemo(() => {
-    if (!session?.code) return "";
-    const origin = typeof window !== "undefined" ? window.location.origin : "";
-    if (!origin) return "";
-    return `${origin}/play?code=${session.code}`;
-  }, [session?.code]);
+  // Use shared vote calculations hook
+  const {
+    voteSummaryActive,
+    activeGroupWinnerIds,
+  } = useVoteCalculations({
+    session,
+    now,
+    activeGroup,
+    activeGroupAnswers,
+    voteCounts,
+  });
 
-  const currentRound = session
-    ? (session.rounds[session.roundIndex] ?? null)
-    : null;
-  const roundGroups = useMemo(() => currentRound?.groups ?? [], [currentRound]);
-  const totalGroups = roundGroups.length;
-  const activeGroupIndex =
-    session && session.status === "vote" && totalGroups
-      ? Math.min(totalGroups - 1, Math.max(0, session.voteGroupIndex ?? 0))
-      : 0;
-  const activeGroup =
-    session && session.status === "vote" && totalGroups
-      ? (roundGroups[activeGroupIndex] ?? null)
-      : null;
+  // Use shared phase timer hook
+  const { totalSeconds } = usePhaseTimer({ session });
 
-  const answersByGroup = useMemo(() => {
-    const map = new Map<string, Answer[]>();
-    answers.forEach((answer) => {
-      const list = map.get(answer.groupId) ?? [];
-      list.push(answer);
-      map.set(answer.groupId, list);
-    });
-    return map;
-  }, [answers]);
+  // Use gameState roundSummaries with shared transformation
+  const transformedRoundSummaries = transformRoundSummariesForUI(
+    gameState.roundSummaries,
+    roundGroups,
+    teams
+  );
 
-  const activeGroupAnswers = useMemo(() => {
-    if (session?.status === "vote" && activeGroup) {
-      return answers.filter((answer) => answer.groupId === activeGroup.id);
-    }
-    return answers;
-  }, [answers, session?.status, activeGroup]);
-
-  const voteSummaryActive = useMemo(() => {
-    if (session?.status !== "vote" || !session?.endsAt) return false;
-    const endsAtTime = new Date(session.endsAt).getTime();
-    return now >= endsAtTime;
-  }, [session?.status, session?.endsAt, now]);
-
-  const activeGroupWinnerIds = useMemo(() => {
-    if (!activeGroup) return new Set<string>();
-    const winners = new Set<string>();
-    let maxVotes = 0;
-    activeGroupAnswers.forEach((answer) => {
-      const votesForAnswer = voteCounts.get(answer.id) ?? 0;
-      if (votesForAnswer > maxVotes) {
-        maxVotes = votesForAnswer;
-        winners.clear();
-        if (votesForAnswer > 0) {
-          winners.add(answer.id);
-        }
-      } else if (votesForAnswer === maxVotes && votesForAnswer > 0) {
-        winners.add(answer.id);
-      }
-    });
-    return winners;
-  }, [activeGroup, activeGroupAnswers, voteCounts]);
-
-  const roundSummaries = useMemo(() => {
-    return roundGroups.map((group, index) => {
-      const groupAnswers = answersByGroup.get(group.id) ?? [];
-      const sorted = [...groupAnswers].sort(
-        (a, b) => (voteCounts.get(b.id) ?? 0) - (voteCounts.get(a.id) ?? 0),
-      );
-      const bestVotes = sorted.length ? (voteCounts.get(sorted[0].id) ?? 0) : 0;
-      const winners =
-        bestVotes > 0
-          ? sorted.filter(
-              (answer) => (voteCounts.get(answer.id) ?? 0) === bestVotes,
-            )
-          : [];
-      return {
-        group,
-        index,
-        answers: sorted,
-        winners,
-      };
-    });
-  }, [roundGroups, answersByGroup, voteCounts]);
-
-  const timeRemaining = useMemo(() => {
-    if (!session?.endsAt) return 0;
-    const remaining = Math.max(0, new Date(session.endsAt).getTime() - Date.now());
-    return Math.ceil(remaining / 1000); // seconds
-  }, [session?.endsAt, now]);
+  const timeRemaining = gameState.timeRemaining ? Math.ceil(gameState.timeRemaining / 1000) : 0;
 
   const presenterHeading = useMemo(() => {
     if (!session) return "";
@@ -226,13 +157,13 @@ export function PresenterPage() {
         return (
           activeGroup?.prompt ??
           roundGroups[activeGroupIndex]?.prompt ??
-          prompts[session.roundIndex % prompts.length]
+          classicPrompts[session.roundIndex % classicPrompts.length]
         );
       case "results":
         return "Round results";
       default:
         return (
-          roundGroups[0]?.prompt ?? prompts[session.roundIndex % prompts.length]
+          roundGroups[0]?.prompt ?? classicPrompts[session.roundIndex % classicPrompts.length]
         );
     }
   }, [
@@ -256,23 +187,11 @@ export function PresenterPage() {
     return "";
   }, [session, totalGroups, activeGroupIndex]);
 
-  const leaderboard = useMemo(() => {
-    return teams
-      .slice()
-      .sort((a, b) => b.score - a.score)
-      .map((team, index) => ({ ...team, rank: index + 1 }));
-  }, [teams]);
-
-  const totalSeconds = useMemo(() => {
-    if (!session) return 30;
-    if (session.status === "vote") {
-      return session.settings.voteSecs ?? 90;
-    }
-    if (session.status === "results") {
-      return 12;
-    }
-    return session.settings.answerSecs ?? 90;
-  }, [session]);
+  // Use gameState.leaderboard and merge with full team data for compatibility
+  const leaderboard = gameState.leaderboard.map(entry => {
+    const team = teams.find(t => t.id === entry.teamId);
+    return team ? { ...team, rank: entry.rank } : null;
+  }).filter(Boolean) as (Team & { rank: number })[];
 
   if (!hasSnapshot) {
     return (
@@ -349,7 +268,7 @@ export function PresenterPage() {
             {statusCard}
             <ResultsPhase
               leaderboard={leaderboard}
-              roundSummaries={roundSummaries}
+              roundSummaries={transformedRoundSummaries}
               voteCounts={voteCounts}
             />
           </>

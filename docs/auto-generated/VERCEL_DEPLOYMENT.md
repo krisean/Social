@@ -23,8 +23,8 @@ This monorepo contains multiple Vercel projects:
 
 ### **Optional Standalone Apps**
 
-4. **vibox-247** - VIBox 24/7 Jukebox (if deployed separately)
-   - Deploy from: `apps/vibox-247/`
+4. **vibox** - VIBox 24/7 Jukebox (if deployed separately)
+   - Deploy from: `apps/vibox/`
    - Domain: `vibox.playnow.social`
 
 5. **topcomment-247** - Deprecated (functionality moved to web app)
@@ -92,7 +92,7 @@ After deployment, configure custom domains:
 2. **pub.playnow.social** → apps/web (pub walls - subdomain routing)
 3. **events.playnow.social** → apps/event-platform
 4. **dashboard.playnow.social** → apps/dashboard
-5. **vibox.playnow.social** → apps/vibox-247 (optional)
+5. **vibox.playnow.social** → apps/vibox (optional)
 
 ## Post-Deployment Checklist
 

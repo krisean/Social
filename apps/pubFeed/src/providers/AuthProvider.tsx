@@ -26,7 +26,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
         // First check if anonymous user already exists for this auth user
         try {
           const fetchData = await supabaseFetch(
-            `/rest/v1/feed_users?auth_user_id=eq.${authUser.id}`
+            `/rest/v1/users?auth_user_id=eq.${authUser.id}`
           );
           const existingUser = fetchData[0];
 
@@ -38,7 +38,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
               if (now > expiresAt) {
                 // User has expired - clean up and create new one
-                await supabaseDelete(`/rest/v1/feed_users?id=eq.${existingUser.id}`);
+                await supabaseDelete(`/rest/v1/users?id=eq.${existingUser.id}`);
               } else {
                 // User still valid - return existing user
                 return {
@@ -65,7 +65,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
         const expiresAt = new Date();
         expiresAt.setHours(expiresAt.getHours() + ANONYMOUS_LIFESPAN_HOURS);
         
-        const data = await supabasePost('/rest/v1/feed_users', {
+        const data = await supabasePost('/rest/v1/users', {
           auth_user_id: authUser.id, // Use actual auth_user_id for anonymous users
           username,
           is_anonymous: true,
@@ -90,7 +90,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
       // For authenticated users, check if feed_user exists by auth_user_id
       try {
         const fetchData = await supabaseFetch(
-          `/rest/v1/feed_users?auth_user_id=eq.${authUser.id}`
+          `/rest/v1/users?auth_user_id=eq.${authUser.id}`
         );
         const existingUser = fetchData[0];
         
@@ -102,7 +102,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
             if (now > expiresAt) {
               // User has expired - clean up and return null to create new anonymous user
-              await supabaseDelete(`/rest/v1/feed_users?id=eq.${existingUser.id}`);
+              await supabaseDelete(`/rest/v1/users?id=eq.${existingUser.id}`);
               return null;
             }
           }
@@ -123,10 +123,10 @@ export function AuthProvider({ children }: PropsWithChildren) {
         // User doesn't exist yet, will create below
       }
 
-      // Create new feed_user record for authenticated user
+      // Create new user record for authenticated user
       const username = authUser.email?.split('@')[0] || generateAnonymousUsername();
       
-      const createData = await supabasePost('/rest/v1/feed_users', {
+      const createData = await supabasePost('/rest/v1/users', {
         auth_user_id: authUser.id,
         username,
         is_anonymous: false,
@@ -264,7 +264,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
       if (data.user) {
         // Create feed_user with custom username
-        const responseData = await supabasePost('/rest/v1/feed_users', {
+        const responseData = await supabasePost('/rest/v1/users', {
           auth_user_id: data.user.id,
           username,
           is_anonymous: false,

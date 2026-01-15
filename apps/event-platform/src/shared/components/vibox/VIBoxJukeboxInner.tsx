@@ -1,0 +1,1561 @@
+import { useState, useRef, useEffect, useCallback } from "react";
+import { Modal } from "@social/ui";
+import { useVIBoxTheme } from "./ThemeProvider";
+import { supabase } from "../../../supabase/client";
+import type { ViboxQueueItem, ViboxQueueInsert, Track, TrackMetadata, VibeHierarchy } from "../../types/vibox";
+import type { RealtimeChannel } from "@supabase/supabase-js";
+import { viboxApi } from "../../api/vibox";
+import {
+  PlayIcon,
+  PauseIcon,
+  MusicIcon,
+  ChevronRightIcon,
+  ChevronUpIcon,
+  ChevronDownIcon,
+  TrashIcon,
+  ListIcon,
+  SparklesIcon
+} from "../icons/VIBoxIcons";
+import { getDeviceType } from "../../utils/device";
+import { getSessionId } from "../../utils/session";
+import { log } from "../../utils/logger";
+import { getNextTrackByVibe, getPreviousTrackByVibe, getNextTrackLinear, getPreviousTrackLinear } from "../../utils/vibeNavigation";
+import { handleQueueError, handleQueueSuccess, handleQueueInfo } from "../../utils/errorHandlers";
+
+
+interface VIBoxJukeboxProps {
+  isOpen: boolean;
+  onClose: () => void;
+  toast: (options: { title: string; variant: "success" | "error" | "info" }) => void;
+  mode?: "host" | "team";
+  allowUploads?: boolean;
+}
+
+export function VIBoxJukeboxInner({ 
+  isOpen, 
+  onClose, 
+  toast, 
+  mode = "host",
+  allowUploads = true 
+}: VIBoxJukeboxProps) {
+  const { isDark } = useVIBoxTheme();
+  const [tracks, setTracks] = useState<Track[]>([]);
+  const [currentTrack, setCurrentTrack] = useState<Track | null>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [volume, setVolume] = useState(0.7);
+  const [vibeHierarchy, setVibeHierarchy] = useState<VibeHierarchy | null>(null);
+  const [trackMetadata, setTrackMetadata] = useState<Map<string, TrackMetadata>>(new Map());
+  const [expandedPrimaryVibes, setExpandedPrimaryVibes] = useState<Set<string>>(new Set());
+  const [expandedSecondaryVibes, setExpandedSecondaryVibes] = useState<Set<string>>(new Set());
+  const [selectedPrimaryVibe, setSelectedPrimaryVibe] = useState<string | null>(null);
+  const [expandedPlayer, setExpandedPlayer] = useState(false);
+  const [viewMode, setViewMode] = useState<'vibes' | 'all'>('vibes');
+  const [queue, setQueue] = useState<ViboxQueueItem[]>([]);
+  const [isQueueLoading, setIsQueueLoading] = useState(false);
+  const [windowWidth, setWindowWidth] = useState(0);
+  const [bottomPlayerHeight, setBottomPlayerHeight] = useState(0);
+  const bottomPlayerExtraLeeway = 64;
+  const audioRef = useRef<HTMLAudioElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const bottomPlayerRef = useRef<HTMLDivElement>(null);
+  const queueChannelRef = useRef<RealtimeChannel | null>(null);
+  const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+
+  
+  // Window resize effect for responsive layout
+  useEffect(() => {
+    const handleResize = () => {
+      setWindowWidth(window.innerWidth);
+    };
+    
+    // Set initial width
+    setWindowWidth(window.innerWidth);
+    
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // iOS-safe body scroll locking - only lock on non-iOS devices
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent);
+
+    if (!isIOS) {
+      document.body.style.overflow = 'hidden';
+      return () => {
+        document.body.style.overflow = '';
+      };
+    }
+  }, [isOpen]);
+
+  useEffect(() => {
+    const el = bottomPlayerRef.current;
+    if (!el) return;
+
+    const update = () => {
+      setBottomPlayerHeight(el.offsetHeight);
+    };
+
+    update();
+
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+
+    return () => {
+      ro.disconnect();
+    };
+  }, [expandedPlayer, isOpen]);
+
+  // Pure realtime approach - no polling
+  useEffect(() => {
+    console.log('🔍 VIBox Debug - Setting up pure realtime');
+    
+    const fetchQueue = () => {
+      console.log('🔍 VIBox Debug - Fetching queue');
+      viboxApi.getQueue().then((response) => {
+        if (response.success && response.data) {
+          setQueue(response.data.queue);
+          console.log('🔍 VIBox Debug - Queue fetched:', response.data.count, 'items');
+        }
+      });
+    };
+
+    // Initial fetch
+    fetchQueue();
+    
+    // Setup realtime subscription
+    const channel = supabase
+      .channel('vibox-queue')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'vibox_queue',
+        },
+        (payload) => {
+          console.log('🔍 VIBox Debug - Realtime event received:', payload.eventType);
+          // Immediate fetch for realtime events
+          fetchQueue();
+        }
+      )
+      .subscribe((status, err) => {
+        console.log('🔍 VIBox Debug - Realtime status:', status, err?.message);
+        
+        if (status === 'SUBSCRIBED') {
+          console.log('✅ VIBox Debug - Realtime connected successfully');
+        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          console.error('❌ VIBox Debug - Realtime failed:', status, err?.message);
+        }
+      });
+
+    return () => {
+      console.log('🔍 VIBox Debug - Cleaning up realtime subscription');
+      channel.unsubscribe();
+    };
+  }, []);
+
+  // Load pre-loaded tracks and metadata from public directory on mount
+  useEffect(() => {
+    const loadPreloadedTracks = async () => {
+      try {
+        // Load track metadata first
+        const metadataResponse = await fetch('/vibox/tracks-metadata.json');
+        let metadataMap = new Map<string, TrackMetadata>();
+        
+        if (metadataResponse.ok) {
+          const metadata = await metadataResponse.json();
+          metadata.tracks.forEach((track: TrackMetadata) => {
+            metadataMap.set(track.file, track);
+          });
+          setTrackMetadata(metadataMap);
+          log.info('Loaded metadata', { trackCount: metadataMap.size });
+        }
+
+        // Load hierarchical vibe structure
+        const vibeResponse = await fetch('/vibox/vibes-hierarchical.json');
+        if (vibeResponse.ok) {
+          const vibeData = await vibeResponse.json();
+          setVibeHierarchy(vibeData);
+          log.info('Loaded vibe hierarchy', { vibeKeys: Object.keys(vibeData.vibes) });
+        }
+
+        // Try to fetch the track list from a JSON file
+        const response = await fetch('/vibox/tracks.json');
+        if (response.ok) {
+          const audioFiles = await response.json();
+          log.info('Loading audio files', { count: audioFiles.length });
+          
+          const preloadedTracks: Track[] = audioFiles.map((filename: string) => {
+            const fileName = filename.replace(/\.[^/.]+$/, "");
+            const metadata = metadataMap.get(filename);
+
+            return {
+              id: `preloaded-${filename}`,
+              title: fileName,
+              artist: metadata?.artist || 'Söcial',
+              duration: 0,
+              url: `/vibox/${filename}`,
+              isPreloaded: true,
+              genre: metadata?.genre,
+              primaryVibe: metadata?.primaryVibe,
+              secondaryVibe: metadata?.secondaryVibe
+            };
+          });
+
+          log.info('Created track objects', { count: preloadedTracks.length });
+          log.debug('Sample track', { track: preloadedTracks[0] });
+
+          if (preloadedTracks.length > 0) {
+            setTracks(prev => [...preloadedTracks, ...prev]);
+            toast({ 
+              title: `Loaded ${preloadedTracks.length} tracks with vibe metadata`, 
+              variant: "info" 
+            });
+          }
+        }
+      } catch (error) {
+        log.error('Error loading tracks', { error });
+      }
+    };
+
+    if (isOpen && tracks.length === 0) {
+      loadPreloadedTracks();
+    }
+  }, [isOpen, tracks.length, toast]);
+
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    const updateTime = () => setCurrentTime(audio.currentTime);
+    const handleEnded = () => {
+      setIsPlaying(false);
+      // If there are songs in the queue, play the next one from queue
+      if (queue.length > 0) {
+        playNextInQueue();
+      } else {
+        // Otherwise, use vibe-based navigation
+        playNext();
+      }
+    };
+
+    audio.addEventListener('timeupdate', updateTime);
+    audio.addEventListener('ended', handleEnded);
+
+    return () => {
+      audio.removeEventListener('timeupdate', updateTime);
+      audio.removeEventListener('ended', handleEnded);
+    };
+  }, [currentTrack, queue]);
+
+  useEffect(() => {
+    if (audioRef.current) {
+      audioRef.current.volume = volume;
+    }
+  }, [volume]);
+
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (!allowUploads) return;
+    
+    const files = event.target.files;
+    if (!files) return;
+    processFiles(files);
+  };
+
+  const handleDrop = (event: React.DragEvent<HTMLDivElement>) => {
+    if (!allowUploads) return;
+    
+    event.preventDefault();
+    const files = event.dataTransfer.files;
+    if (files.length > 0) {
+      processFiles(files);
+    }
+  };
+
+  const handleDragOver = (event: React.DragEvent<HTMLDivElement>) => {
+    if (!allowUploads) return;
+    
+    event.preventDefault();
+  };
+
+  const processFiles = (files: FileList) => {
+    const audioFiles = Array.from(files).filter(file => 
+      file.type.startsWith('audio/') || file.name.toLowerCase().endsWith('.mp3')
+    );
+
+    if (audioFiles.length === 0) {
+      toast({ title: 'No audio files found', variant: 'error' });
+      return;
+    }
+
+    const newTracks: Track[] = audioFiles.map((file, index) => {
+      const fileName = file.name.replace(/\.[^/.]+$/, ""); // Remove extension
+      const parts = fileName.split(' - ');
+      const title = parts[1] || parts[0] || fileName;
+      const artist = parts[1] ? parts[0] : 'Unknown Artist';
+
+      return {
+        id: `track-${Date.now()}-${index}`,
+        title: title.trim(),
+        artist: artist.trim(),
+        duration: 0, // Will be updated when loaded
+        file,
+        url: URL.createObjectURL(file),
+        isPreloaded: false
+      };
+    });
+
+    setTracks(prev => [...prev, ...newTracks]);
+    toast({ title: `Added ${newTracks.length} track${newTracks.length !== 1 ? 's' : ''}`, variant: "success" });
+  };
+
+  // Progress bar drag handling
+  const handleProgressSeek = useCallback((clientX: number, targetElement: HTMLElement) => {
+    if (!audioRef.current || !currentTrack) return;
+    
+    const rect = targetElement.getBoundingClientRect();
+    const clickX = clientX - rect.left;
+    const width = rect.width;
+    const percentage = Math.max(0, Math.min(1, clickX / width));
+    const newTime = percentage * (audioRef.current.duration || 0);
+    audioRef.current.currentTime = newTime;
+    setCurrentTime(newTime);
+  }, [audioRef, currentTrack]);
+
+  const handleProgressMouseDown = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!audioRef.current || !currentTrack) return;
+    
+    // Initial seek
+    handleProgressSeek(e.clientX, e.currentTarget);
+    
+    // Setup drag listeners
+    const handleMouseMove = (moveEvent: MouseEvent) => {
+      handleProgressSeek(moveEvent.clientX, e.currentTarget);
+    };
+    
+    const handleMouseUp = () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+    
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+  }, [handleProgressSeek]);
+
+  const handleProgressTouchStart = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!audioRef.current || !currentTrack) return;
+    
+    // Initial seek
+    handleProgressSeek(e.touches[0].clientX, e.currentTarget);
+    
+    // Setup drag listeners
+    const handleTouchMove = (moveEvent: TouchEvent) => {
+      handleProgressSeek(moveEvent.touches[0].clientX, e.currentTarget);
+    };
+    
+    const handleTouchEnd = () => {
+      document.removeEventListener('touchmove', handleTouchMove);
+      document.removeEventListener('touchend', handleTouchEnd);
+    };
+    
+    document.addEventListener('touchmove', handleTouchMove);
+    document.addEventListener('touchend', handleTouchEnd);
+  }, [handleProgressSeek]);
+
+  const togglePrimaryVibe = useCallback((primaryVibe: string) => {
+    setSelectedPrimaryVibe(prev => 
+      prev === primaryVibe ? null : primaryVibe
+    );
+    // Also expand the vibe when selected
+    setExpandedPrimaryVibes(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(primaryVibe)) {
+        newSet.delete(primaryVibe);
+      } else {
+        newSet.add(primaryVibe);
+      }
+      return newSet;
+    });
+  }, []);
+
+  const addToQueue = async (track: Track) => {
+    try {
+      const queueInsert: ViboxQueueInsert = {
+        track_id: track.id,
+        track_title: track.title,
+        track_artist: track.artist,
+        track_url: track.url,
+        track_genre: track.genre,
+        track_duration: track.duration,
+        primary_vibe: track.primaryVibe,
+        secondary_vibe: track.secondaryVibe,
+        added_by: mode === "host" ? "Host" : "Patron",
+        device_type: getDeviceType(),
+        user_agent: navigator.userAgent,
+        session_id: getSessionId(),
+      };
+
+      const response = await viboxApi.addToQueue(queueInsert);
+
+      if (!response.success) {
+        throw new Error(response.error || 'Failed to add to queue');
+      }
+
+      handleQueueSuccess(response.message || `Added "${track.title}" to queue`, toast);
+    } catch (error) {
+      handleQueueError(error, 'add to queue', toast);
+    }
+  };
+
+  const removeFromQueue = async (queueItemId: string) => {
+    try {
+      const response = await viboxApi.removeFromQueue(queueItemId);
+      
+      if (!response.success) {
+        throw new Error(response.error || 'Failed to remove from queue');
+      }
+    } catch (error) {
+      handleQueueError(error, 'remove from queue', toast);
+    }
+  };
+
+  const clearQueue = async () => {
+    try {
+      const response = await viboxApi.clearQueue();
+      
+      if (!response.success) {
+        throw new Error(response.error || 'Failed to clear queue');
+      }
+
+      handleQueueInfo(response.message || "Queue cleared", toast);
+    } catch (error) {
+      handleQueueError(error, 'clear queue', toast);
+    }
+  };
+
+  const playNextInQueue = async () => {
+    if (queue.length > 0) {
+      const nextItem = queue[0];
+      
+      // Create a Track object from the queue item
+      const track: Track = {
+        id: nextItem.track_id,
+        title: nextItem.track_title,
+        artist: nextItem.track_artist,
+        url: nextItem.track_url,
+        duration: nextItem.track_duration || 0,
+        genre: nextItem.track_genre || undefined,
+        primaryVibe: nextItem.primary_vibe || undefined,
+        secondaryVibe: nextItem.secondary_vibe || undefined,
+        isPreloaded: true,
+      };
+      
+      playTrack(track);
+      
+      // Mark as played instead of removing
+      try {
+        const response = await viboxApi.markPlayed(nextItem.id);
+        
+        if (!response.success) {
+          handleQueueError(response.error, 'mark track as played', toast);
+        }
+      } catch (error) {
+        handleQueueError(error, 'mark track as played', toast);
+      }
+    }
+  };
+
+  const playTrack = (track: Track) => {
+    if (audioRef.current && track.url) {
+      audioRef.current.src = track.url;
+      audioRef.current.play();
+      setCurrentTrack(track);
+      setIsPlaying(true);
+    }
+  };
+
+  // Disable body scrolling when modal is open
+  useEffect(() => {
+    if (isOpen) {
+      // Save original body style
+      const originalStyle = window.getComputedStyle(document.body);
+      const originalOverflow = document.body.style.overflow;
+      
+      // Disable scrolling
+      document.body.style.overflow = 'hidden';
+      
+      // Cleanup function to restore scrolling when modal closes
+      return () => {
+        document.body.style.overflow = originalOverflow;
+      };
+    }
+  }, [isOpen]);
+
+  // Helper function to check if vibe contains current track
+  const isVibeActive = (primaryVibe: string, secondaryVibe?: string) => {
+    if (!currentTrack) return false;
+    
+    if (secondaryVibe) {
+      return currentTrack.primaryVibe === primaryVibe && currentTrack.secondaryVibe === secondaryVibe;
+    }
+    
+    return currentTrack.primaryVibe === primaryVibe;
+  };
+
+  const togglePlayPause = () => {
+    if (!audioRef.current || !currentTrack) return;
+
+    if (isPlaying) {
+      audioRef.current.pause();
+      setIsPlaying(false);
+    } else {
+      audioRef.current.play();
+      setIsPlaying(true);
+    }
+  };
+
+  const playNext = () => {
+    if (!currentTrack || tracks.length === 0) return;
+    
+    // If we're in vibe mode, follow the vibe order
+    if (viewMode === 'vibes' && vibeHierarchy) {
+      const nextTrack = getNextTrackByVibe(currentTrack, tracks, vibeHierarchy);
+      if (nextTrack) {
+        playTrack(nextTrack);
+        return;
+      }
+    }
+    
+    // Fallback to linear behavior
+    const nextTrack = getNextTrackLinear(currentTrack, tracks);
+    playTrack(nextTrack);
+  };
+
+  
+  const playPrevious = () => {
+    if (!currentTrack || tracks.length === 0) return;
+    
+    // If we're in vibe mode, follow the vibe order in reverse
+    if (viewMode === 'vibes' && vibeHierarchy) {
+      const prevTrack = getPreviousTrackByVibe(currentTrack, tracks, vibeHierarchy);
+      if (prevTrack) {
+        playTrack(prevTrack);
+        return;
+      }
+    }
+    
+    // Fallback to linear behavior
+    const prevTrack = getPreviousTrackLinear(currentTrack, tracks);
+    playTrack(prevTrack);
+  };
+
+  const removeTrack = (trackId: string) => {
+    if (!allowUploads) return;
+    
+    const track = tracks.find(t => t.id === trackId);
+    
+    // Clean up object URL for uploaded files
+    if (track?.url && !track.isPreloaded && track.url.startsWith('blob:')) {
+      URL.revokeObjectURL(track.url);
+    }
+    
+    setTracks(prev => prev.filter(t => t.id !== trackId));
+    if (currentTrack?.id === trackId) {
+      setCurrentTrack(null);
+      setIsPlaying(false);
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.src = '';
+      }
+    }
+  };
+
+  const clearAll = () => {
+    if (!allowUploads) return;
+    
+    // Clean up object URLs for uploaded files
+    tracks.forEach(track => {
+      if (track.url && !track.isPreloaded && track.url.startsWith('blob:')) {
+        URL.revokeObjectURL(track.url);
+      }
+    });
+    
+    setTracks(tracks.filter(t => t.isPreloaded));
+    setCurrentTrack(null);
+    setIsPlaying(false);
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.src = '';
+    }
+  };
+
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  const getModalTitle = () => {
+    return mode === "team" ? "🎵 VIBox Jukebox - Team View" : "🎵 VIBox Jukebox";
+  };
+
+  return (
+    <>
+      <audio ref={audioRef} />
+      
+      <Modal
+        open={isOpen}
+        onClose={onClose}
+        title=""
+        isDark={isDark}
+      >
+        <style>{`
+          .flex.items-start.justify-between.gap-4 {
+            display: none !important;
+          }
+          .modal-header {
+            display: none !important;
+          }
+          .modal-title {
+            display: none !important;
+          }
+          .modal-body {
+            padding: 0 !important;
+            margin: 0 !important;
+            margin-top: 0 !important;
+          }
+          /* Desktop ONLY modal styling */
+          @media (min-width: 769px) {
+            .ReactModal__Content {
+              position: fixed !important;
+              top: 50% !important;
+              left: 50% !important;
+              transform: translate(-50%, -50%) !important;
+              padding: 1rem !important;
+              max-height: 90vh !important;
+              overflow: hidden !important;
+              border-radius: 1rem !important;
+              margin: 0 !important;
+              inset: auto !important;
+              right: auto !important;
+              bottom: auto !important;
+            }
+          }
+          
+          /* Mobile ONLY modal styling - iOS sheet approach */
+          @media screen and (max-width: 768px) {
+            .ReactModal__Overlay {
+              position: fixed !important;
+              inset: 0 !important;
+              overflow-y: auto !important;
+              -webkit-overflow-scrolling: touch !important;
+            }
+            
+            .ReactModal__Content {
+              position: relative !important;
+              min-height: 100dvh !important;
+              height: auto !important;
+              max-height: none !important;
+              transform: none !important;
+              border-radius: 0 !important;
+              padding: 0 !important;
+              margin: 0 !important;
+              top: auto !important;
+              left: auto !important;
+              right: auto !important;
+              bottom: auto !important;
+            }
+            
+            /* Make bottom player sticky instead of absolute */
+            .absolute.bottom-0 {
+              position: sticky !important;
+              bottom: 0 !important;
+              top: auto !important;
+              left: 0 !important;
+              right: 0 !important;
+            }
+          }
+          
+          /* iOS-specific: Use relative positioning, not fixed */
+          @supports (-webkit-touch-callout: none) {
+            @media screen and (max-width: 768px) {
+              .ReactModal__Content {
+                position: relative !important;
+                min-height: 100dvh !important;
+              }
+            }
+          }
+          .modal-content {
+            padding: 0 !important;
+            margin: 0 !important;
+          }
+          div[class*="modal-content"] {
+            padding: 0 !important;
+            margin: 0 !important;
+          }
+          div[class*="modal-content-dark"] {
+            padding: 0 !important;
+            margin: 0 !important;
+          }
+          .modal-content-dark {
+            padding: 0 !important;
+            margin: 0 !important;
+            background: transparent !important;
+            border-radius: 1rem !important;
+          }
+          .modal-content {
+            background: transparent !important;
+            border-radius: 1rem !important;
+          }
+          .modal-body {
+            background: transparent !important;
+            border-radius: 1rem !important;
+          }
+          .modal-wrapper {
+            padding: 0 !important;
+            margin: 0 !important;
+            border-radius: 1rem !important;
+          }
+          .modal-overlay {
+            padding: 0 !important;
+            margin: 0 !important;
+            border-radius: 1rem !important;
+          }
+          .modal-content {
+            background: var(--color-player-background) !important;
+          }
+          .modal-body {
+            background: var(--color-player-background) !important;
+          }
+          .space-y-2 {
+            margin-bottom: 0 !important;
+          }
+          .space-y-2 > *:last-child {
+            margin-bottom: 0 !important;
+          }
+          .space-y-1 > *:last-child {
+            margin-bottom: 0 !important;
+          }
+          .space-y-2 > * {
+            margin-bottom: 0 !important;
+          }
+          .space-y-1 > * {
+            margin-bottom: 0 !important;
+          }
+          .space-y-2 {
+            margin-bottom: 0 !important;
+          }
+          .space-y-1 {
+            margin-bottom: 0 !important;
+          }
+          .max-h-\[45vh\] {
+            margin-bottom: 0 !important;
+          }
+          .flex-1 {
+            margin-bottom: 0 !important;
+          }
+          .overflow-y-auto {
+            margin-bottom: 0 !important;
+          }
+          .mb-8 {
+            margin-bottom: 0 !important;
+          }
+          .mb-4 {
+            margin-bottom: 0 !important;
+          }
+          .h-full {
+            padding: 0 !important;
+            margin: 0 !important;
+          }
+          
+          /* iOS Safari viewport fix */
+          @supports (-webkit-touch-callout: none) {
+            .modal-content {
+              position: fixed;
+              top: 0;
+              left: 0;
+              right: 0;
+              bottom: 0;
+              width: 100vw;
+              height: 100vh;
+              -webkit-overflow-scrolling: touch;
+              overflow-scrolling: touch;
+              padding-bottom: 0 !important;
+              margin-bottom: 0 !important;
+            }
+            .modal-body {
+              -webkit-overflow-scrolling: touch;
+              overflow-scrolling: touch;
+              padding-bottom: 0 !important;
+              margin-bottom: 0 !important;
+            }
+            /* Target the main phone container */
+            .min-h-\[700px\] {
+              margin-bottom: 0 !important;
+              padding-bottom: 0 !important;
+            }
+            .bg-gradient-to-br {
+              margin-bottom: 0 !important;
+              padding-bottom: 0 !important;
+            }
+            .overflow-hidden {
+              margin-bottom: 0 !important;
+              padding-bottom: 0 !important;
+            }
+            .relative {
+              margin-bottom: 0 !important;
+              padding-bottom: 0 !important;
+            }
+            .rounded-lg {
+              margin-bottom: 0 !important;
+              padding-bottom: 0 !important;
+            }
+            /* Target the specific track list container */
+            .mb-8 {
+              margin-bottom: 0 !important;
+            }
+            .mb-4 {
+              margin-bottom: 0 !important;
+            }
+            .flex-1.overflow-y-auto {
+              margin-bottom: 0 !important;
+              padding-bottom: 0 !important;
+            }
+            /* Remove all bottom margins from track list containers */
+            .space-y-2 {
+              margin-bottom: 0 !important;
+            }
+            .space-y-1 {
+              margin-bottom: 0 !important;
+            }
+            .max-h-\[45vh\] {
+              margin-bottom: 0 !important;
+            }
+            /* Remove any remaining bottom spacing */
+            [class*="mb-"] {
+              margin-bottom: 0 !important;
+            }
+            [class*="space-y"] {
+              margin-bottom: 0 !important;
+            }
+            /* Fix border spacing issue */
+            .border-t {
+              margin-top: 0 !important;
+              padding-top: 0 !important;
+            }
+          }
+                    /* Remove modal card bottom spacing */
+          .ReactModal__Content {
+            padding-bottom: 0 !important;
+            margin-bottom: 0 !important;
+          }
+          .ReactModal__Overlay {
+            padding-bottom: 0 !important;
+            margin-bottom: 0 !important;
+          }
+          /* Remove bottom spacing from main containers */
+          .h-full.min-h-\[700px\] {
+            padding-bottom: 0 !important;
+            margin-bottom: 0 !important;
+          }
+          .h-full.flex.flex-col {
+            padding-bottom: 0 !important;
+            margin-bottom: 0 !important;
+          }
+          div[class*="h-full"] {
+            padding: 0 !important;
+            margin: 0 !important;
+          }
+          div[class*="min-h-"] {
+            padding: 0 !important;
+            margin: 0 !important;
+          }
+          /* Expanded Player Slide-up Animation */
+          .expanded-player {
+            transform: translateY(100vh);
+            transition: transform 0.3s ease-out;
+            opacity: 0;
+            pointer-events: none;
+            height: 100% !important;
+            min-height: 100% !important;
+          }
+          .expanded-player.show {
+            transform: translateY(0);
+            opacity: 1;
+            pointer-events: auto;
+          }
+          
+          /* Force consistent heights */
+          .px-4.flex.flex-col.gap-2 {
+            max-height: 500px !important;
+            height: 500px !important;
+          }
+          /* Force list heights */
+          .space-y-2.max-h-\[800px\] {
+            max-height: 200px !important;
+            height: 200px !important;
+            padding-bottom: 0 !important;
+          }
+          .space-y-2.max-h-\[600px\] {
+            max-height: 200px !important;
+            height: 200px !important;
+            padding-bottom: 0 !important;
+          }
+          /* Add space below last element */
+          .space-y-2.max-h-\[800px\] .space-y-1:last-child {
+            margin-bottom: 200px !important;
+          }
+          .space-y-2.max-h-\[600px\] .space-y-1:last-child {
+            margin-bottom: 200px !important;
+          }
+          .space-y-2.max-h-\[800px\] button:last-child {
+            margin-bottom: 200px !important;
+          }
+          .space-y-2.max-h-\[600px\] button:last-child {
+            margin-bottom: 200px !important;
+          }
+          /* Add spacer after lists */
+          .space-y-2.max-h-\[800px\]:after {
+            content: '';
+            display: block;
+            height: 200px;
+          }
+          .space-y-2.max-h-\[600px\]:after {
+            content: '';
+            display: block;
+            height: 200px;
+          }
+          .q-umlaut {
+            filter: drop-shadow(0 0 8px var(--color-button-primary));
+          }
+          .svg-glow-primary {
+            filter: drop-shadow(0 0 8px var(--color-button-primary));
+          }
+          .svg-glow-secondary {
+            filter: drop-shadow(0 0 8px var(--color-text-secondary));
+          }
+          /* Vibe selection colors */
+          .vibe-selected-text {
+            color: var(--color-vibox-background-gradient-via);
+          }
+          .vibe-selected-text-alt {
+            color: var(--color-vibox-background-gradient-to);
+          }
+        `}</style>
+        {/* File Input */}
+        {allowUploads && (
+          <input
+            ref={fileInputRef}
+            type="file"
+            multiple
+            accept="audio/mp3,audio/wav,audio/flac,audio/aac"
+            onChange={handleFileUpload}
+            className="hidden"
+          />
+        )}
+
+        {/* Phone Layout */}
+        <div className={`h-[90vh] max-h-[700px] min-h-[500px] md:h-[700px] md:max-h-[700px] md:min-h-[700px] flex flex-col bg-gradient-to-br from-[var(--color-vibox-background-gradient-from)] via-[var(--color-vibox-background-gradient-via)] to-[var(--color-vibox-background-gradient-to)] overflow-hidden relative rounded-2xl`}>
+          {/* Header Bar */}
+          <div className="bg-[var(--color-player-background)]/85 backdrop-blur-xl">
+            <div className="flex items-center justify-between px-6 py-2 text-sm [--tw-text-opacity:1] text-[var(--color-text-primary)]">
+              <div className="w-8"></div>
+              <button
+                onClick={onClose}
+                className="w-6 h-6 flex items-center justify-center [--tw-text-opacity:1] text-[var(--color-text-primary)] opacity-70 hover:opacity-100 transition-opacity"
+                aria-label="Close"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M18 6L6 18M6 6l12 12"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          {/* Header */}
+          <div className="px-4 py-3">
+            <div className="flex items-center justify-between mb-3">
+              <div className="w-8"></div>
+              <h1 className={`font-semibold [--tw-text-opacity:1] text-[var(--color-text-primary)]`}>VIBox Jukebox</h1>
+              <div className="w-8"></div>
+            </div>
+            <div className="flex items-center justify-center gap-2 w-full">
+              {vibeHierarchy && (
+                <div className="flex gap-1 rounded-2xl">
+                  <button
+                    onClick={() => setViewMode('vibes')}
+                    className={`px-2 py-1 text-xs rounded transition-colors flex items-center gap-1 ${
+                      viewMode === 'vibes'
+                        ? '[--tw-text-opacity:1] text-[var(--color-button-primary)]'
+                        : '[--tw-text-opacity:0.8] text-[var(--color-text-secondary)] hover:[--tw-text-opacity:1] text-[var(--color-text-primary)]'
+                    }`}
+                  >
+                    <SparklesIcon className="w-3 h-3" />
+                    <span>Vibes</span>
+                  </button>
+                  <button
+                    onClick={() => setViewMode('all')}
+                    className={`px-2 py-1 text-xs rounded transition-colors flex items-center gap-1 ${
+                      viewMode === 'all'
+                        ? '[--tw-text-opacity:1] text-[var(--color-button-primary)]'
+                        : '[--tw-text-opacity:0.8] text-[var(--color-text-secondary)] hover:[--tw-text-opacity:1] text-[var(--color-text-primary)]'
+                    }`}
+                  >
+                    <ListIcon className="w-3 h-3" />
+                    <span>All</span>
+                  </button>
+                </div>
+              )}
+              {allowUploads && (
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  className="px-2 py-1 text-[var(--color-vibox-text-primary)] text-xs rounded-full hover:bg-[var(--color-vibox-add-button-hover)] transition-colors"
+                >
+                  + Add
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Main Content */}
+          <div className="flex-1 overflow-y-auto min-h-0">
+            <div
+              className="px-4 sm:px-6 max-w-screen-md mx-auto w-full"
+              style={{ paddingBottom: bottomPlayerHeight ? bottomPlayerHeight + bottomPlayerExtraLeeway : undefined }}
+            >
+              <div className="flex flex-col gap-2">
+
+            {/* Track List */}
+            <div>
+              <h3 className="text-lg font-semibold [--tw-text-opacity:1] text-[var(--color-text-primary)] mb-2">Tracks ({tracks.length})</h3>
+              
+              {viewMode === 'vibes' && vibeHierarchy ? (
+                <div className="space-y-2">
+                  {Object.entries(vibeHierarchy.vibes)
+                    .sort((a, b) => b[1].total - a[1].total)
+                    // Hide other primary vibes if one is selected, unless it's the selected one
+                    .filter(([primaryVibe]) => !selectedPrimaryVibe || selectedPrimaryVibe === primaryVibe)
+                    .map(([primaryVibe, data]) => {
+                      const isPrimaryExpanded = expandedPrimaryVibes.has(primaryVibe);
+                      const isSelected = selectedPrimaryVibe === primaryVibe;
+                      
+                      return (
+                        <div key={primaryVibe} className="space-y-1">
+                          {/* Primary Vibe */}
+                          <button
+                            onClick={() => togglePrimaryVibe(primaryVibe)}
+                            className={`w-full flex items-center justify-between p-2 rounded transition-colors ${
+                              isSelected 
+                                ? 'bg-[var(--color-vibox-button-primary)] bg-opacity-20 ring-1 ring-[var(--color-vibox-button-primary)] ring-opacity-50' 
+                                : 'bg-[var(--color-card-background)] bg-opacity-50 hover:bg-opacity-70'
+                            }`}
+                          >
+                            <div className="flex items-center gap-2">
+                              {isPrimaryExpanded ? (
+                                <ChevronDownIcon className={`w-4 h-4 [--tw-text-opacity:0.8] ${
+                                  isSelected ? 'vibe-selected-text' : 'text-[var(--color-text-secondary)]'
+                                }`} />
+                              ) : (
+                                <ChevronRightIcon className="w-4 h-4 [--tw-text-opacity:0.8] text-[var(--color-text-secondary)]" />
+                              )}
+                              <div className="text-left">
+                                <p className={`text-sm font-semibold [--tw-text-opacity:1] ${
+                                  isSelected ? 'vibe-selected-text' : 
+                                  isVibeActive(primaryVibe) ? 'text-[var(--color-button-primary)]' : 
+                                  'text-[var(--color-text-secondary)]'
+                                }`}>
+                                  {primaryVibe}
+                                  {isSelected && (
+                                    <span className="ml-2 text-xs [--tw-text-opacity:0.7] font-normal">(Selected)</span>
+                                  )}
+                                </p>
+                                <p className={`text-xs [--tw-text-opacity:0.6] ${
+                                  isSelected ? 'vibe-selected-text-alt' : 'text-[var(--color-text-secondary)]'
+                                }`}>
+                                  {data.total} tracks
+                                </p>
+                              </div>
+                            </div>
+                          </button>
+
+                          {/* Secondary Vibes */}
+                          {isPrimaryExpanded && (
+                            <div className="ml-6 space-y-1">
+                              {Object.entries(data.secondaryVibes).map(([secondaryVibe, songs]) => {
+                                const isSecondaryExpanded = expandedSecondaryVibes.has(`${primaryVibe}-${secondaryVibe}`);
+                                
+                                return (
+                                  <div key={secondaryVibe} className="space-y-1">
+                                    {/* Secondary Vibe */}
+                                    <button
+                                      onClick={() => {
+                                        const key = `${primaryVibe}-${secondaryVibe}`;
+                                        const newExpanded = new Set(expandedSecondaryVibes);
+                                        if (isSecondaryExpanded) {
+                                          newExpanded.delete(key);
+                                        } else {
+                                          newExpanded.add(key);
+                                        }
+                                        setExpandedSecondaryVibes(newExpanded);
+                                      }}
+                                      className="w-full flex items-center justify-between p-2 rounded bg-[var(--color-card-background)] bg-opacity-50 hover:bg-opacity-70 transition-colors"
+                                    >
+                                      <div className="flex items-center gap-2">
+                                        {isSecondaryExpanded ? (
+                                          <ChevronDownIcon className="w-4 h-4 [--tw-text-opacity:0.8] text-[var(--color-text-secondary)]" />
+                                        ) : (
+                                          <ChevronRightIcon className="w-4 h-4 [--tw-text-opacity:0.8] text-[var(--color-text-secondary)]" />
+                                        )}
+                                        <div className="text-left">
+                                          <p className={`text-sm font-medium [--tw-text-opacity:0.8] ${
+                                            isVibeActive(primaryVibe, secondaryVibe) ? 'text-[var(--color-button-primary)]' : 'text-[var(--color-text-secondary)]'
+                                          }`}>
+                                            {secondaryVibe}
+                                          </p>
+                                          <p className="text-xs [--tw-text-opacity:0.6] text-[var(--color-text-secondary)]">
+                                            {songs.length} tracks
+                                          </p>
+                                        </div>
+                                      </div>
+                                    </button>
+
+                                    {/* Songs */}
+                                    {isSecondaryExpanded && (
+                                      <div className="ml-6 space-y-1">
+                                        {songs.map((song) => {
+                                          const track = tracks.find(t => {
+                                            const urlFilename = t.url.split('/').pop();
+                                            return urlFilename === song.file || t.url.includes(song.file);
+                                          });
+                                          if (!track) {
+                                            return null;
+                                          }
+
+                                          return (
+                                            <div
+                                              key={track.id}
+                                              className={`flex items-center gap-3 p-2 rounded bg-[var(--color-vibox-card-background)] bg-opacity-30 hover:bg-opacity-50 transition-all ${
+                                                windowWidth < 640 ? 'min-w-[280px]' : 'min-w-[320px]'
+                                              } ${
+                                                currentTrack?.id === track.id ? 'ring-1 ring-[var(--color-vibox-button-primary)]' : ''
+                                              }`}
+                                            >
+                                              <div className="flex-1 min-w-0">
+                                                <p className={`text-xs font-medium [--tw-text-opacity:1] truncate ${
+                                                  currentTrack?.id === track.id ? 'text-[var(--color-button-primary)]' : 'text-[var(--color-text-primary)]'
+                                                }`}>{track.title}</p>
+                                                <p className="text-xs [--tw-text-opacity:0.8] text-[var(--color-text-secondary)] truncate">
+                                                  {song.genre} • {track.artist}
+                                                </p>
+                                              </div>
+                                              <div className="flex items-center gap-2">
+                                                <button
+                                                  onClick={currentTrack?.id === track.id ? togglePlayPause : () => playTrack(track)}
+                                                  className="[--tw-text-opacity:1] text-[var(--color-button-primary)] hover:[--tw-text-opacity:0.8] transition-opacity svg-glow-primary"
+                                                >
+                                                  {currentTrack?.id === track.id && isPlaying ? (
+                                                    <PauseIcon className="w-5 h-5" />
+                                                  ) : (
+                                                    <PlayIcon className="w-5 h-5" />
+                                                  )}
+                                                </button>
+                                                <button
+                                                  onClick={() => addToQueue(track)}
+                                                  className="[--tw-text-opacity:1] text-[var(--color-button-primary)] hover:[--tw-text-opacity:0.8] transition-opacity svg-glow-primary"
+                                                >
+                                                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                                    <path d="M12 5v14M5 12h14"/>
+                                                  </svg>
+                                                </button>
+                                              </div>
+                                            </div>
+                                          );
+                                        })}
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                </div>
+              ) : tracks.length === 0 ? (
+                <div className="text-center py-8">
+                  <div className="flex justify-center mb-2">
+                    <MusicIcon className="w-12 h-12 [--tw-text-opacity:0.4] text-[var(--color-text-primary)]" />
+                  </div>
+                  <p className="text-sm [--tw-text-opacity:1] text-[var(--color-text-secondary)]">
+                    No tracks loaded yet
+                  </p>
+                  <p className="text-xs [--tw-text-opacity:0.8] text-[var(--color-text-secondary)] mt-1">
+                    {allowUploads 
+                      ? "Tap 'Add Tracks' to upload music" 
+                      : "Waiting for host to add tracks..."
+                    }
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {tracks.map((track) => (
+                    <div
+                      key={track.id}
+                      className={`flex items-center gap-3 p-3 [--tw-bg-opacity:0.5] bg-[var(--color-vibox-card-background)] rounded-2xl hover:bg-opacity-0.7 transition-all ${
+                        windowWidth < 640 ? 'min-w-[280px]' : 'min-w-[320px]'
+                      } ${
+                        currentTrack?.id === track.id ? 'ring-2 ring-[var(--color-vibox-button-primary)]' : ''
+                      }`}
+                    >
+                      <div className="flex-1 min-w-0">
+                        <p className={`text-sm font-medium [--tw-text-opacity:1] truncate ${
+                          currentTrack?.id === track.id ? 'text-[var(--color-button-primary)]' : 'text-[var(--color-text-primary)]'
+                        }`}>{track.title}</p>
+                        <p className="text-xs [--tw-text-opacity:0.8] text-[var(--color-text-secondary)] truncate">
+                          {track.artist}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        {currentTrack?.id === track.id && isPlaying ? (
+                          <button
+                            onClick={togglePlayPause}
+                            className="[--tw-text-opacity:1] text-[var(--color-button-primary)] hover:[--tw-text-opacity:0.8] transition-opacity svg-glow-primary"
+                          >
+                            <PauseIcon className="w-6 h-6" />
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => playTrack(track)}
+                            className="[--tw-text-opacity:1] text-[var(--color-button-primary)] hover:[--tw-text-opacity:0.8] transition-opacity svg-glow-primary"
+                          >
+                            <PlayIcon className="w-6 h-6" />
+                          </button>
+                        )}
+                        <button
+                          onClick={() => addToQueue(track)}
+                          className="[--tw-text-opacity:1] text-[var(--color-button-primary)] hover:[--tw-text-opacity:0.8] transition-opacity svg-glow-primary"
+                        >
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M12 5v14M5 12h14"/>
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Expanded Player View - Covers Song List */}
+          <div className={`absolute inset-x-0 inset-y-0 expanded-player ${expandedPlayer ? 'show' : ''} bg-gradient-to-br from-[var(--color-vibox-background-gradient-from)] via-[var(--color-vibox-background-gradient-via)] to-[var(--color-vibox-background-gradient-to)] z-50`}>
+              <div className="flex flex-col min-h-[100dvh] md:min-h-[700px]">
+                {/* Expanded Player Header */}
+                <div className="flex items-center justify-between px-6 py-4">
+                  <button 
+                    onClick={() => setExpandedPlayer(false)}
+                    className="w-10 h-10 flex items-center justify-center [--tw-text-opacity:0.8] text-[var(--color-button-primary)] opacity-70 hover:opacity-100 transition-opacity svg-glow-primary ml-12"
+                    aria-label="Collapse"
+                  >
+                  {/* Collapse Queue Button */}
+                  <div className="flex items-center svg-glow-primary">
+                    <ChevronDownIcon className="w-8 h-8 mr-1 text-[var(--color-button-primary)]" />
+                    <span className="text-2xl flex items-center">
+                      <span className="[--tw-text-opacity:0.8] text-[var(--color-button-primary)]">Q</span>
+                      <span className="[--tw-text-opacity:0.8] text-[var(--color-text-primary)]">ueue</span>
+                      <span className="[--tw-text-opacity:0.8] text-[var(--color-text-primary)]"> ({queue.length})</span>
+                    </span>
+                  </div>
+                  </button>
+                  <div className="w-8 h-8" />
+                </div>
+
+                {/* Track Info and Queue */}
+                <div className="flex-1 overflow-y-auto min-h-0">
+                  <div className="px-4 sm:px-6 max-w-screen-md mx-auto w-full py-4">
+                  {/* Queue Section - Always Visible in Expanded Player */}
+                  <div>
+                    {mode === "host" && queue.length > 0 && (
+                      <div className="flex justify-end mb-3">
+                        <button
+                          onClick={() => playNextInQueue()}
+                          className="text-sm [--tw-text-opacity:0.8] text-[var(--color-text-primary)] opacity-80 hover:opacity-100 transition-opacity"
+                        >
+                          Play Next
+                        </button>
+                      </div>
+                    )}
+                    
+                    {queue.length === 0 ? (
+                      <div className="text-center py-8">
+                        <div className="flex justify-center mb-2">
+                          <MusicIcon className="w-12 h-12 [--tw-text-opacity:0.4] text-[var(--color-text-primary)]" />
+                        </div>
+                        <p className="[--tw-text-opacity:0.6] text-[var(--color-text-primary)]">Queue is empty</p>
+                        <p className="text-sm mt-1 [--tw-text-opacity:0.4] text-[var(--color-text-primary)]">
+                          {mode === "host" ? "Songs will appear here when patrons add them" : "Browse songs and tap to add to queue"}
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="space-y-2 max-h-48 overflow-y-auto">
+                        {queue.map((item, index) => (
+                          <div
+                            key={item.id}
+                            className={`flex items-center gap-2 p-2 [--tw-bg-opacity:0.5] bg-[var(--color-vibox-card-background)] rounded hover:bg-opacity-0.7 transition-colors`}
+                          >
+                            <span className={`text-sm font-medium w-6 [--tw-text-opacity:0.8] text-[var(--color-text-secondary)]`}>
+                              {index + 1}
+                            </span>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium [--tw-text-opacity:0.8] text-[var(--color-text-secondary)] truncate">
+                                {item.track_title}
+                              </p>
+                              <p className="text-xs [--tw-text-opacity:0.8] text-[var(--color-text-secondary)] truncate">
+                                {item.track_artist} • {item.track_genre}
+                              </p>
+                            </div>
+                            {mode === "host" && (
+                              <div className="flex items-center gap-2">
+                                <button
+                                  onClick={() => {
+                                    const track: Track = {
+                                      id: item.track_id,
+                                      title: item.track_title,
+                                      artist: item.track_artist,
+                                      url: item.track_url,
+                                      duration: item.track_duration || 0,
+                                      genre: item.track_genre || undefined,
+                                      primaryVibe: item.primary_vibe || undefined,
+                                      secondaryVibe: item.secondary_vibe || undefined,
+                                      isPreloaded: true,
+                                    };
+                                    playTrack(track);
+                                  }}
+                                  className="[--tw-text-opacity:1] text-[var(--color-button-primary)] hover:[--tw-text-opacity:0.8] transition-opacity p-2 svg-glow-primary"
+                                >
+                                  <PlayIcon className="w-6 h-6" />
+                                </button>
+                                <button
+                                  onClick={() => removeFromQueue(item.id)}
+                                  className="[--tw-text-opacity:1] text-[var(--color-text-secondary)] hover:[--tw-text-opacity:0.8] transition-opacity p-2 svg-glow-secondary"
+                                >
+                                  <TrashIcon className="w-6 h-6" />
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Track Info and Action Buttons */}
+                  <div className="mt-4 pt-8 border-t border-[var(--color-vibox-player-border)]/10">
+                    {/* Now Playing Section */}
+                    <div className="text-left mb-4">
+                      <p className="[--tw-text-opacity:1] text-[var(--color-text-primary)] text-sm font-medium">Now Playing</p>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1">
+                        <h2 className={`text-xl font-semibold [--tw-text-opacity:1] text-[var(--color-text-primary)] mb-1`}>{currentTrack?.title || 'No track playing'}</h2>
+                        <p className={`text-sm [--tw-text-opacity:0.8] text-[var(--color-text-secondary)]`}>{currentTrack?.artist || 'No artist'}</p>
+                      </div>
+                      
+                      {/* Action Buttons */}
+                      <div className="flex gap-2">
+                        <button 
+                          className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors ${isDark ? 'bg-[var(--color-vibox-button-danger)]/50 text-[var(--color-vibox-button-danger)] hover:bg-[var(--color-vibox-button-danger)]/70' : 'bg-[var(--color-vibox-button-danger)]/50 text-[var(--color-vibox-button-danger)] hover:bg-[var(--color-vibox-button-danger)]/70'}`}
+                          title="Hide Song"
+                        >
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/>
+                          </svg>
+                        </button>
+                        <button 
+                          className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors ${isDark ? 'bg-[var(--color-vibox-card-background)] [--tw-text-opacity:1] text-[var(--color-text-primary)] hover:bg-[var(--color-vibox-card-hover)]' : 'bg-[var(--color-vibox-card-background)] [--tw-text-opacity:1] text-[var(--color-text-primary)] hover:bg-[var(--color-vibox-card-hover)]'}`}
+                          title="Add to Playlist"
+                        >
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="M12 5v14M5 12h14"/>
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Expanded Progress Bar - Old Style */}
+                <div className="px-6 pb-6">
+                  <div className="mb-1">
+                    <div 
+                      className={`w-full h-2 bg-[var(--color-vibox-progress-track)] rounded-full cursor-pointer`}
+                      onMouseDown={handleProgressMouseDown}
+                      onTouchStart={handleProgressTouchStart}
+                    >
+                      <div 
+                        className={`h-full rounded-full transition-all relative [--tw-bg-opacity:1] bg-[var(--color-vibox-button-primary)]`}
+                        style={{ width: `${(currentTime / (audioRef.current?.duration || 1)) * 100}%` }}
+                      >
+                        <div className={`absolute right-0 top-1/2 transform translate-x-1/2 -translate-y-1/2 w-2 h-2 rounded-full shadow-lg [--tw-bg-opacity:1] bg-[var(--color-vibox-button-primary)]`} />
+                      </div>
+                    </div>
+                    <div className={`flex justify-between text-xs mt-1 [--tw-text-opacity:0.8] text-[var(--color-text-secondary)]`}>
+                      <span>{formatTime(currentTime)}</span>
+                      <span>{formatTime(audioRef.current?.duration || 0)}</span>
+                    </div>
+                  </div>
+
+                  {/* Expanded Controls */}
+                  <div className="flex items-center justify-center gap-6">
+                    <button
+                      onClick={playPrevious}
+                      disabled={tracks.length <= 1}
+                      className={`w-12 h-12 rounded-full flex items-center justify-center ${isDark ? 'bg-[var(--color-vibox-card-background)] [--tw-text-opacity:1] text-[var(--color-button-primary)]' : 'bg-[var(--color-vibox-card-background)] [--tw-text-opacity:1] text-[var(--color-button-primary)]'} opacity-70 hover:opacity-100 disabled:opacity-30 transition-all svg-glow-primary`}
+                    >
+                      <svg className="w-6 h-6" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M11 17L6 12L11 7L11 17zM17 17L12 12L17 7L17 17z"/>
+                      </svg>
+                    </button>
+                    <button
+                      onClick={togglePlayPause}
+                      className={`w-16 h-16 rounded-full flex items-center justify-center hover:scale-105 transition-transform [--tw-bg-opacity:1] bg-[var(--color-vibox-button-primary)] text-[var(--color-vibox-button-play-text)] svg-glow-primary`}
+                    >
+                      {isPlaying ? (
+                        <PauseIcon className="w-6 h-6" />
+                      ) : (
+                        <PlayIcon className="w-6 h-6" />
+                      )}
+                    </button>
+                    
+                    <button
+                      onClick={playNext}
+                      disabled={tracks.length <= 1}
+                      className={`w-12 h-12 rounded-full flex items-center justify-center ${isDark ? 'bg-[var(--color-vibox-card-background)] [--tw-text-opacity:1] text-[var(--color-button-primary)]' : 'bg-[var(--color-vibox-card-background)] [--tw-text-opacity:1] text-[var(--color-button-primary)]'} opacity-70 hover:opacity-100 disabled:opacity-30 transition-all svg-glow-primary`}
+                    >
+                      <svg className="w-6 h-6" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M7 17L12 12L7 7L7 17zM13 17L18 12L13 7L13 17z"/>
+                      </svg>
+                    </button>
+                  </div>
+                  </div>
+                </div>
+                {/* Bottom Navigation Bar */}
+                <div className={`bg-[var(--color-player-background)]/85 backdrop-blur-2xl pb-[env(safe-area-inset-bottom)]`}>
+                  <div className={`h-16 flex items-center justify-end px-4`}>
+                    <span className="[--tw-text-opacity:0.6] text-[var(--color-text-secondary)] text-xs">
+                      VIBox powered by Söcial
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Bottom Player Bar - Always Visible */}
+          <div ref={bottomPlayerRef} className={`absolute bottom-0 left-0 right-0 bg-[var(--color-player-background)]/85 backdrop-blur-2xl`}>
+            {/* Now Playing Mini Bar */}
+            <div className={expandedPlayer ? 'hidden' : 'block'}>
+            {currentTrack ? (
+              <div className="px-4 py-3">
+                {/* Track Info and Play Button - Horizontal Layout */}
+                <div className="flex items-center gap-3 px-4">
+                  <div className="flex items-center gap-3 flex-1 cursor-pointer" onClick={() => setExpandedPlayer(true)}>
+                    {/* Expand Queue Button */ }
+                    <div className="flex items-center justify-center w-10 h-10 group hover:scale-105 transition-transform">
+                      <div className="flex items-center svg-glow-primary">
+                        <ChevronUpIcon className="w-8 h-8 mr-1 text-[var(--color-button-primary)]" />
+                        <span className="text-2xl flex items-center">
+                          <span className="[--tw-text-opacity:0.8] text-[var(--color-button-primary)]">Q</span>
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex-1 min-w-0 text-center">
+                      <p className={`text-sm font-medium truncate [--tw-text-opacity:1] text-[var(--color-text-primary)]`}>{currentTrack.title}</p>
+                      <p className={`text-xs truncate [--tw-text-opacity:0.8] text-[var(--color-text-secondary)]`}>{currentTrack.artist}</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={togglePlayPause}
+                    className={`hover:scale-105 transition-transform [--tw-text-opacity:1] text-[var(--color-button-primary)] flex-shrink-0 svg-glow-primary`}
+                  >
+                    {isPlaying ? (
+                      <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                        <rect x="6" y="4" width="4" height="16" />
+                        <rect x="14" y="4" width="4" height="16" />
+                      </svg>
+                    ) : (
+                      <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M8 5v14l11-7z"/>
+                      </svg>
+                    )}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="px-4 py-3">
+                {/* Track Info and Play Button - Horizontal Layout */}
+                <div className="flex items-center gap-3 px-4">
+                  <div className="flex items-center gap-3 flex-1 cursor-pointer" onClick={() => setExpandedPlayer(true)}>
+                    <div className="flex items-center justify-center w-10 h-10 group hover:scale-105 transition-transform">
+                      <div className="flex items-center svg-glow-primary">
+                        <ChevronUpIcon className="w-8 h-8 mr-1 text-[var(--color-button-primary)]" />
+                        <span className="text-2xl flex items-center">
+                          <span className="[--tw-text-opacity:0.8] text-[var(--color-button-primary)]">Q</span>
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex-1 min-w-0 text-center">
+                      <p className={`text-sm font-medium truncate [--tw-text-opacity:0.6] text-[var(--color-text-secondary)]`}>No track playing</p>
+                    </div>
+                  </div>
+                  <button
+                    className={`hover:scale-105 transition-transform [--tw-text-opacity:0.5] text-[var(--color-button-primary)] flex-shrink-0`}
+                    disabled
+                  >
+                    <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M8 5v14l11-7z"/>
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            )}
+            
+            {/* Progress Bar - Direct in Bottom Player Bar */}
+            <div 
+              className="w-full h-2 bg-[var(--color-vibox-progress-track)] relative cursor-pointer"
+              onMouseDown={handleProgressMouseDown}
+              onTouchStart={handleProgressTouchStart}
+            >
+              {currentTrack && (
+                <div 
+                  className="h-full [--tw-bg-opacity:1] bg-[var(--color-vibox-button-primary)] absolute top-0 left-0 transition-all"
+                  style={{ width: `${(currentTime / (audioRef.current?.duration || 1)) * 100}%` }}
+                />
+              )}
+            </div>
+            </div>
+
+            {/* Bottom Navigation Bar */}
+            <div className={`bg-[var(--color-player-background)]/85 backdrop-blur-2xl pb-[env(safe-area-inset-bottom)]`}>
+              <div className={`h-16 flex items-center justify-end px-4`}>
+                <span className="[--tw-text-opacity:0.6] text-[var(--color-text-secondary)] text-xs">
+                  VIBox powered by Söcial
+                </span>
+              </div>
+            </div>
+          </div>
+        </Modal>
+    </>
+  );
+};

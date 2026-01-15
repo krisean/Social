@@ -42,7 +42,7 @@ social/
 ├── apps/ (5 apps)
 │   ├── event-platform/       ✅ Universal event host
 │   ├── topcomment-247/       ✅ Facebook wall UI
-│   ├── vibox-247/            ✅ AI jukebox UI
+│   ├── vibox/            ✅ AI jukebox UI
 │   ├── web/                  ✅ Landing + admin
 │   └── dashboard/            ✅ Analytics dashboard
 ├── packages/ (7 packages)

@@ -2,6 +2,7 @@ import { Card, Leaderboard } from "@social/ui";
 import type { Session, Team } from "../../../shared/types";
 import { statusHeadline } from "../../../shared/constants";
 import { useTheme } from "../../../shared/providers/ThemeProvider";
+import { useMemo } from "react";
 
 interface LeaderboardTeam extends Team {
   rank: number;
@@ -23,6 +24,20 @@ export function ResultsPhase({
   myRoundPoints,
 }: ResultsPhaseProps) {
   const { isDark } = useTheme();
+  
+  // Get bonus information for current team's group
+  const myBonus = useMemo(() => {
+    const currentRound = session.rounds?.[session.roundIndex];
+    if (!currentRound || !currentTeam) return null;
+    
+    // Find the group this team belongs to
+    const myGroup = currentRound.groups?.find(g => 
+      g.teamIds.includes(currentTeam.id)
+    );
+    
+    return myGroup?.selectedBonus || null;
+  }, [session, currentTeam]);
+  
   return (
     <Card className="space-y-5" isDark={isDark}>
       <div className="space-y-2 text-center">
@@ -52,7 +67,23 @@ export function ResultsPhase({
         <p className="text-sm font-semibold text-slate-300">
           You earned {votesForMe} vote{votesForMe === 1 ? "" : "s"} this round.
         </p>
-        <p className="mt-1 text-xs font-semibold text-cyan-400">
+        
+        {/* Bonus Display */}
+        {myBonus && votesForMe > 0 && (
+          <div className="mt-3 space-y-1">
+            <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full ${
+              myBonus.bonusType === 'multiplier' 
+                ? 'bg-gradient-to-r from-purple-500 to-pink-500' 
+                : 'bg-gradient-to-r from-yellow-400 to-yellow-600'
+            }`}>
+              <span className="text-white font-bold text-lg">
+                {myBonus.bonusType === 'multiplier' ? `${myBonus.bonusValue}× MULTIPLIER!` : `+${myBonus.bonusValue} BONUS!`}
+              </span>
+            </div>
+          </div>
+        )}
+        
+        <p className={`mt-3 text-xs font-semibold ${!isDark ? 'text-brand-primary' : 'text-cyan-400'}`}>
           +{myRoundPoints}
         </p>
       </div>
