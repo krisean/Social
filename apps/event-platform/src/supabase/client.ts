@@ -56,4 +56,16 @@ export async function signInAnonymouslyUser() {
   return data.user;
 }
 
+export async function ensureVenueAccountProfile(options?: { fullName?: string; phone?: string }) {
+  const { error } = await supabase.functions.invoke('venue-accounts-register', {
+    body: {
+      fullName: options?.fullName,
+      phone: options?.phone,
+    },
+  });
+
+  if (error) {
+    throw error;
+  }
+}
 

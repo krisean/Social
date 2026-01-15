@@ -1,4 +1,5 @@
 import React from "react";
+import { Link } from "react-router-dom";
 import { Button, FormField, Modal } from "@social/ui";
 import { useTheme } from "../../../shared/providers/ThemeProvider";
 import { usePromptLibraries } from "../../../shared/hooks/usePromptLibraries";
@@ -7,9 +8,9 @@ import type { PromptLibraryId } from "../../../shared/promptLibraries";
 interface CreateSessionModalProps {
   open: boolean;
   onClose: () => void;
-  createForm: { teamName: string; venueName: string; gameMode: "classic" | "jeopardy"; selectedCategories: PromptLibraryId[]; totalRounds?: number };
+  createForm: { venueName: string; gameMode: "classic" | "jeopardy"; selectedCategories: PromptLibraryId[]; totalRounds?: number };
   setCreateForm: React.Dispatch<
-    React.SetStateAction<{ teamName: string; venueName: string; gameMode: "classic" | "jeopardy"; selectedCategories: PromptLibraryId[]; totalRounds?: number }>
+    React.SetStateAction<{ venueName: string; gameMode: "classic" | "jeopardy"; selectedCategories: PromptLibraryId[]; totalRounds?: number }>
   >;
   createErrors: Record<string, string>;
   isCreating: boolean;
@@ -74,26 +75,22 @@ export function CreateSessionModal({
       <form id="create-session-form" className="space-y-4" onSubmit={onSubmit}>
         {!canCreateSession && (
           <div className={`rounded-lg border p-3 text-sm ${!isDark ? 'bg-amber-50 border-amber-200 text-amber-800' : 'bg-slate-700 border-cyan-400/50 text-cyan-200'}`}>
-            <p className="font-semibold">Authentication required</p>
+            <p className="font-semibold">Venue account required</p>
             <p className="mt-1">
               {isCreating
                 ? "Creating session..."
-                : "Please wait for authentication to complete."}
+                : "Sign in with your venue credentials before hosting."}
             </p>
+            {!isCreating && (
+              <Link
+                to="/venue-auth"
+                className={`mt-2 inline-flex text-sm font-semibold underline ${!isDark ? 'text-brand-primary' : 'text-cyan-200'}`}
+              >
+                Open venue login
+              </Link>
+            )}
           </div>
         )}
-        <FormField
-          label="Your team name"
-          name="teamName"
-          placeholder="Host team name"
-          maxLength={15}
-          value={createForm.teamName}
-          onChange={(e) =>
-            setCreateForm((prev) => ({ ...prev, teamName: e.target.value }))
-          }
-          error={createErrors.teamName}
-          isDark={isDark}
-        />
         <FormField
           label="Venue name (optional)"
           name="venueName"
@@ -118,7 +115,9 @@ export function CreateSessionModal({
               className={`
                 p-4 rounded-xl border-2 text-left transition-all
                 ${createForm.gameMode === "classic"
-                  ? "border-brand-primary bg-brand-light"
+                  ? (!isDark
+                      ? "border-brand-primary bg-amber-100 text-brand-primary shadow-sm"
+                      : "border-cyan-300 bg-slate-800/70 text-cyan-100 shadow-cyan-500/20")
                   : !isDark ? "border-slate-300 bg-white hover:border-slate-400" : "border-slate-600 bg-slate-800 hover:border-slate-500"
                 }
               `}
@@ -136,7 +135,9 @@ export function CreateSessionModal({
               className={`
                 p-4 rounded-xl border-2 text-left transition-all
                 ${createForm.gameMode === "jeopardy"
-                  ? "border-brand-primary bg-brand-light"
+                  ? (!isDark
+                      ? "border-brand-primary bg-amber-100 text-brand-primary shadow-sm"
+                      : "border-cyan-300 bg-slate-800/70 text-cyan-100 shadow-cyan-500/20")
                   : !isDark ? "border-slate-300 bg-white hover:border-slate-400" : "border-slate-600 bg-slate-800 hover:border-slate-500"
                 }
               `}
@@ -164,7 +165,9 @@ export function CreateSessionModal({
                 className={`
                   flex-1 py-2 px-3 rounded-lg border-2 font-semibold transition-all
                   ${(createForm.totalRounds || (createForm.gameMode === "jeopardy" ? 1 : 5)) === rounds
-                    ? "border-brand-primary bg-brand-light"
+                    ? (!isDark
+                        ? "border-brand-primary bg-amber-100 text-brand-primary"
+                        : "border-cyan-300 bg-slate-800/70 text-cyan-100")
                     : !isDark ? "border-slate-300 bg-white hover:border-slate-400" : "border-slate-600 bg-slate-800 hover:border-slate-500"
                   }
                 `}

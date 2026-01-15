@@ -48,7 +48,7 @@ import type {
 } from "../../shared/promptLibraries";
 
 export function HostPage() {
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, isVenueAccount, venueAccountLoading } = useAuth();
   const { addToast } = useToast();
   const { isDark, theme } = useTheme();
   const themedStyles = getThemedStyles(theme);
@@ -68,6 +68,7 @@ export function HostPage() {
   const [isUpdatingCategories, setIsUpdatingCategories] = useState(false);
   const [showBannedTeamsModal, setShowBannedTeamsModal] = useState(false);
   const [showVIBoxModal, setShowVIBoxModal] = useState(false);
+  const [showVenueAuthPrompt, setShowVenueAuthPrompt] = useState(false);
   
   const hostState = useHostState(storedSessionId);
   const {
@@ -107,7 +108,7 @@ export function HostPage() {
     isPerformingActionRef,
   } = hostState;
 
-  const canCreateSession = !authLoading && Boolean(user);
+  const canCreateSession = !authLoading && !venueAccountLoading && isVenueAccount;
 
   // Use the new application hooks - this replaces 4 separate hooks and multiple useMemo calls!
   const gameState = useGameState({ 
@@ -203,6 +204,7 @@ export function HostPage() {
   const createSessionHandler = handleCreateSession({
     user,
     authLoading,
+    isVenueAccount,
     toast: addToast,
     setCreateErrors,
     isCreating, // Added this prop
@@ -337,6 +339,33 @@ export function HostPage() {
     setHostGroupVotes,
     isSubmittingVote,
   });
+
+  const requireVenueAccount = useCallback(() => {
+    if (canCreateSession) {
+      return true;
+    }
+
+    if (authLoading || venueAccountLoading) {
+      addToast({ title: "Checking your venue access...", variant: "info" });
+    } else {
+      setShowVenueAuthPrompt(true);
+    }
+    return false;
+  }, [addToast, authLoading, venueAccountLoading, canCreateSession]);
+
+  const handleOpenCreateModal = useCallback(() => {
+    if (!requireVenueAccount()) {
+      return;
+    }
+    setShowCreateModal(true);
+  }, [requireVenueAccount, setShowCreateModal]);
+
+  const handleCreateModalClose = useCallback(() => {
+    setShowCreateModal(false);
+    if (!session) {
+      navigate("/");
+    }
+  }, [setShowCreateModal, session, navigate]);
 
   // Handler for selecting/swapping categories
   const handleCategoryClick = useCallback(async (index: number) => {
@@ -781,13 +810,37 @@ export function HostPage() {
           </div>
         </Card>
 
+        {!session && !venueAccountLoading && !canCreateSession && (
+          <Card className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between" isDark={isDark}>
+            <div>
+              <p className={`text-sm font-semibold ${!isDark ? 'text-slate-900' : 'text-pink-400'}`}>
+                Venue login required
+              </p>
+              <p className={`text-sm ${!isDark ? 'text-slate-600' : 'text-cyan-300'}`}>
+                Sign in with your venue credentials before creating a new game.
+              </p>
+            </div>
+            <Button
+              variant="secondary"
+              onClick={() => setShowVenueAuthPrompt(true)}
+            >
+              Open venue login
+            </Button>
+          </Card>
+        )}
+
         <section className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,_2fr)_minmax(0,_1fr)]">
           <div className="flex flex-col gap-6">
             {promptLibraryCard}
             {renderPhaseContent()}
             <div className="flex flex-wrap gap-3">
               <Button
-                onClick={primaryActionHandler}
+                onClick={() => {
+                  if (!session && !requireVenueAccount()) {
+                    return;
+                  }
+                  primaryActionHandler();
+                }}
                 disabled={
                   session
                     ? isPerformingAction ||
@@ -870,7 +923,7 @@ export function HostPage() {
               {session ? (
                 session.status === "ended" ? (
                   <>
-                    <Button variant="secondary" onClick={() => setShowCreateModal(true)}>
+                    <Button variant="secondary" onClick={handleOpenCreateModal}>
                       New Session
                     </Button>
                     <Button variant="ghost" onClick={handleReturnHome}>
@@ -889,7 +942,7 @@ export function HostPage() {
               ) : (
                 <Button
                   variant="secondary"
-                  onClick={() => setShowCreateModal(true)}
+                  onClick={handleOpenCreateModal}
                 >
                   New session
                 </Button>
@@ -972,7 +1025,7 @@ export function HostPage() {
 
       <CreateSessionModal
         open={showCreateModal}
-        onClose={() => setShowCreateModal(false)}
+        onClose={handleCreateModalClose}
         createForm={createForm}
         setCreateForm={setCreateForm}
         createErrors={createErrors}
@@ -1123,6 +1176,33 @@ export function HostPage() {
         mode="host"
         allowUploads={true}
       />
+
+      <Modal
+        open={showVenueAuthPrompt}
+        onClose={() => setShowVenueAuthPrompt(false)}
+        title="Venue account required"
+        isDark={isDark}
+        footer={
+          <div className="flex w-full items-center justify-between">
+            <Button variant="ghost" onClick={() => setShowVenueAuthPrompt(false)}>
+              Maybe later
+            </Button>
+            <Button
+              onClick={() => {
+                setShowVenueAuthPrompt(false);
+                navigate("/venue-auth");
+              }}
+            >
+              Go to venue login
+            </Button>
+          </div>
+        }
+      >
+        <p className={`text-sm ${!isDark ? 'text-slate-600' : 'text-slate-300'}`}>
+          Only approved venue accounts can start Söcial sessions. Use your venue
+          credentials to sign in before creating a game.
+        </p>
+      </Modal>
     </main>
   );
 }

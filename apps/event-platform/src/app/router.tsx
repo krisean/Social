@@ -19,6 +19,7 @@ export const appRouter = createBrowserRouter([
     children: [
       { index: true, element: <EntryPage /> },
       { path: "auth", element: <AuthPage /> },
+      { path: "venue-auth", element: <AuthPage variant="venue" /> },
       { path: "host", element: <HostPage /> },
       { path: "play", element: <TeamPage /> },
       { path: "presenter/:sessionId", element: <PresenterPage /> },
