@@ -163,20 +163,35 @@ export function VIBoxJukeboxInner({
     const loadPreloadedTracks = async () => {
       try {
         // Load track metadata first
-        const metadataResponse = await fetch('/vibox/tracks-metadata.json');
+        const metadataResponse = await fetch('/tracks-metadata.json');
         let metadataMap = new Map<string, TrackMetadata>();
         
+        log.info('Metadata response', { 
+          status: metadataResponse.status, 
+          statusText: metadataResponse.statusText,
+          url: metadataResponse.url,
+          ok: metadataResponse.ok
+        });
+        
         if (metadataResponse.ok) {
-          const metadata = await metadataResponse.json();
-          metadata.tracks.forEach((track: TrackMetadata) => {
-            metadataMap.set(track.file, track);
-          });
-          setTrackMetadata(metadataMap);
-          log.info('Loaded metadata', { trackCount: metadataMap.size });
+          const responseText = await metadataResponse.text();
+          log.info('Metadata response text (first 100 chars)', { text: responseText.substring(0, 100) });
+          
+          try {
+            const metadata = JSON.parse(responseText);
+            metadata.tracks.forEach((track: TrackMetadata) => {
+              metadataMap.set(track.file, track);
+            });
+            setTrackMetadata(metadataMap);
+            log.info('Loaded metadata', { trackCount: metadataMap.size });
+          } catch (parseError) {
+            log.error('JSON parse error', { error: parseError, responseText: responseText.substring(0, 200) });
+            throw parseError;
+          }
         }
 
         // Load hierarchical vibe structure
-        const vibeResponse = await fetch('/vibox/vibes-hierarchical.json');
+        const vibeResponse = await fetch('/vibes-hierarchical.json');
         if (vibeResponse.ok) {
           const vibeData = await vibeResponse.json();
           setVibeHierarchy(vibeData);
@@ -184,21 +199,22 @@ export function VIBoxJukeboxInner({
         }
 
         // Try to fetch the track list from a JSON file
-        const response = await fetch('/vibox/tracks.json');
+        const response = await fetch('/vibox/data/tracks.json');
         if (response.ok) {
           const audioFiles = await response.json();
           log.info('Loading audio files', { count: audioFiles.length });
           
           const preloadedTracks: Track[] = audioFiles.map((filename: string) => {
-            const fileName = filename.replace(/\.[^/.]+$/, "");
             const metadata = metadataMap.get(filename);
+            // Use metadata title if available, otherwise fall back to cleaned filename
+            const displayTitle = metadata?.title || filename.replace(/\.[^/.]+$/, "").replace(/_/g, ' ');
 
             return {
               id: `preloaded-${filename}`,
-              title: fileName,
+              title: displayTitle,
               artist: metadata?.artist || 'Söcial',
               duration: 0,
-              url: `/vibox/${filename}`,
+              url: `/vibox/audio/${filename}`,
               isPreloaded: true,
               genre: metadata?.genre,
               primaryVibe: metadata?.primaryVibe,
@@ -218,7 +234,11 @@ export function VIBoxJukeboxInner({
           }
         }
       } catch (error) {
-        log.error('Error loading tracks', { error });
+        log.error('Error loading tracks', { 
+          error,
+          message: error instanceof Error ? error.message : 'Unknown error',
+          stack: error instanceof Error ? error.stack : undefined
+        });
       }
     };
 
@@ -984,7 +1004,19 @@ export function VIBoxJukeboxInner({
           <div className="px-4 py-3">
             <div className="flex items-center justify-between mb-3">
               <div className="w-8"></div>
-              <h1 className={`font-semibold [--tw-text-opacity:1] text-[var(--color-text-primary)]`}>VIBox Jukebox</h1>
+              <div className="flex items-center gap-2">
+                {/* VIBox Logo */}
+                <img 
+                  src="/viboxLogo.png" 
+                  alt="VIBox Logo" 
+                  className="w-8 h-8"
+                />
+                <img 
+                  src="/viboxLong2.png" 
+                  alt="Vibox Jukebox" 
+                  className="h-8 w-auto"
+                />
+              </div>
               <div className="w-8"></div>
             </div>
             <div className="flex items-center justify-center gap-2 w-full">
@@ -1037,10 +1069,14 @@ export function VIBoxJukeboxInner({
             <div>
               <h3 className="text-lg font-semibold [--tw-text-opacity:1] text-[var(--color-text-primary)] mb-2">Tracks ({tracks.length})</h3>
               
-              {viewMode === 'vibes' && vibeHierarchy ? (
+              {viewMode === 'vibes' && vibeHierarchy && vibeHierarchy.vibes ? (
                 <div className="space-y-2">
                   {Object.entries(vibeHierarchy.vibes)
-                    .sort((a, b) => b[1].total - a[1].total)
+                    .sort((a, b) => {
+                      const aCount = Array.isArray(a[1]) ? a[1].length : (a[1]?.total || 0);
+                      const bCount = Array.isArray(b[1]) ? b[1].length : (b[1]?.total || 0);
+                      return bCount - aCount;
+                    })
                     // Hide other primary vibes if one is selected, unless it's the selected one
                     .filter(([primaryVibe]) => !selectedPrimaryVibe || selectedPrimaryVibe === primaryVibe)
                     .map(([primaryVibe, data]) => {
@@ -1080,113 +1116,68 @@ export function VIBoxJukeboxInner({
                                 <p className={`text-xs [--tw-text-opacity:0.6] ${
                                   isSelected ? 'vibe-selected-text-alt' : 'text-[var(--color-text-secondary)]'
                                 }`}>
-                                  {data.total} tracks
+                                  {Array.isArray(data) ? data.length : data.total || 0} tracks
                                 </p>
                               </div>
                             </div>
                           </button>
 
-                          {/* Secondary Vibes */}
-                          {isPrimaryExpanded && (
+                          {/* Songs for expanded primary vibe */}
+                          {isPrimaryExpanded && Array.isArray(data) && (
                             <div className="ml-6 space-y-1">
-                              {Object.entries(data.secondaryVibes).map(([secondaryVibe, songs]) => {
-                                const isSecondaryExpanded = expandedSecondaryVibes.has(`${primaryVibe}-${secondaryVibe}`);
-                                
+                              {data.map((song) => {
+                                const track = tracks.find(t => {
+                                  const urlFilename = t.url.split('/').pop();
+                                  return urlFilename === song.file || t.url.includes(song.file);
+                                });
+                                if (!track) {
+                                  return null;
+                                }
+
                                 return (
-                                  <div key={secondaryVibe} className="space-y-1">
-                                    {/* Secondary Vibe */}
-                                    <button
-                                      onClick={() => {
-                                        const key = `${primaryVibe}-${secondaryVibe}`;
-                                        const newExpanded = new Set(expandedSecondaryVibes);
-                                        if (isSecondaryExpanded) {
-                                          newExpanded.delete(key);
-                                        } else {
-                                          newExpanded.add(key);
-                                        }
-                                        setExpandedSecondaryVibes(newExpanded);
-                                      }}
-                                      className="w-full flex items-center justify-between p-2 rounded bg-[var(--color-card-background)] bg-opacity-50 hover:bg-opacity-70 transition-colors"
-                                    >
-                                      <div className="flex items-center gap-2">
-                                        {isSecondaryExpanded ? (
-                                          <ChevronDownIcon className="w-4 h-4 [--tw-text-opacity:0.8] text-[var(--color-text-secondary)]" />
+                                  <div
+                                    key={track.id}
+                                    className={`flex items-center gap-3 p-2 rounded bg-[var(--color-vibox-card-background)] bg-opacity-30 hover:bg-opacity-50 transition-all ${
+                                      windowWidth < 640 ? 'min-w-[280px]' : 'min-w-[320px]'
+                                    } ${
+                                      currentTrack?.id === track.id ? 'ring-1 ring-[var(--color-vibox-button-primary)]' : ''
+                                    }`}
+                                  >
+                                    <div className="flex-1 min-w-0">
+                                      <p className={`text-xs font-medium [--tw-text-opacity:1] truncate ${
+                                        currentTrack?.id === track.id ? 'text-[var(--color-button-primary)]' : 'text-[var(--color-text-primary)]'
+                                      }`}>{track.title}</p>
+                                      <p className="text-xs [--tw-text-opacity:0.8] text-[var(--color-text-secondary)] truncate">
+                                        {song.genre} • {track.artist}
+                                      </p>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      <button
+                                        onClick={currentTrack?.id === track.id ? togglePlayPause : () => playTrack(track)}
+                                        className="[--tw-text-opacity:1] text-[var(--color-button-primary)] hover:[--tw-text-opacity:0.8] transition-opacity svg-glow-primary"
+                                      >
+                                        {currentTrack?.id === track.id && isPlaying ? (
+                                          <PauseIcon className="w-5 h-5" />
                                         ) : (
-                                          <ChevronRightIcon className="w-4 h-4 [--tw-text-opacity:0.8] text-[var(--color-text-secondary)]" />
+                                          <PlayIcon className="w-5 h-5" />
                                         )}
-                                        <div className="text-left">
-                                          <p className={`text-sm font-medium [--tw-text-opacity:0.8] ${
-                                            isVibeActive(primaryVibe, secondaryVibe) ? 'text-[var(--color-button-primary)]' : 'text-[var(--color-text-secondary)]'
-                                          }`}>
-                                            {secondaryVibe}
-                                          </p>
-                                          <p className="text-xs [--tw-text-opacity:0.6] text-[var(--color-text-secondary)]">
-                                            {songs.length} tracks
-                                          </p>
-                                        </div>
-                                      </div>
-                                    </button>
-
-                                    {/* Songs */}
-                                    {isSecondaryExpanded && (
-                                      <div className="ml-6 space-y-1">
-                                        {songs.map((song) => {
-                                          const track = tracks.find(t => {
-                                            const urlFilename = t.url.split('/').pop();
-                                            return urlFilename === song.file || t.url.includes(song.file);
-                                          });
-                                          if (!track) {
-                                            return null;
-                                          }
-
-                                          return (
-                                            <div
-                                              key={track.id}
-                                              className={`flex items-center gap-3 p-2 rounded bg-[var(--color-vibox-card-background)] bg-opacity-30 hover:bg-opacity-50 transition-all ${
-                                                windowWidth < 640 ? 'min-w-[280px]' : 'min-w-[320px]'
-                                              } ${
-                                                currentTrack?.id === track.id ? 'ring-1 ring-[var(--color-vibox-button-primary)]' : ''
-                                              }`}
-                                            >
-                                              <div className="flex-1 min-w-0">
-                                                <p className={`text-xs font-medium [--tw-text-opacity:1] truncate ${
-                                                  currentTrack?.id === track.id ? 'text-[var(--color-button-primary)]' : 'text-[var(--color-text-primary)]'
-                                                }`}>{track.title}</p>
-                                                <p className="text-xs [--tw-text-opacity:0.8] text-[var(--color-text-secondary)] truncate">
-                                                  {song.genre} • {track.artist}
-                                                </p>
-                                              </div>
-                                              <div className="flex items-center gap-2">
-                                                <button
-                                                  onClick={currentTrack?.id === track.id ? togglePlayPause : () => playTrack(track)}
-                                                  className="[--tw-text-opacity:1] text-[var(--color-button-primary)] hover:[--tw-text-opacity:0.8] transition-opacity svg-glow-primary"
-                                                >
-                                                  {currentTrack?.id === track.id && isPlaying ? (
-                                                    <PauseIcon className="w-5 h-5" />
-                                                  ) : (
-                                                    <PlayIcon className="w-5 h-5" />
-                                                  )}
-                                                </button>
-                                                <button
-                                                  onClick={() => addToQueue(track)}
-                                                  className="[--tw-text-opacity:1] text-[var(--color-button-primary)] hover:[--tw-text-opacity:0.8] transition-opacity svg-glow-primary"
-                                                >
-                                                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                                    <path d="M12 5v14M5 12h14"/>
-                                                  </svg>
-                                                </button>
-                                              </div>
-                                            </div>
-                                          );
-                                        })}
-                                      </div>
-                                    )}
+                                      </button>
+                                      <button
+                                        onClick={() => addToQueue(track)}
+                                        className="[--tw-text-opacity:1] text-[var(--color-button-primary)] hover:[--tw-text-opacity:0.8] transition-opacity svg-glow-primary"
+                                      >
+                                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                          <path d="M12 5v14M5 12h14"/>
+                                        </svg>
+                                      </button>
+                                    </div>
                                   </div>
                                 );
                               })}
                             </div>
                           )}
-                        </div>
+
+                                                  </div>
                       );
                     })}
                 </div>

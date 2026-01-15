@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button, QRCodeBlock, Card, Modal, useToast } from "@social/ui";
+import { VIBoxButton } from "../../shared/components/vibox/VIBoxButton";
 import { useAuth } from "../../shared/providers/AuthContext";
 import { useCurrentPhase } from "../../shared/providers/CurrentPhaseContext";
 import { useTheme } from "../../shared/providers/ThemeProvider";
@@ -769,14 +770,11 @@ export function HostPage() {
                 ← Back
               </Link>
               {presenterButton}
-              <Button
-                variant="ghost"
-                size="sm"
+              <VIBoxButton 
                 onClick={() => setShowVIBoxModal(true)}
-                className="text-purple-600 hover:text-purple-700"
-              >
-                🎵 VIBox
-              </Button>
+                variant="host"
+                size="lg"
+              />
             </div>
             <div>
               <h1 className="text-3xl font-black text-pink-400">
