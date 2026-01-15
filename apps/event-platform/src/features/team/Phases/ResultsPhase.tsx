@@ -41,15 +41,15 @@ export function ResultsPhase({
   return (
     <Card className="space-y-5" isDark={isDark}>
       <div className="space-y-2 text-center">
-        <h2 className={`text-2xl font-bold ${!isDark ? 'text-slate-900' : 'text-white'}`}>
+        <h2 className="text-2xl font-bold text-white">
           {statusHeadline[session.status]}
         </h2>
-        <p className={`text-sm ${!isDark ? 'text-slate-600' : 'text-slate-300'}`}>
+        <p className="text-sm text-slate-300">
           Round {session.roundIndex + 1} recap & leaderboard.
         </p>
       </div>
-      <div className={`elevated-card p-5`}>
-        <h3 className={`text-sm font-semibold uppercase tracking-wide transition-all duration-200 ${!isDark ? 'text-slate-700' : 'text-cyan-400 drop-shadow-sm'}`}>
+      <div className="elevated-card p-5">
+        <h3 className="text-sm font-semibold uppercase tracking-wide transition-all duration-200 text-cyan-400 drop-shadow-sm">
           Current leaderboard
         </h3>
         <div className="mt-3">
@@ -63,8 +63,8 @@ export function ResultsPhase({
           />
         </div>
       </div>
-      <div className={`rounded-3xl p-5 text-center shadow-2xl ${!isDark ? 'bg-white' : 'bg-slate-800'}`}>
-        <p className={`text-sm font-semibold ${!isDark ? 'text-slate-700' : 'text-slate-300'}`}>
+      <div className="rounded-3xl p-5 text-center shadow-2xl bg-slate-800">
+        <p className="text-sm font-semibold text-slate-300">
           You earned {votesForMe} vote{votesForMe === 1 ? "" : "s"} this round.
         </p>
         
