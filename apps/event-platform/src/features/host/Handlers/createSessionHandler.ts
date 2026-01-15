@@ -9,6 +9,7 @@ import type { User } from "@supabase/supabase-js";
 interface CreateSessionHandlersDeps {
   user: User | null;
   authLoading: boolean;
+  isVenueAccount: boolean;
   toast: Toast;
   setCreateErrors: React.Dispatch<React.SetStateAction<Record<string, string>>>;
   isCreating: boolean; // Added this prop
@@ -30,6 +31,7 @@ export const handleCreateSession =
     const {
       user,
       authLoading,
+      isVenueAccount,
       toast,
       setCreateErrors,
       isCreating,
@@ -54,6 +56,10 @@ export const handleCreateSession =
     }
     if (!user) {
       toast({ title: "Sign-in failed - refresh the page and try again once connected", variant: "error" });
+      return;
+    }
+    if (!isVenueAccount) {
+      toast({ title: "Only venue accounts can host games. Please sign in with your venue credentials.", variant: "error" });
       return;
     }
 

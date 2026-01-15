@@ -1,5 +1,5 @@
 // Create a new game session
-import { createPublicHandler, requireString, cleanTeamName, corsResponse, getUserId } from '../_shared/utils.ts';
+import { createPublicHandler, requireString, cleanTeamName, corsResponse, getUserId, AppError } from '../_shared/utils.ts';
 import { getPromptLibrary, DEFAULT_PROMPTS, GROUP_SIZE, TOTAL_ROUNDS } from '../_shared/prompts.ts';
 import type { Session, Team } from '../_shared/types.ts';
 
@@ -41,6 +41,20 @@ function generateCategoryBonuses() {
 
 async function handleCreateSession(req: Request, supabase: any): Promise<Response> {
   const uid = await getUserId(req); // Still need auth for creating (to be host)
+  const { data: venueAccount, error: venueError } = await supabase
+    .from('venue_accounts')
+    .select('id, is_active')
+    .eq('auth_user_id', uid)
+    .maybeSingle();
+
+  if (venueError) {
+    console.error('Failed to verify venue account', venueError);
+    throw new AppError(500, 'Unable to verify venue account', 'venue-verification-failed');
+  }
+
+  if (!venueAccount || !venueAccount.is_active) {
+    throw new AppError(403, 'Venue login required to create sessions', 'venue-required');
+  }
     const { teamName, venueName, promptLibraryId, gameMode, selectedCategories, totalRounds } = await req.json();
     
     const cleanedTeamName = cleanTeamName(requireString(teamName, 'teamName'));
