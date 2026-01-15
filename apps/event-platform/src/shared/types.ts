@@ -22,7 +22,6 @@ export type { CategoryGrid } from "./utils/categoryGrid";
 
 // API Request/Response types (these stay in shared as they're infrastructure concerns)
 export interface CreateSessionRequest {
-  teamName: string;
   venueName?: string;
   promptLibraryId?: PromptLibraryId;
   gameMode?: "classic" | "jeopardy";

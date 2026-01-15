@@ -65,7 +65,6 @@ export const handleCreateSession =
 
     const formData = new FormData(event.currentTarget);
     const values = {
-      teamName: String(formData.get("teamName") ?? ""),
       venueName: String(formData.get("venueName") ?? ""),
     };
 
@@ -86,7 +85,6 @@ export const handleCreateSession =
 
     try {
       const response = await createSession({
-        teamName: maskProfanity(parsed.data.teamName),
         venueName: parsed.data.venueName
           ? maskProfanity(parsed.data.venueName)
           : undefined,

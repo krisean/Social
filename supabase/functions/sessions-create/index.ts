@@ -1,5 +1,5 @@
 // Create a new game session
-import { createPublicHandler, requireString, cleanTeamName, corsResponse, getUserId, AppError } from '../_shared/utils.ts';
+import { createPublicHandler, cleanTeamName, corsResponse, getUserId, AppError } from '../_shared/utils.ts';
 import { getPromptLibrary, DEFAULT_PROMPTS, GROUP_SIZE, TOTAL_ROUNDS } from '../_shared/prompts.ts';
 import type { Session, Team } from '../_shared/types.ts';
 
@@ -55,9 +55,7 @@ async function handleCreateSession(req: Request, supabase: any): Promise<Respons
   if (!venueAccount || !venueAccount.is_active) {
     throw new AppError(403, 'Venue login required to create sessions', 'venue-required');
   }
-    const { teamName, venueName, promptLibraryId, gameMode, selectedCategories, totalRounds } = await req.json();
-    
-    const cleanedTeamName = cleanTeamName(requireString(teamName, 'teamName'));
+    const { venueName, promptLibraryId, gameMode, selectedCategories, totalRounds } = await req.json();
     const cleanedVenueName = venueName ? cleanTeamName(venueName) : undefined;
     const libraryId = promptLibraryId || 'classic';
     const mode = gameMode || 'classic';

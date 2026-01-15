@@ -20,7 +20,6 @@ export const answerSchema = z
   .max(120, "Keep it to 120 characters");
 
 export const createSessionSchema = z.object({
-  teamName: z.string().trim().min(2).max(15),
   venueName: z
     .string()
     .trim()

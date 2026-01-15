@@ -359,6 +359,13 @@ export function HostPage() {
     setShowCreateModal(true);
   }, [requireVenueAccount, setShowCreateModal]);
 
+  const handleCreateModalClose = useCallback(() => {
+    setShowCreateModal(false);
+    if (!session) {
+      navigate("/");
+    }
+  }, [setShowCreateModal, session, navigate]);
+
   // Handler for selecting/swapping categories
   const handleCategoryClick = useCallback(async (index: number) => {
     if (!session?.settings?.selectedCategories) return;
@@ -1020,7 +1027,7 @@ export function HostPage() {
 
       <CreateSessionModal
         open={showCreateModal}
-        onClose={() => setShowCreateModal(false)}
+        onClose={handleCreateModalClose}
         createForm={createForm}
         setCreateForm={setCreateForm}
         createErrors={createErrors}
