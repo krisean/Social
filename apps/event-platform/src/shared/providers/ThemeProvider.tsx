@@ -1,53 +1,39 @@
 /**
  * Theme Context and Provider
- * Manages theme state and provides theme toggle functionality
+ * Dark mode only - no theme switching
  */
 
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useEffect } from 'react';
 import type { ReactNode } from 'react';
-import { lightTheme, darkTheme } from '../theme';
+import { darkTheme } from '../theme';
 import type { Theme } from '../theme';
 
 interface ThemeContextType {
   theme: Theme;
-  toggleTheme: () => void;
   isDark: boolean;
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  // Load theme from localStorage or default to dark
-  const [theme, setTheme] = useState<Theme>(() => {
-    const stored = localStorage.getItem('app-theme');
-    return stored === 'light' ? lightTheme : darkTheme;
-  });
+  const theme = darkTheme;
+  const isDark = true;
 
-  const isDark = theme.name === 'dark';
-
-  const toggleTheme = () => {
-    setTheme((current) => {
-      const newTheme = current.name === 'light' ? darkTheme : lightTheme;
-      localStorage.setItem('app-theme', newTheme.name);
-      return newTheme;
-    });
-  };
-
-  // Update CSS variables when theme changes
+  // Set dark theme on mount
   useEffect(() => {
     const root = document.documentElement;
     root.style.setProperty('--color-text-primary', theme.colors.text.primary);
     root.style.setProperty('--color-text-secondary', theme.colors.text.secondary);
 
-    // Update color-scheme for native browser elements
-    root.style.colorScheme = theme.name === 'dark' ? 'dark' : 'light';
+    // Set color-scheme for native browser elements
+    root.style.colorScheme = 'dark';
 
     // Set data-theme attribute for CSS selectors
-    root.setAttribute('data-theme', theme.name);
+    root.setAttribute('data-theme', 'dark');
   }, [theme]);
 
   return (
-    <ThemeContext.Provider value={{ theme, toggleTheme, isDark }}>
+    <ThemeContext.Provider value={{ theme, isDark }}>
       {children}
     </ThemeContext.Provider>
   );

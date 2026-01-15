@@ -1,6 +1,6 @@
 /**
  * Theme Configuration
- * Centralized theming for light and dark modes
+ * Dark mode only
  */
 
 export interface ThemeColors {
@@ -35,43 +35,9 @@ export interface ThemeColors {
 }
 
 export interface Theme {
-  name: 'light' | 'dark';
+  name: 'dark';
   colors: ThemeColors;
 }
-
-export const lightTheme: Theme = {
-  name: 'light',
-  colors: {
-    background: {
-      gradient: {
-        from: 'from-amber-600',
-        via: 'via-orange-700',
-        to: 'to-amber-900',
-      },
-      foam: 'from-amber-200/40',
-    },
-    bubble: {
-      gradient: 'radial-gradient(circle at 30% 30%, rgba(255,255,255,0.95), rgba(255,255,255,0.3) 50%, transparent 70%)',
-      border: 'rgba(255,255,255,0.3)',
-      shadow: '0 0 20px rgba(255,255,255,0.5)',
-      innerShadow: 'inset 0 0 20px rgba(255,255,255,0.4), inset -8px -8px 15px rgba(0,0,0,0.3)',
-    },
-    text: {
-      primary: '#0f172a',
-      secondary: '#64748b',
-    },
-    glass: {
-      background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.28), rgba(255, 255, 255, 0.05))',
-      border: 'rgba(255, 255, 255, 0.35)',
-      shadow: '0 18px 40px rgba(5, 7, 19, 0.35)',
-    },
-    matte: {
-      background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.65), rgba(255, 255, 255, 0.18))',
-      border: 'rgba(255, 255, 255, 0.55)',
-      shadow: 'inset 0 1px 1px rgba(255, 255, 255, 0.35), 0 10px 22px rgba(9, 9, 12, 0.18)',
-    },
-  },
-};
 
 export const darkTheme: Theme = {
   name: 'dark',

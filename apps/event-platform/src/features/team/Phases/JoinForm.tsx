@@ -25,8 +25,8 @@ export function JoinForm({
   return (
     <Card className="space-y-5" isDark={isDark}>
       <div className="space-y-2 text-center">
-        <h1 className={`text-3xl font-black ${!isDark ? 'text-slate-900' : 'text-pink-400'}`}>Join Söcial</h1>
-        <p className={`text-sm ${!isDark ? 'text-slate-600' : 'text-cyan-300'}`}>
+        <h1 className="text-3xl font-black text-pink-400">Join Söcial</h1>
+        <p className="text-sm text-cyan-300">
           Enter the room code from the host screen and pick a team name.
         </p>
       </div>

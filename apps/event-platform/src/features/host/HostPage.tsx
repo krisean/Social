@@ -49,7 +49,7 @@ import type {
 export function HostPage() {
   const { user, loading: authLoading } = useAuth();
   const { addToast } = useToast();
-  const { isDark } = useTheme();
+  const { isDark } = useTheme(); // Always true (dark mode only)
   const {
     sessionId: storedSessionId,
     code: storedCode,
@@ -482,27 +482,27 @@ export function HostPage() {
   const promptLibraryCard =
     session && session.status === "lobby" ? (
       <Card className="flex flex-col gap-4" isDark={isDark}>
-        <div className={`flex flex-col gap-1 ${!isDark ? 'text-slate-700' : 'text-cyan-100'}`}>
-          <span className={`text-xs font-semibold uppercase tracking-wide ${!isDark ? 'text-slate-500' : 'text-cyan-400'}`}>
+        <div className="flex flex-col gap-1 text-cyan-100">
+          <span className="text-xs font-semibold uppercase tracking-wide text-cyan-400">
             Prompt library
           </span>
-          <p className={`text-lg font-bold ${!isDark ? 'text-slate-900' : 'text-pink-400'}`}>
+          <p className="text-lg font-bold text-pink-400">
             {currentPromptLibrary.emoji} {currentPromptLibrary.name}
           </p>
-          <p className={`text-sm ${!isDark ? 'text-slate-500' : 'text-cyan-300'}`}>
+          <p className="text-sm text-cyan-300">
             {currentPromptLibrary.description}
           </p>
         </div>
         {currentPromptLibrary.prompts.length > 0 && (
           <div className="space-y-2">
-            <p className={`text-xs font-semibold uppercase tracking-wide ${!isDark ? 'text-slate-500' : 'text-cyan-400'}`}>
+            <p className="text-xs font-semibold uppercase tracking-wide text-cyan-400">
               Sample prompts
             </p>
             <div className="space-y-2">
               {currentPromptLibrary.prompts.slice(0, 3).map((prompt, index) => (
                 <div
                   key={index}
-                  className={`rounded-lg border px-3 py-2 text-sm ${!isDark ? 'border-slate-200 bg-slate-50 text-slate-700' : 'border-slate-600 bg-slate-700 text-cyan-100'}`}
+                  className="rounded-lg border px-3 py-2 text-sm border-slate-600 bg-slate-700 text-cyan-100"
                 >
                   {prompt}
                 </div>
@@ -511,7 +511,7 @@ export function HostPage() {
           </div>
         )}
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <p className={`text-xs ${!isDark ? 'text-slate-500' : 'text-cyan-300'}`}>
+          <p className="text-xs text-cyan-300">
             Pick a deck for tonight before you start the first round.
           </p>
           <Button
@@ -530,7 +530,7 @@ export function HostPage() {
     if (!session) {
       return (
         <Card className="min-h-[360px]" isDark={isDark}>
-          <p className={`text-lg ${!isDark ? 'text-slate-600' : 'text-cyan-300'}`}>
+          <p className="text-lg text-cyan-300">
             Create a session to unlock the host controls.
           </p>
         </Card>
@@ -617,40 +617,40 @@ export function HostPage() {
   ) : null;
 
   return (
-    <main className={`min-h-screen px-4 py-8 ${!isDark ? 'bg-amber-50' : 'bg-slate-950'}`}>
+    <main className="min-h-screen px-4 py-8 bg-slate-950">
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-8">
         <Card className="flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between" isDark={isDark}>
           <div className="space-y-3">
             <div className="flex items-center gap-3">
-              <Link to="/" className={`text-sm font-semibold ${!isDark ? 'text-brand-primary' : 'text-cyan-400 hover:text-cyan-300'}`}>
+              <Link to="/" className="text-sm font-semibold text-cyan-400 hover:text-cyan-300">
                 ← Back
               </Link>
               {presenterButton}
             </div>
             <div>
-              <h1 className={`text-3xl font-black ${!isDark ? 'text-slate-900' : 'text-pink-400'}`}>
+              <h1 className="text-3xl font-black text-pink-400">
                 Host Console
               </h1>
               {session ? (
-                <p className={`text-sm ${!isDark ? 'text-slate-600' : 'text-cyan-300'}`}>
+                <p className="text-sm text-cyan-300">
                   {phaseCopy[session.status]}
                 </p>
               ) : (
-                <p className={`text-sm ${!isDark ? 'text-slate-600' : 'text-cyan-300'}`}>
+                <p className="text-sm text-cyan-300">
                   Create a game room when you're ready to host.
                 </p>
               )}
             </div>
           </div>
-          <div className={`flex flex-col items-center gap-2 rounded-2xl px-6 py-4 border ${!isDark ? 'bg-slate-100 border-slate-200' : 'bg-cyan-900/30 border-cyan-400/50'}`}>
-            <span className={`text-xs uppercase tracking-wider ${!isDark ? 'text-slate-600' : 'text-cyan-300'}`}>
+          <div className="flex flex-col items-center gap-2 rounded-2xl px-6 py-4 border bg-cyan-900/30 border-cyan-400/50">
+            <span className="text-xs uppercase tracking-wider text-cyan-300">
               Room code
             </span>
-            <span className={`text-3xl font-black tracking-widest ${!isDark ? 'text-slate-900' : 'text-pink-400'}`}>
+            <span className="text-3xl font-black tracking-widest text-pink-400">
               {session?.code ?? storedCode ?? "---"}
             </span>
             {session ? (
-              <span className={`text-xs ${!isDark ? 'text-slate-500' : 'text-cyan-400'}`}>
+              <span className="text-xs text-cyan-400">
                 {teams.length} team{teams.length === 1 ? "" : "s"} online
               </span>
             ) : null}
@@ -772,17 +772,17 @@ export function HostPage() {
             {session ? (
               <QRCodeBlock value={inviteLink || ""} caption="Scan to join" isDark={isDark} />
             ) : (
-              <div className={`rounded-3xl p-6 text-center text-sm shadow-lg ${!isDark ? 'bg-white text-slate-500 shadow-slate-300/40' : 'bg-slate-800 text-cyan-300 shadow-fuchsia-500/20'}`}>
+              <div className="rounded-3xl p-6 text-center text-sm shadow-lg bg-slate-800 text-cyan-300 shadow-fuchsia-500/20">
                 Start a session to generate a QR code for your guests.
               </div>
             )}
             {session ? (
-              <div className={`space-y-4 rounded-3xl p-5 shadow-lg ${!isDark ? 'bg-white shadow-slate-300/40' : 'bg-slate-800 shadow-fuchsia-500/20'}`}>
+              <div className="space-y-4 rounded-3xl p-5 shadow-lg bg-slate-800 shadow-fuchsia-500/20">
                 <div className="flex items-center justify-between">
-                  <h3 className={`text-lg font-semibold ${!isDark ? 'text-slate-900' : 'text-pink-400'}`}>
+                  <h3 className="text-lg font-semibold text-pink-400">
                     Lobby ({teams.length})
                   </h3>
-                  <span className={`text-xs ${!isDark ? 'text-slate-500' : 'text-cyan-300'}`}>
+                  <span className="text-xs text-cyan-300">
                     Max {session.settings.maxTeams}
                   </span>
                 </div>
@@ -790,9 +790,9 @@ export function HostPage() {
                   {teams.map((team) => (
                     <li
                       key={team.id}
-                      className={`flex items-center justify-between rounded-2xl px-4 py-3 ${!isDark ? 'bg-slate-100' : 'bg-slate-700'}`}
+                      className="flex items-center justify-between rounded-2xl px-4 py-3 bg-slate-700"
                     >
-                      <span className={`font-medium ${!isDark ? 'text-slate-800' : 'text-cyan-100'}`}>
+                      <span className="font-medium text-cyan-100">
                         {team.teamName}
                         {team.isHost ? " (Host)" : ""}
                       </span>
@@ -810,7 +810,7 @@ export function HostPage() {
                     </li>
                   ))}
                   {!teams.length ? (
-                    <li className={`rounded-2xl px-4 py-3 text-sm ${!isDark ? 'bg-slate-100 text-slate-500' : 'bg-slate-700 text-cyan-300'}`}>
+                    <li className="rounded-2xl px-4 py-3 text-sm bg-slate-700 text-cyan-300">
                       Teams will appear here as they join.
                     </li>
                   ) : null}
@@ -849,12 +849,12 @@ export function HostPage() {
               onSelect={handlePromptLibrarySelect}
               disabled={isUpdatingPromptLibrary || session.status !== "lobby"}
             />
-            <p className="text-xs text-slate-500 dark:text-slate-400">
+            <p className="text-xs text-slate-400">
               You can switch decks any time before the first round begins.
             </p>
           </div>
         ) : (
-          <p className="text-sm text-slate-600 dark:text-slate-300">
+          <p className="text-sm text-slate-300">
             Start a session to choose your prompt library.
           </p>
         )}
@@ -883,7 +883,7 @@ export function HostPage() {
           </div>
         }
       >
-        <p className="text-sm text-slate-600 dark:text-slate-300">
+        <p className="text-sm text-slate-300">
           Are you sure you want to end this session? This action cannot be undone
           and all teams will be disconnected.
         </p>
