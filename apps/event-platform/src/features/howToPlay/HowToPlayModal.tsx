@@ -46,6 +46,19 @@ const steps = [
       'Vote for your favorite (not your own)',
       'Answers are shown anonymously',
       'Voting lasts 30 seconds—cheer for the funniest!',
+      'Earn points for voting! +100 per vote, +200 if you pick the winner, +300 for voting in all groups',
+    ],
+  },
+  {
+    emoji: '💰',
+    title: 'Earning points',
+    description: [
+      'As an Answer Creator: Earn 100 points for each vote your answer receives',
+      'As a Voter: Earn points for participating and accuracy',
+      'Voter rewards: +100 per vote, +200 if you pick the winner, +300 for voting in all groups',
+      'Group Winners: Earn +1000 bonus points for winning your group!',
+      'Second Place: Earn +500 bonus points for placing second in your group!',
+      '💡 Tip: Vote thoughtfully in every group to maximize your points!',
     ],
   },
   {
@@ -54,6 +67,7 @@ const steps = [
     description: [
       'Check the round leaderboard',
       'See points earned and votes received',
+      'View your voter rewards breakdown',
       'Results appear for 12 seconds before the next round',
     ],
   },
@@ -95,9 +109,9 @@ function getStepIndexForPhase(phase: SessionStatus | null | undefined): number |
     case "vote":
       return 4; // Vote for the best answer
     case "results":
-      return 5; // See the results
+      return 6; // See the results (skip the earning points step)
     case "ended":
-      return 7; // Celebrate and share
+      return 8; // Celebrate and share
     default:
       return null;
   }

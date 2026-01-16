@@ -725,6 +725,9 @@ export function HostPage() {
             sessionEndsAt={session.endsAt}
             voteSecs={session.settings.voteSecs ?? 90}
             sessionPaused={session.paused}
+            votes={gameState.votes}
+            teams={gameState.teams}
+            currentRoundIndex={session.roundIndex}
           />
         );
 

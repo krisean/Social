@@ -78,7 +78,7 @@ export function VotePhase({
         <p className={`text-xs font-medium sm:text-sm ${!isDark ? 'text-slate-600' : 'text-slate-400'}`}>
           {isVotingOnOwnGroup
             ? "Viewing your group's answers — you cannot vote in your own group."
-            : "Tap your favorite answer — everyone can vote."}
+            : "Tap your favorite answer — earn points for voting! 🎯"}
         </p>
       </div>
       <Timer endTime={session.endsAt} label="Voting ends" size="md" isDark={isDark} paused={session.paused} />
@@ -93,6 +93,13 @@ export function VotePhase({
             const authorName = authorTeam?.teamName ?? "Unknown team";
             const mascot = authorTeam?.mascotId ? getMascotById(authorTeam.mascotId) : null;
             const timeAgo = formatTimeAgo(answer.createdAt);
+            const voteCount = _voteCounts.get(answer.id) || 0;
+            
+            // Check if this answer has the most votes in the group
+            const isLeading = activeGroupAnswers.some(a => {
+              const otherCount = _voteCounts.get(a.id) || 0;
+              return otherCount > voteCount;
+            }) === false && voteCount >= 3;
 
             return (
               <article
@@ -102,7 +109,9 @@ export function VotePhase({
                 } ${
                   isSelected
                     ? `${!isDark ? 'ring-4 ring-brand-primary bg-brand-light/50' : 'ring-4 ring-cyan-400 bg-cyan-400/20 card-glow-selected'} shadow-lg`
-                    : `${!isDark ? `hover:bg-slate-50 border-slate-300/60` : `card-hover-glow hover:bg-cyan-800/40 border-cyan-300/60`}`
+                    : (isSubmittingVote || voteSummaryActive || isVotingOnOwnGroup)
+                      ? ''
+                      : `${!isDark ? `hover:bg-slate-50 border-slate-300/60` : `card-hover-glow hover:bg-cyan-800/40 border-cyan-300/60`}`
                 } ${isSubmittingVote || voteSummaryActive || isVotingOnOwnGroup ? "opacity-70 cursor-not-allowed" : ""}`}
                 onClick={() => !isSubmittingVote && !voteSummaryActive && !isVotingOnOwnGroup && handleVote(answer.id)}
               >
@@ -144,8 +153,14 @@ export function VotePhase({
                   <p className={`leading-relaxed ${!isDark ? 'text-slate-800' : 'text-slate-200'}`}>{answer.text}</p>
                 </div>
 
-                {/* Vote button */}
-                <div className="flex-shrink-0">
+                {/* Vote button and count */}
+                <div className="flex-shrink-0 flex items-center gap-2">
+                  <div className="flex items-center gap-1">
+                    {isLeading && <span className="text-lg animate-pulse">🔥</span>}
+                    <div className={`text-sm font-semibold ${!isDark ? 'text-slate-600' : 'text-slate-400'}`}>
+                      {voteCount}
+                    </div>
+                  </div>
                   <button
                     type="button"
                     onClick={(e) => {
@@ -189,6 +204,13 @@ export function VotePhase({
           Vote recorded — tap another answer to change it.
         </p>
       ) : null}
+      
+      {!isVotingOnOwnGroup && !voteSummaryActive && (
+        <div className={`text-center text-xs space-y-1 ${!isDark ? 'text-slate-600' : 'text-slate-400'}`}>
+          <p className="font-semibold">💰 Voter Rewards:</p>
+          <p>+100 per vote • +200 if you pick the winner • +300 for voting in all groups</p>
+        </div>
+      )}
     </Card>
   );
 }

@@ -254,27 +254,39 @@ async function calculateRoundScores(supabase: any, sessionId: string, roundIndex
     
     let totalScore = voteCount; // Base score from votes
     
-    // Apply bonus if this team won their group's vote
-    if (bonus) {
-      // Check if this team is the winner of their group (has most votes)
-      const groupTeamVotes = Array.from(votesByTeam.entries())
-        .filter(([_, d]) => d.groupId === groupId)
-        .map(([tid, d]) => ({ teamId: tid, votes: d.voteCount }));
-      
-      const maxVotes = Math.max(...groupTeamVotes.map(t => t.votes));
-      const isWinner = voteCount === maxVotes;
-      
-      if (isWinner) {
-        if (bonus.bonusType === 'points') {
-          // Add flat points
-          totalScore += bonus.bonusValue;
-          console.log(`Team ${teamId} won with ${voteCount} votes and earned ${bonus.bonusValue} bonus points`);
-        } else if (bonus.bonusType === 'multiplier') {
-          // Apply multiplier to voting score
-          totalScore = voteCount * bonus.bonusValue;
-          console.log(`Team ${teamId} won with ${voteCount} votes and earned ${bonus.bonusValue}x multiplier (${totalScore} total)`);
-        }
+    // Check if this team is the winner of their group (has most votes)
+    const groupTeamVotes = Array.from(votesByTeam.entries())
+      .filter(([_, d]) => d.groupId === groupId)
+      .map(([tid, d]) => ({ teamId: tid, votes: d.voteCount }));
+    
+    const maxVotes = Math.max(...groupTeamVotes.map(t => t.votes));
+    const isWinner = voteCount === maxVotes && voteCount > 0;
+    
+    // Check for second place (if there are at least 2 teams with votes)
+    const sortedVotes = groupTeamVotes.sort((a, b) => b.votes - a.votes);
+    const isSecondPlace = sortedVotes.length >= 2 && 
+                          sortedVotes[1].teamId === teamId && 
+                          sortedVotes[1].votes > 0;
+    
+    // Apply Jeopardy bonus if this team won their group's vote
+    if (bonus && isWinner) {
+      if (bonus.bonusType === 'points') {
+        // Add flat points
+        totalScore += bonus.bonusValue;
+        console.log(`Team ${teamId} won with ${voteCount} votes and earned ${bonus.bonusValue} bonus points`);
+      } else if (bonus.bonusType === 'multiplier') {
+        // Apply multiplier to voting score
+        totalScore = voteCount * bonus.bonusValue;
+        console.log(`Team ${teamId} won with ${voteCount} votes and earned ${bonus.bonusValue}x multiplier (${totalScore} total)`);
       }
+    } else if (isWinner && !bonus) {
+      // Classic mode: Add 10-point group winner bonus
+      totalScore += 10;
+      console.log(`Team ${teamId} won group with ${voteCount} votes and earned 10 winner bonus points`);
+    } else if (isSecondPlace && !bonus) {
+      // Classic mode: Add 5-point second place bonus
+      totalScore += 5;
+      console.log(`Team ${teamId} placed second with ${voteCount} votes and earned 5 second place bonus points`);
     }
     
     // Update team score
@@ -283,6 +295,126 @@ async function calculateRoundScores(supabase: any, sessionId: string, roundIndex
       score_delta: totalScore,
     });
   }
+  
+  // NEW: Calculate and award voter rewards
+  await calculateVoterRewards(supabase, sessionId, roundIndex, groups, votesByTeam);
+}
+
+async function calculateVoterRewards(
+  supabase: any, 
+  sessionId: string, 
+  roundIndex: number,
+  groups: any[],
+  answerVotesByTeam: Map<string, { voteCount: number; groupId: string }>
+) {
+  console.log(`Calculating voter rewards for session ${sessionId}, round ${roundIndex}`);
+  
+  // Get all votes for this round with voter information
+  const { data: allVotes } = await supabase
+    .from('votes')
+    .select('voter_id, answer_id, group_id, answers!inner(team_id)')
+    .eq('session_id', sessionId)
+    .eq('round_index', roundIndex);
+  
+  if (!allVotes || allVotes.length === 0) {
+    console.log('No votes found for voter rewards calculation');
+    return;
+  }
+  
+  // Determine winners for each group (teams with most votes)
+  const groupWinners = new Map<string, Set<string>>(); // groupId -> Set of winning answer_ids
+  
+  for (const group of groups) {
+    const groupId = group.id;
+    const groupAnswerVotes = Array.from(answerVotesByTeam.entries())
+      .filter(([_, data]) => data.groupId === groupId);
+    
+    if (groupAnswerVotes.length === 0) continue;
+    
+    const maxVotes = Math.max(...groupAnswerVotes.map(([_, data]) => data.voteCount));
+    
+    // Get all answers with max votes (handles ties)
+    const winningTeamIds = groupAnswerVotes
+      .filter(([_, data]) => data.voteCount === maxVotes)
+      .map(([teamId, _]) => teamId);
+    
+    // Get answer IDs for winning teams
+    const { data: winningAnswers } = await supabase
+      .from('answers')
+      .select('id')
+      .eq('session_id', sessionId)
+      .eq('round_index', roundIndex)
+      .eq('group_id', groupId)
+      .in('team_id', winningTeamIds);
+    
+    if (winningAnswers) {
+      groupWinners.set(groupId, new Set(winningAnswers.map((a: any) => a.id)));
+      console.log(`Group ${groupId} winners: ${winningAnswers.map((a: any) => a.id).join(', ')}`);
+    }
+  }
+  
+  // Track voter participation and accuracy
+  const voterStats = new Map<string, {
+    votesCount: number;
+    accurateVotes: number;
+    groupsVotedIn: Set<string>;
+  }>();
+  
+  for (const vote of allVotes) {
+    const voterId = vote.voter_id;
+    const answerId = vote.answer_id;
+    const groupId = vote.group_id;
+    
+    if (!voterStats.has(voterId)) {
+      voterStats.set(voterId, {
+        votesCount: 0,
+        accurateVotes: 0,
+        groupsVotedIn: new Set(),
+      });
+    }
+    
+    const stats = voterStats.get(voterId)!;
+    stats.votesCount++;
+    stats.groupsVotedIn.add(groupId);
+    
+    // Check if this vote was for a winner
+    const winners = groupWinners.get(groupId);
+    if (winners && winners.has(answerId)) {
+      stats.accurateVotes++;
+    }
+  }
+  
+  // Calculate and award points to voters
+  const totalGroups = groups.length;
+  let totalVoterPointsAwarded = 0;
+  
+  for (const [voterId, stats] of voterStats.entries()) {
+    let voterPoints = 0;
+    
+    // Base participation: +1 per vote
+    voterPoints += stats.votesCount * 1;
+    
+    // Accuracy bonus: +2 per accurate vote
+    voterPoints += stats.accurateVotes * 2;
+    
+    // Completion bonus: +3 if voted in all groups
+    if (stats.groupsVotedIn.size === totalGroups) {
+      voterPoints += 3;
+    }
+    
+    // Award points to voter
+    if (voterPoints > 0) {
+      await supabase.rpc('increment_team_score', {
+        team_id: voterId,
+        score_delta: voterPoints,
+      });
+      
+      totalVoterPointsAwarded += voterPoints;
+      console.log(`Voter ${voterId} earned ${voterPoints} points (${stats.votesCount} votes, ${stats.accurateVotes} accurate, ${stats.groupsVotedIn.size}/${totalGroups} groups)`);
+    }
+  }
+  
+  console.log(`Total voter points awarded this round: ${totalVoterPointsAwarded} to ${voterStats.size} voters`);
 }
 
 

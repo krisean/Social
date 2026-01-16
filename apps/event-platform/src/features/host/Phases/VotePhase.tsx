@@ -1,6 +1,6 @@
 import { Card, SessionTimer, AnswerCard } from "@social/ui";
 import { useTheme } from "../../../shared/providers/ThemeProvider";
-import type { Answer, RoundGroup } from "../../../shared/types";
+import type { Answer, RoundGroup, Vote } from "../../../shared/types";
 
 interface VotePhaseProps {
   totalGroups: number;
@@ -21,6 +21,9 @@ interface VotePhaseProps {
   sessionEndsAt: string | undefined;
   voteSecs: number;
   sessionPaused?: boolean;
+  votes: Vote[];
+  teams: any[];
+  currentRoundIndex?: number;
 }
 
 export function VotePhase({
@@ -37,8 +40,21 @@ export function VotePhase({
   sessionEndsAt,
   voteSecs,
   sessionPaused = false,
+  votes,
+  teams,
+  currentRoundIndex,
 }: VotePhaseProps) {
   const { isDark } = useTheme();
+  
+  // Calculate voting participation stats
+  const votingParticipation = {
+    totalVoters: new Set(votes?.filter(v => v.roundIndex === currentRoundIndex).map(v => v.voterId) || []).size,
+    totalTeams: teams?.length || 0,
+    votesPerGroup: roundGroups.map(group => ({
+      groupId: group.id,
+      voteCount: votes?.filter(v => v.groupId === group.id && v.roundIndex === currentRoundIndex).length || 0
+    }))
+  };
   return (
     <Card className="space-y-6" isDark={isDark}>
       <div className="flex flex-col gap-2">
@@ -124,6 +140,33 @@ export function VotePhase({
             );
           })}
         </ul>
+      </div>
+      
+      {/* Voting Participation Stats */}
+      <div className="elevated-card p-4">
+        <h4 className={`text-xs font-semibold uppercase tracking-wide ${!isDark ? 'text-slate-700' : 'text-brand-primary'}`}>
+          🎯 Voting Participation
+        </h4>
+        <div className="mt-3 space-y-2 text-sm">
+          <div className="flex justify-between">
+            <span className={isDark ? 'text-slate-300' : 'text-slate-700'}>
+              Active Voters
+            </span>
+            <span className={`font-semibold ${isDark ? 'text-cyan-400' : 'text-brand-primary'}`}>
+              {votingParticipation.totalVoters}/{votingParticipation.totalTeams}
+            </span>
+          </div>
+          <div className="flex justify-between">
+            <span className={isDark ? 'text-slate-300' : 'text-slate-700'}>
+              Participation Rate
+            </span>
+            <span className={`font-semibold ${isDark ? 'text-cyan-400' : 'text-brand-primary'}`}>
+              {votingParticipation.totalTeams > 0 
+                ? Math.round((votingParticipation.totalVoters / votingParticipation.totalTeams) * 100)
+                : 0}%
+            </span>
+          </div>
+        </div>
       </div>
     </Card>
   );

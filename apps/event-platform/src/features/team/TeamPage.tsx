@@ -434,6 +434,8 @@ export function TeamPage() {
     handleLeave: effectsHandleLeave,
     scoreboardRef,
     roundSummaries,
+    votes,
+    answers,
   });
 
   let mainContent;
