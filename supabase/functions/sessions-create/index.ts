@@ -1,5 +1,5 @@
 // Create a new game session
-import { createPublicHandler, cleanTeamName, corsResponse, getUserId, AppError } from '../_shared/utils.ts';
+import { createHandler, cleanTeamName, corsResponse, AppError } from '../_shared/utils.ts';
 import { getPromptLibrary, DEFAULT_PROMPTS, GROUP_SIZE, TOTAL_ROUNDS } from '../_shared/prompts.ts';
 import type { Session, Team } from '../_shared/types.ts';
 
@@ -39,8 +39,7 @@ function generateCategoryBonuses() {
   return bonuses.map((bonus, index) => ({ ...bonus, promptIndex: index }));
 }
 
-async function handleCreateSession(req: Request, supabase: any): Promise<Response> {
-  const uid = await getUserId(req); // Still need auth for creating (to be host)
+async function handleCreateSession(req: Request, uid: string, supabase: any): Promise<Response> {
   const { data: venueAccount, error: venueError } = await supabase
     .from('venue_accounts')
     .select('id, is_active')
@@ -149,4 +148,4 @@ async function handleCreateSession(req: Request, supabase: any): Promise<Respons
   }
 
 // @ts-ignore - Deno global is available in Supabase Edge Functions runtime
-Deno.serve(createPublicHandler(handleCreateSession));
+Deno.serve(createHandler(handleCreateSession));

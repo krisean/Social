@@ -38,10 +38,10 @@ export function EndedPhase({
     <Card className="space-y-5" isDark={isDark}>
       <div className="flex items-center justify-between">
         <div>
-          <h2 className={`text-2xl font-bold ${!isDark ? 'text-slate-900' : 'text-pink-400'}`}>
+          <h2 className="text-2xl font-bold text-pink-400">
             Final Scoreboard
           </h2>
-          <p className={`text-sm ${!isDark ? 'text-slate-600' : 'text-cyan-300'}`}>Thanks for playing!</p>
+          <p className="text-sm text-cyan-300">Thanks for playing!</p>
         </div>
         {currentTeam ? (
           <Button
@@ -58,10 +58,10 @@ export function EndedPhase({
       {currentTeam && (
         <div className="space-y-3">
           <div className="text-center">
-            <h3 className={`text-lg font-semibold ${!isDark ? 'text-slate-700' : 'text-brand-primary'}`}>
+            <h3 className="text-lg font-semibold text-brand-primary">
               Celebrate Your Victory!
             </h3>
-            <p className={`text-sm ${!isDark ? 'text-slate-600' : 'text-slate-300'}`}>Take a selfie with your score</p>
+            <p className="text-sm text-slate-300">Take a selfie with your score</p>
           </div>
 
           {selfieImage ? (

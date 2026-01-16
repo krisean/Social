@@ -14,8 +14,8 @@ export function LobbyPhase({ teams }: LobbyPhaseProps) {
     <>
       <Card className="space-y-5" isDark={isDark}>
         <div className="text-center">
-          <h2 className={`text-2xl font-bold ${!isDark ? 'text-slate-900' : 'text-pink-400'}`}>You're in!</h2>
-          <p className={`text-sm ${!isDark ? 'text-slate-600' : 'text-cyan-300'}`}>
+          <h2 className="text-2xl font-bold text-pink-400">You're in!</h2>
+          <p className="text-sm text-cyan-300">
             Waiting for host to start the game.
           </p>
         </div>
