@@ -38,6 +38,7 @@ export interface CreateSessionResponse {
 export interface JoinSessionRequest {
   code: string;
   teamName: string;
+  playerName?: string;
 }
 
 export interface JoinSessionResponse {
@@ -93,6 +94,14 @@ export interface SessionAnalytics {
   answerRate: number;
   voteRate: number;
   duration?: number;
+}
+
+export interface TeamMember {
+  id: string;
+  team_id: string;
+  user_id: string;
+  is_captain: boolean;
+  joined_at: string;
 }
 
 export interface SetPromptLibraryRequest {

@@ -43,7 +43,18 @@ export function resetClient(): void {
 export type { Database };
 export type Tables = Database['public']['Tables'];
 export type Session = Tables['sessions']['Row'];
-export type Team = Tables['teams']['Row'];  // Updated: players → teams
+// Define team member interface since it's not in the generated types yet
+export interface TeamMember {
+  id: string;
+  team_id: string;
+  user_id: string;
+  is_captain: boolean;
+  joined_at: string;
+}
+
+export type Team = Tables['teams']['Row'] & {
+  team_members?: TeamMember[];
+};  // Updated: players → teams
 export type Answer = Tables['answers']['Row'];  // Updated: submissions → answers
 export type Vote = Tables['votes']['Row'];
 export type Venue = Tables['venues']['Row'];

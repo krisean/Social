@@ -126,18 +126,24 @@ export function TeamPage() {
 
   const activeTeams = session ? teams : finalTeams;
 
-  // Use gameState.userTeam instead of complex calculation
-  // When session ends, gameState.userTeam will be null, so fall back to teamSession.uid
+  // Use gameState.userTeam when available, otherwise use teamSession.teamId like LobbyPhase
   const currentTeam = useMemo(() => {
     if (gameState.userTeam) {
       return activeTeams.find(team => team.id === gameState.userTeam?.id) ?? null;
     }
-    // Session has ended, try to find team by uid from teamSession
+    
+    // Use the same logic as LobbyPhase - check teamId from session
+    if (teamSession?.teamId && activeTeams.length > 0) {
+      return activeTeams.find(team => team.id === teamSession.teamId) ?? null;
+    }
+    
+    // Fallback: check if team has members and user is in them
     if (teamSession?.uid && activeTeams.length > 0) {
       return activeTeams.find(team => team.uid === teamSession.uid) ?? null;
     }
+    
     return null;
-  }, [gameState.userTeam, activeTeams, teamSession?.uid]);
+  }, [gameState.userTeam, activeTeams, teamSession?.teamId, teamSession?.uid]);
 
   // Extract session management logic into custom hook
   useTeamSessionManagement({

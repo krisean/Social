@@ -15,7 +15,7 @@ import { useSession, useTeams, useAnswers, useVotes } from '../../features/sessi
  * Fetches raw data and computes derived state using domain services
  */
 export function useGameState(config: GameStateConfig = {}): UseGameStateReturn {
-  const { sessionId, userId } = config;
+  const { sessionId, userId, teamSession } = config;
   
   // Error state
   const [error, setError] = useState<GameStateError | null>(null);
@@ -46,6 +46,7 @@ export function useGameState(config: GameStateConfig = {}): UseGameStateReturn {
       
       // Domain service computations
       const voteCounts = VotingEngine.calculateVoteCounts(votes);
+      // Teams are already filtered at DB level (only teams with captains)
       const leaderboard = LeaderboardCalculator.calculate(teams);
       const roundSummaries = session ? 
         VotingEngine.calculateRoundSummaries(
@@ -82,7 +83,13 @@ export function useGameState(config: GameStateConfig = {}): UseGameStateReturn {
         RoundManager.getVotingProgress(session.voteGroupIndex, currentGroups.length) : 0;
 
       // User-specific state
-      const userTeam = userId ? teams.find(team => team.uid === userId) : null;
+      const userTeam = userId ? teams.find(team => {
+        // Check if user is a member of this team by looking at team_members
+        const isMember = team.team_members?.some(member => member.user_id === userId);
+        // Also check if user is the captain via teamSession.uid (for legacy compatibility)
+        const isCaptain = teamSession?.uid === userId && team.uid === teamSession.uid;
+        return isMember || isCaptain;
+      }) : null;
       const userTeamState = userTeam ? {
         id: userTeam.id,
         name: userTeam.teamName,

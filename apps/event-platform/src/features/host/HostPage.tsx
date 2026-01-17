@@ -41,6 +41,7 @@ import {
 import { handleBanTeam } from "./Handlers/banPlayerHandler";
 import { PromptLibrarySelector } from "./components/PromptLibrarySelector";
 import { BannedTeamsManager } from "./components/BannedTeamsManager";
+import { TeamCodesManager } from "./components/TeamCodesManager";
 import { VIBoxJukebox } from "../../shared/components/vibox/VIBoxJukebox";
 import type {
   PromptLibraryId,
@@ -65,6 +66,7 @@ export function HostPage() {
   const [newCategories, setNewCategories] = useState<PromptLibraryId[]>([]);
   const [isUpdatingCategories, setIsUpdatingCategories] = useState(false);
   const [showBannedTeamsModal, setShowBannedTeamsModal] = useState(false);
+  const [showTeamCodesModal, setShowTeamCodesModal] = useState(false);
   const [showVIBoxModal, setShowVIBoxModal] = useState(false);
   const [showVenueAuthPrompt, setShowVenueAuthPrompt] = useState(false);
   
@@ -123,7 +125,7 @@ export function HostPage() {
 
   // Extract data from gameState for compatibility with existing code
   const session = gameState.session;
-  const teams = gameState.teams;
+  const teams = gameState.teams; // Already filtered at DB level
   const answers = gameState.answers;
   const sessionSnapshotReady = !gameState.isLoading;
 
@@ -773,6 +775,14 @@ export function HostPage() {
                 ← Back
               </Link>
               {presenterButton}
+              {session && (
+                <Button
+                  variant="ghost"
+                  onClick={() => setShowTeamCodesModal(true)}
+                >
+                  Team Codes
+                </Button>
+              )}
               <VIBoxButton 
                 onClick={() => setShowVIBoxModal(true)}
                 variant="host"
@@ -1167,6 +1177,15 @@ export function HostPage() {
         onClose={() => setShowBannedTeamsModal(false)}
         toast={addToast}
       />
+      
+      {sessionId && (
+        <TeamCodesManager
+          sessionId={sessionId}
+          isOpen={showTeamCodesModal}
+          onClose={() => setShowTeamCodesModal(false)}
+          toast={addToast}
+        />
+      )}
       
       <VIBoxJukebox
         isOpen={showVIBoxModal}

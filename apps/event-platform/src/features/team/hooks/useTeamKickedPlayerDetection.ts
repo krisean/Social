@@ -87,13 +87,12 @@ export function useTeamKickedPlayerDetection({
           // Show the kicked modal
           setShowKickedModal(true);
           
-          // Clear session and redirect after showing modal
+          // Clear session after showing modal (no automatic redirect)
           setTimeout(() => {
-            console.log("Auto-redirecting removed player to join form");
+            console.log("Clearing session for removed player (no redirect)");
             clearTeamSession();
             setSessionId(null);
-            // Force navigation to join form
-            window.location.href = '/play';
+            // Note: No automatic redirect - user stays on page
           }, 3000); // 3 second delay to show the modal
         }
       }, 500); // 500ms debounce (reduced from 1s for faster response)

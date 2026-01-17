@@ -8,26 +8,31 @@ const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
 interface JoinSessionRequest {
   code: string;
   teamName: string;
+  playerName?: string;
 }
 
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
+    console.log("CORS preflight request detected");
     return new Response("ok", { headers: corsHeaders })
   }
 
-  try {
-    // Only allow POST requests
-    if (req.method !== "POST") {
-      console.error("Invalid method:", req.method)
-      return new Response(
-        JSON.stringify({ error: "Method not allowed" }),
-        { status: 405, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      )
-    }
+  if (req.method !== 'POST') {
+    console.log("Method not allowed:", req.method);
+    return new Response(
+      JSON.stringify({ error: "Method not allowed" }),
+      { status: 405, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
 
-    const { code, teamName }: JoinSessionRequest = await req.json()
-    console.log("Join request received:", { code, teamName })
+  try {
+    console.log("Parsing request body...");
+    const body = await req.json();
+    const { code, teamName, playerName }: JoinSessionRequest = body;
+    
+    console.log("Join session request:", { code, teamName, playerName });
+    console.log("Request body parsed successfully");
 
     if (!code || !teamName) {
       console.error("Missing required fields:", { code, teamName })
@@ -37,56 +42,240 @@ serve(async (req) => {
       )
     }
 
+    console.log("Normalizing inputs...");
     // Normalize inputs
     const normalizedCode = code.trim().toUpperCase()
     const normalizedTeamName = teamName.trim()
+    
+    console.log("Normalized inputs:", { normalizedCode, normalizedTeamName });
 
+    console.log("Creating Supabase client...");
     // Create service role client for admin operations
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
     
+    console.log("Getting authenticated user...");
     // Get the authenticated user from the request
     const authHeader = req.headers.get('Authorization')
     let userId = null
+    let isAuthenticated = false
     if (authHeader) {
+      console.log("Auth header found, getting user...");
       const token = authHeader.replace('Bearer ', '')
       const { data: { user } } = await supabase.auth.getUser(token)
       userId = user?.id
+      isAuthenticated = !!user
+    } else {
+      console.log("No auth header found");
     }
     
-    console.log("User ID from auth:", userId)
+    console.log("User ID from auth:", userId, "Authenticated:", isAuthenticated);
+    console.log("Authentication step completed");
 
-    // Find the session by code
-    console.log("Looking for session with code:", normalizedCode)
-    const { data: session, error: sessionError } = await supabase
-      .from("sessions")
-      .select("id, code, status, settings")
-      .eq("code", normalizedCode)
-      .single()
-
-    if (sessionError || !session) {
-      console.error("Session not found:", sessionError)
+    console.log("Detecting code type...");
+    // Detect code type: 6 digits = session code, 4 digits = team code
+    const isSessionCode = normalizedCode.length === 6;
+    const isTeamCode = normalizedCode.length === 4;
+    
+    console.log("Code type detected:", { isSessionCode, isTeamCode, code: normalizedCode });
+    console.log("Code detection completed");
+    
+    let session: any = null;
+    let teamCodeData: any = null;
+    console.log("Starting session lookup...");
+    
+    if (isSessionCode) {
+      // Traditional flow: Find session by 6-digit code
+      console.log("Looking for session with code:", normalizedCode);
+      const { data: sessionData, error: sessionError } = await supabase
+        .from("sessions")
+        .select("id, code, status, settings, ended_by_host")
+        .eq("code", normalizedCode)
+        .single();
+        
+      if (sessionError || !sessionData) {
+        console.error("Session not found:", sessionError);
+        return new Response(
+          JSON.stringify({ error: "Session not found" }),
+          { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      
+      session = sessionData;
+    } else if (isTeamCode) {
+      // New flow: Find team code and get session
+      console.log("Looking for team code:", normalizedCode);
+      const { data: codeData, error: codeError } = await supabase
+        .from("team_codes")
+        .select("session_id, team_id, is_used")
+        .eq("code", normalizedCode)
+        .single();
+        
+      if (codeError || !codeData) {
+        console.error("Team code not found:", codeError);
+        return new Response(
+          JSON.stringify({ error: "Team code not found" }),
+          { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      
+      teamCodeData = codeData;
+      
+      // Get session details
+      const { data: sessionData, error: sessionError } = await supabase
+        .from("sessions")
+        .select("id, code, status, settings, ended_by_host")
+        .eq("id", teamCodeData.session_id)
+        .single();
+        
+      if (sessionError || !sessionData) {
+        console.error("Session not found for team code:", sessionError);
+        return new Response(
+          JSON.stringify({ error: "Session not found" }),
+          { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      
+      session = sessionData;
+    } else {
       return new Response(
-        JSON.stringify({ error: "Session not found" }),
-        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      )
+        JSON.stringify({ error: "Invalid code format" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
     console.log("Session found:", { id: session.id, status: session.status })
 
-    // Check if this team already exists (rejoining)
-    console.log("Checking if team already exists...")
-    const { data: existingTeam, error: existingTeamError } = await supabase
-      .from("teams")
-      .select("id, team_name")
-      .eq("session_id", session.id)
-      .eq("team_name", normalizedTeamName)
-      .single()
+    let existingTeam: any = null;
+    let isRejoining = false;
+    
+    if (isTeamCode && teamCodeData.team_id) {
+      // Team code flow: Check if team exists
+      console.log("Checking existing team for team code...");
+      const { data: teamData, error: teamError } = await supabase
+        .from("teams")
+        .select("id, team_name")
+        .eq("id", teamCodeData.team_id)
+        .single();
+        
+      if (!teamError && teamData) {
+        existingTeam = teamData;
+        console.log("Found existing team for team code:", teamData);
+        
+        // Check if user is already a member of this team
+        let userIsAlreadyMember = false;
+        if (userId) {
+          console.log("Checking if user is already member:", { 
+            teamId: teamData.id, 
+            userId: userId 
+          });
+          
+          const { data: memberCheck, error: memberCheckError } = await supabase
+            .from("team_members")
+            .select("id, user_id")
+            .eq("team_id", teamData.id)
+            .eq("user_id", userId)
+            .single();
+          
+          console.log("Member check result:", { 
+            memberCheck, 
+            memberCheckError, 
+            isMember: !!memberCheck 
+          });
+          
+          userIsAlreadyMember = !!memberCheck;
+        }
+        
+        isRejoining = userIsAlreadyMember;
+        console.log("Rejoin detection result:", { 
+          userId, 
+          isRejoining, 
+          userIsAlreadyMember 
+        });
+      }
+    } else {
+      // Session code flow: Check if team with this name exists
+      console.log("Checking if team already exists...");
+      const { data: teamData, error: existingTeamError } = await supabase
+        .from("teams")
+        .select("id, team_name")
+        .eq("session_id", session.id)
+        .eq("team_name", normalizedTeamName)
+        .single();
 
-    const isRejoining = existingTeam && !existingTeamError
+      // Check if user is already a member of this team
+      let userIsAlreadyMember = false;
+      if (teamData && !existingTeamError && userId) {
+        const { data: memberCheck } = await supabase
+          .from("team_members")
+          .select("id")
+          .eq("team_id", teamData.id)
+          .eq("user_id", userId)
+          .single();
+        
+        userIsAlreadyMember = !!memberCheck;
+      }
+      
+      isRejoining = userIsAlreadyMember;
+      existingTeam = teamData;
+    }
 
     // If rejoining, allow it regardless of session status
     if (isRejoining) {
       console.log("Team is rejoining - allowing access")
+      
+      // Add user to team_members if not already there
+      if (userId && existingTeam) {
+        // Check if user is already a member
+        const { data: existingMember } = await supabase
+          .from("team_members")
+          .select("id")
+          .eq("team_id", existingTeam.id)
+          .eq("user_id", userId)
+          .single();
+          
+        if (!existingMember) {
+          console.log("Adding user to team_members for existing team:", {
+            team_id: existingTeam.id,
+            user_id: userId,
+            player_name: playerName
+          });
+          
+          const { error: memberError } = await supabase
+            .from("team_members")
+            .insert({
+              team_id: existingTeam.id,
+              user_id: userId,
+              device_id: null,
+              player_name: playerName || null,
+              is_captain: false, // Rejoining users are not captains
+              joined_at: new Date().toISOString()
+            });
+            
+          if (memberError) {
+            console.error("Error adding team member on rejoin:", memberError);
+            // Don't fail the join, just log the error
+          } else {
+            console.log("Successfully added user to team_members");
+          }
+        } else {
+          console.log("User already a member, updating player name if needed");
+          
+          // Update player name if it's different
+          if (playerName) {
+            const { error: updateError } = await supabase
+              .from("team_members")
+              .update({ player_name: playerName })
+              .eq("id", existingMember.id);
+              
+            if (updateError) {
+              console.error("Error updating player name on rejoin:", updateError);
+            } else {
+              console.log("Updated player name to:", playerName);
+            }
+          }
+        }
+      }
+      
       return new Response(
         JSON.stringify({ 
           sessionId: session.id,
@@ -106,62 +295,12 @@ serve(async (req) => {
       )
     }
 
-    // For new teams, check if session is still joinable (lobby or category-select status)
-    if (session.status !== "lobby" && session.status !== "category-select") {
-      console.error("Session not in joinable status for new teams:", session.status)
-      return new Response(
-        JSON.stringify({ error: "Session is not accepting new teams" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      )
-    }
+    // For team code joins, skip session status and capacity checks
+    // Teams are pre-created, so we just need to join the specific team
+    console.log("Team code flow - skipping session capacity checks")
 
-    // Check if session is full
-    console.log("Checking existing teams...")
-    const { data: existingTeams, error: teamsError } = await supabase
-      .from("teams")
-      .select("id")
-      .eq("session_id", session.id)
-
-    if (teamsError) {
-      console.error("Error checking existing teams:", teamsError)
-      return new Response(
-        JSON.stringify({ error: "Failed to check session capacity" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      )
-    }
-
-    console.log("Existing teams count:", existingTeams?.length || 0)
-
-    const maxTeams = session.settings?.maxTeams || 10
-    if (existingTeams && existingTeams.length >= maxTeams) {
-      console.error("Session is full:", existingTeams.length, ">=", maxTeams)
-      return new Response(
-        JSON.stringify({ error: "Session is full" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      )
-    }
-
-    // Check for duplicate team name in this session
-    console.log("Checking for duplicate team name...")
-    const { data: duplicateTeam, error: duplicateError } = await supabase
-      .from("teams")
-      .select("id")
-      .eq("session_id", session.id)
-      .eq("team_name", normalizedTeamName)
-      .single()
-
-    console.log("Duplicate check result:", { duplicateTeam, duplicateError })
-
-    if (duplicateTeam) {
-      console.error("Duplicate team name found")
-      return new Response(
-        JSON.stringify({ 
-          error: "That team name is already taken. Try another one.",
-          code: "functions/already-exists"
-        }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      )
-    }
+    // For team codes, skip duplicate validation since teams are pre-created
+    // For session codes, we could add validation here if needed
 
     // Check if this user (by UID) is banned from this session
     try {
@@ -190,55 +329,280 @@ serve(async (req) => {
     // Create the new team
     console.log("Creating team with userId:", userId)
     
-    if (!userId) {
-      console.error("No user ID available")
-      return new Response(
-        JSON.stringify({ error: "Authentication required" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      )
-    }
+    // Allow anonymous users (userId can be null)
+    console.log("User authentication status:", { userId, isAuthenticated })
     
-    // Assign a random mascot (IDs 1-6)
-    const randomMascotId = Math.floor(Math.random() * 6) + 1
-    console.log("Assigning mascot ID:", randomMascotId)
+    let newTeam: any = null;
     
-    const { data: newTeam, error: createError } = await supabase
-      .from("teams")
-      .insert({
-        session_id: session.id,
-        team_name: normalizedTeamName,
-        uid: userId,
-        mascot_id: randomMascotId
-      })
-      .select()
-      .single()
-
-    if (createError) {
-      console.error("Error creating team:", createError)
-      return new Response(
-        JSON.stringify({ error: "Failed to join session" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      )
+    if (isTeamCode && teamCodeData.team_id) {
+      // Team code flow: Join existing team
+      console.log("Joining existing team from team code:", teamCodeData.team_id);
+      
+      // Get the existing team
+      const { data: teamData, error: teamError } = await supabase
+        .from("teams")
+        .select("id, team_name, captain_id")
+        .eq("id", teamCodeData.team_id)
+        .single();
+        
+      if (teamError || !teamData) {
+        console.error("Team not found for team code:", teamError);
+        return new Response(
+          JSON.stringify({ error: "Team not found" }),
+          { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      
+      // Check if user is already a member of this team
+      if (userId) {
+        const { data: existingMember } = await supabase
+          .from("team_members")
+          .select("id")
+          .eq("team_id", teamCodeData.team_id)
+          .eq("user_id", userId)
+          .single();
+          
+        if (existingMember) {
+          console.log("User already a member of this team, updating player name if needed");
+          
+          // Update player name if it's different
+          if (playerName) {
+            const { error: updateError } = await supabase
+              .from("team_members")
+              .update({ player_name: playerName })
+              .eq("id", existingMember.id);
+              
+            if (updateError) {
+              console.error("Error updating player name:", updateError);
+            } else {
+              console.log("Updated player name to:", playerName);
+            }
+          }
+          
+          newTeam = teamData;
+          console.log("Successfully rejoined existing team");
+          // Skip to response
+        } else {
+          // User is not a member yet, check if team has any members
+          const { data: existingMembers, error: countError } = await supabase
+            .from("team_members")
+            .select("id")
+            .eq("team_id", teamCodeData.team_id);
+          
+          const teamHasMembers = !countError && existingMembers && existingMembers.length > 0;
+          const shouldBecomeCaptain = !teamHasMembers;
+          
+          console.log("Team member check for captain assignment", {
+            teamId: teamCodeData.team_id,
+            existingMembersCount: existingMembers?.length || 0,
+            teamHasMembers,
+            shouldBecomeCaptain,
+            userId: userId
+          });
+          
+          let isCaptain = false;
+          if (shouldBecomeCaptain) {
+            console.log("Setting first member as captain:", userId);
+            
+            // Set both captain_id and uid on the team
+            const { error: captainError } = await supabase
+              .from("teams")
+              .update({ 
+                captain_id: userId,
+                uid: userId  // Also set uid so team appears in filtered queries
+              })
+              .eq("id", teamCodeData.team_id);
+            
+            if (captainError) {
+              console.error("Error setting captain:", captainError);
+            } else {
+              isCaptain = true;
+              console.log("Successfully set as team captain:", userId);
+            }
+          } else {
+            console.log("NOT setting as captain (shouldBecomeCaptain=false):", userId);
+          }
+          
+          // Add player as team member
+          if (!userId) {
+            console.error("Cannot add team member: userId is null");
+            throw new AppError(401, 'User authentication required', 'unauthenticated');
+          }
+          
+          const memberData = {
+            team_id: teamCodeData.team_id,
+            user_id: userId,
+            device_id: null,
+            player_name: playerName || null,
+            is_captain: isCaptain,
+            joined_at: new Date().toISOString()
+          };
+          
+          console.log("Adding player as team member:", memberData);
+          
+          const { error: memberError } = await supabase
+            .from("team_members")
+            .insert(memberData);
+          
+          if (memberError) {
+            console.error("CRITICAL: Failed to insert team member:", {
+              error: memberError,
+              message: memberError.message,
+              details: memberError.details,
+              hint: memberError.hint,
+              code: memberError.code
+            });
+          }
+          
+          // Verify what was actually inserted and fix if needed
+          if (!memberError) {
+            const { data: insertedMember } = await supabase
+              .from("team_members")
+              .select("id, user_id, player_name, is_captain, joined_at")
+              .eq("team_id", teamCodeData.team_id)
+              .eq("user_id", userId)
+              .single();
+            
+            console.log("Verification - what was actually inserted:", insertedMember);
+            
+            // Fix: If database incorrectly set is_captain to true, override it
+            if (insertedMember && insertedMember.is_captain !== isCaptain) {
+              console.log("DATABASE OVERRIDE DETECTED - Fixing incorrect is_captain value:", {
+                expected: isCaptain,
+                actual: insertedMember.is_captain,
+                userId: userId
+              });
+              
+              const { error: fixError } = await supabase
+                .from("team_members")
+                .update({ is_captain: isCaptain })
+                .eq("id", insertedMember.id);
+              
+              if (fixError) {
+                console.error("Failed to fix is_captain value:", fixError);
+              } else {
+                console.log("Successfully fixed is_captain value to:", isCaptain);
+                
+                // Verify the fix worked
+                const { data: fixedMember } = await supabase
+                  .from("team_members")
+                  .select("id, user_id, player_name, is_captain")
+                  .eq("id", insertedMember.id)
+                  .single();
+                
+                console.log("Post-fix verification:", fixedMember);
+              }
+            }
+          }
+        
+          if (memberError) {
+            console.error("Error adding team member:", memberError);
+            console.error("Error details:", {
+              message: memberError.message,
+              details: memberError.details,
+              hint: memberError.hint,
+              code: memberError.code
+            });
+            // Don't fail the join, just log the error
+            console.log("Continuing with join despite team member error");
+          }
+          
+          newTeam = teamData;
+          console.log("Successfully added player to existing team");
+        }
+      }
+    } else {
+      // Session code flow: Find an available team to join
+      console.log("Session code flow - finding available team");
+      
+      // Get all teams for this session
+      const { data: availableTeams, error: teamsError } = await supabase
+        .from("teams")
+        .select("id, team_name, captain_id")
+        .eq("session_id", session.id)
+        .is("captain_id", null) // Find teams without a captain
+        .limit(1);
+      
+      if (teamsError || !availableTeams || availableTeams.length === 0) {
+        console.error("No available teams found:", teamsError);
+        return new Response(
+          JSON.stringify({ error: "No available teams. All teams are full." }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      
+      // Join the first available team
+      const teamToJoin = availableTeams[0];
+      console.log("Joining available team:", teamToJoin);
+      
+      // Set this user as captain
+      const { error: captainError } = await supabase
+        .from("teams")
+        .update({ 
+          captain_id: userId,
+          team_name: normalizedTeamName // Update team name
+        })
+        .eq("id", teamToJoin.id);
+      
+      if (captainError) {
+        console.error("Error setting captain:", captainError);
+      }
+      
+      // Add player as team member
+      const memberData = {
+        team_id: teamToJoin.id,
+        user_id: userId,
+        device_id: null,
+        player_name: playerName || null,
+        is_captain: true,
+        joined_at: new Date().toISOString()
+      };
+      
+      console.log("Adding player as team captain:", memberData);
+      
+      const { error: memberError } = await supabase
+        .from("team_members")
+        .insert(memberData);
+      
+      if (memberError) {
+        console.error("Error adding team member:", memberError);
+      }
+      
+      newTeam = {
+        ...teamToJoin,
+        team_name: normalizedTeamName
+      };
+      console.log("Successfully joined team via session code");
     }
 
-    console.log(`Team ${normalizedTeamName} joined session ${session.id}`)
+    console.log(`Team ${newTeam.team_name || normalizedTeamName} joined session ${session.id}`)
+    console.log('Team data being returned:', {
+      teamId: newTeam.id,
+      teamName: newTeam.team_name || normalizedTeamName,
+      teamUid: newTeam.uid
+    });
 
     // Return format matching frontend expectations
+    const response = {
+      sessionId: session.id,
+      session: {
+        id: session.id,
+        code: session.code,
+        status: session.status,
+        settings: session.settings,
+        endedByHost: session.ended_by_host || false
+      },
+      team: {
+        id: newTeam.id,
+        teamName: newTeam.team_name || normalizedTeamName,
+        uid: newTeam.uid || null
+      }
+    };
+    
+    console.log('Full response:', JSON.stringify(response, null, 2));
+    
     return new Response(
-      JSON.stringify({ 
-        sessionId: session.id,
-        session: {
-          id: session.id,
-          code: session.code,
-          status: session.status,
-          settings: session.settings
-        },
-        team: {
-          id: newTeam.id,
-          teamName: normalizedTeamName,
-          uid: newTeam.uid || null
-        }
-      }),
+      JSON.stringify(response),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     )
 

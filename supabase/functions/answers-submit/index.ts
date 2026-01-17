@@ -17,20 +17,33 @@ async function handleSubmitAnswer(req: Request, uid: string, supabase: any): Pro
 
   console.log('answers-submit: Session validated', { sessionId, phase: session.status });
     
-    // Get user's team
+    // Get user's team through team_members (most recent for this session)
     console.log('answers-submit: Looking up team', { sessionId, uid });
-    const { data: team, error: teamError } = await supabase
-      .from('teams')
-      .select('id')
-      .eq('session_id', sessionId)
-      .eq('uid', uid)
-      .single();
+    
+    // Get all team memberships for this user in this session
+    const { data: teamMembers, error: teamError } = await supabase
+      .from('team_members')
+      .select('team_id, teams!inner(id, session_id)')
+      .eq('user_id', uid)
+      .eq('teams.session_id', sessionId)
+      .order('joined_at', { ascending: false });
+    
+    console.log('answers-submit: Team lookup result', { 
+      hasTeams: !!teamMembers, 
+      hasError: !!teamError, 
+      error: teamError?.message, 
+      teamCount: teamMembers?.length 
+    });
 
-    console.log('answers-submit: Team lookup result', { hasTeam: !!team, hasError: !!teamError, error: teamError?.message, teamId: team?.id });
-
-    if (teamError || !team) {
+    if (teamError || !teamMembers || teamMembers.length === 0) {
       throw new AppError(404, 'Team not found', 'not-found');
     }
+    
+    // Use the most recent team membership
+    const teamMember = teamMembers[0];
+    console.log('answers-submit: Using most recent team', { teamId: teamMember.team_id });
+    
+    const team = { id: teamMember.team_id };
     
     // Find which group this team is in for current round
     const roundIndex = session.round_index || 0;

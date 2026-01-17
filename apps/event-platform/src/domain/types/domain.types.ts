@@ -55,13 +55,14 @@ export interface Session {
 
 export interface Team {
   id: string;
-  uid: string;
+  uid: string | null; // Nullable for teams without captains
   teamName: string;
   isHost: boolean;
   score: number;
   joinedAt: string;
   lastActiveAt?: string;
   mascotId?: number;
+  team_members?: import("../../shared/types").TeamMember[];
 }
 
 export interface Answer {

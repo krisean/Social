@@ -122,7 +122,7 @@ async function handleCreateSession(req: Request, uid: string, supabase: any): Pr
           answerSecs: 90,
           voteSecs: 90,
           resultsSecs: 12,
-          maxTeams: 24,
+          maxTeams: 10,
           gameMode: mode,
           categorySelectSecs: 15,
           selectedCategories: mode === 'jeopardy' && categoryGrid ? categoryGrid.categories.map((c: { id: string; usedPrompts: number[] }) => c.id) : undefined,
@@ -134,6 +134,114 @@ async function handleCreateSession(req: Request, uid: string, supabase: any): Pr
       .single();
     
     if (sessionError) throw sessionError;
+    
+    // Generate team codes for this session
+    console.log("Generating team codes for session:", session.id);
+    try {
+      const { error: codesError } = await supabase.rpc('generate_team_codes', {
+        session_uuid: session.id,
+        num_codes: 10
+      });
+      
+      if (codesError) {
+        console.error('Failed to generate team codes:', codesError);
+        console.error('Error details:', JSON.stringify(codesError));
+        throw codesError;
+      }
+      
+      console.log('Team codes generated successfully');
+    } catch (error) {
+      console.error('Exception during team code generation:', error);
+      throw error;
+    }
+    
+    // Now fetch the generated team codes
+    console.log('Fetching generated team codes for session:', session.id);
+    let teamCodes;
+    try {
+      const { data, error: fetchError } = await supabase
+        .from('team_codes')
+        .select('code')
+        .eq('session_id', session.id)
+        .eq('is_used', false)
+        .limit(10);
+      
+      if (fetchError) {
+        console.error('Failed to fetch team codes:', fetchError);
+        console.error('Fetch error details:', JSON.stringify(fetchError));
+        throw fetchError;
+      }
+      
+      teamCodes = data;
+      
+      if (!teamCodes || teamCodes.length === 0) {
+        console.error('No team codes found after generation');
+        throw new Error('Failed to fetch generated team codes');
+      }
+      
+      console.log('Successfully fetched', teamCodes.length, 'team codes for session:', session.id);
+    } catch (error) {
+      console.error('Exception during team code fetch:', error);
+      throw error;
+    }
+    
+    // Create teams for each team code
+    console.log('Creating teams for session:', session.id);
+    let createdTeams;
+    try {
+      const teamsToCreate = teamCodes.map((code: any, index: number) => {
+        // Let Postgres generate the UUID automatically by not specifying id
+        return {
+          session_id: session.id,
+          team_name: `Team ${index + 1}`,
+          uid: null, // Will be set when first user joins
+          is_host: false,
+          score: 0,
+          joined_at: new Date().toISOString(),
+          mascot_id: Math.floor(Math.random() * 6) + 1
+        };
+      });
+      
+      console.log('Inserting', teamsToCreate.length, 'teams into database');
+      
+      const { data, error: teamsError } = await supabase
+        .from('teams')
+        .insert(teamsToCreate)
+        .select();
+      
+      if (teamsError) {
+        console.error('Failed to create teams:', teamsError);
+        console.error('Teams error details:', JSON.stringify(teamsError));
+        throw teamsError;
+      }
+      
+      createdTeams = data;
+      console.log(`Successfully created ${createdTeams.length} teams for session:`, session.id);
+    } catch (error) {
+      console.error('Exception during team creation:', error);
+      throw error;
+    }
+    
+    // Assign team codes to teams
+    console.log('Assigning team codes to teams');
+    const codeAssignments = teamCodes.map((code: any, index: number) => ({
+      code: code.code,
+      team_id: createdTeams[index].id,
+      session_id: session.id,
+      is_used: false,
+      assigned_at: new Date().toISOString()
+    }));
+    
+    const { error: assignmentError } = await supabase
+      .from('team_codes')
+      .upsert(codeAssignments, { onConflict: 'code' });
+    
+    if (assignmentError) {
+      console.error('Failed to assign team codes:', assignmentError);
+      throw assignmentError;
+    }
+    
+    console.log('Successfully assigned team codes to teams');
     
     // Create analytics record
     await supabase
