@@ -17,33 +17,55 @@ async function handleSubmitAnswer(req: Request, uid: string, supabase: any): Pro
 
   console.log('answers-submit: Session validated', { sessionId, phase: session.status });
     
-    // Get user's team through team_members (most recent for this session)
+    // Get user's team - check both team_members (new schema) and teams (old schema)
     console.log('answers-submit: Looking up team', { sessionId, uid });
     
-    // Get all team memberships for this user in this session
+    let team = null;
+    
+    // First try team_members table (new schema)
     const { data: teamMembers, error: teamError } = await supabase
       .from('team_members')
       .select('team_id, teams!inner(id, session_id)')
       .eq('user_id', uid)
       .eq('teams.session_id', sessionId)
-      .order('joined_at', { ascending: false });
+      .order('joined_at', { ascending: false })
+      .limit(1);
     
-    console.log('answers-submit: Team lookup result', { 
+    console.log('answers-submit: Team members lookup result', { 
       hasTeams: !!teamMembers, 
       hasError: !!teamError, 
       error: teamError?.message, 
       teamCount: teamMembers?.length 
     });
 
-    if (teamError || !teamMembers || teamMembers.length === 0) {
+    if (!teamError && teamMembers && teamMembers.length > 0) {
+      team = { id: teamMembers[0].team_id };
+      console.log('answers-submit: Found team via team_members', { teamId: team.id });
+    } else {
+      // Fallback to teams table (old schema)
+      const { data: directTeams, error: directError } = await supabase
+        .from('teams')
+        .select('id')
+        .eq('uid', uid)
+        .eq('session_id', sessionId)
+        .limit(1);
+      
+      console.log('answers-submit: Direct teams lookup result', { 
+        hasTeams: !!directTeams, 
+        hasError: !!directError, 
+        error: directError?.message, 
+        teamCount: directTeams?.length 
+      });
+      
+      if (!directError && directTeams && directTeams.length > 0) {
+        team = directTeams[0];
+        console.log('answers-submit: Found team via teams table', { teamId: team.id });
+      }
+    }
+
+    if (!team) {
       throw new AppError(404, 'Team not found', 'not-found');
     }
-    
-    // Use the most recent team membership
-    const teamMember = teamMembers[0];
-    console.log('answers-submit: Using most recent team', { teamId: teamMember.team_id });
-    
-    const team = { id: teamMember.team_id };
     
     // Find which group this team is in for current round
     const roundIndex = session.round_index || 0;
@@ -77,11 +99,11 @@ async function handleSubmitAnswer(req: Request, uid: string, supabase: any): Pro
     // Simple profanity filter (you can enhance this)
     const masked = containsProfanity(cleanedText);
     
-    // Check if already answered
+    // Check if already answered (for logging/tracking purposes)
     console.log('answers-submit: Checking for existing answer', { sessionId, teamId: team.id, roundIndex });
     const { data: existingAnswer } = await supabase
       .from('answers')
-      .select('id')
+      .select('id, created_at')
       .eq('session_id', sessionId)
       .eq('team_id', team.id)
       .eq('round_index', roundIndex)
@@ -89,37 +111,41 @@ async function handleSubmitAnswer(req: Request, uid: string, supabase: any): Pro
 
     console.log('answers-submit: Existing answer check', { hasExistingAnswer: !!existingAnswer, existingAnswerId: existingAnswer?.id });
 
-    if (existingAnswer) {
-      throw new AppError(400, 'Already submitted answer for this round', 'already-exists');
-    }
+    const isUpdate = !!existingAnswer;
     
-    // Insert answer
-    console.log('answers-submit: Inserting answer', {
+    // Use upsert to either create new answer or update existing one
+    const answerData = {
+      session_id: sessionId,
+      team_id: team.id,
+      round_index: roundIndex,
+      group_id: groupId,
+      text: cleanedText,
+      masked,
+      updated_at: new Date().toISOString(),
+    };
+
+    console.log('answers-submit: Upserting answer', {
       sessionId,
       teamId: team.id,
       roundIndex,
       groupId,
       textLength: cleanedText.length,
-      masked
+      masked,
+      isUpdate
     });
 
-    const { error: insertError } = await supabase
+    const { error: upsertError } = await supabase
       .from('answers')
-      .insert({
-        session_id: sessionId,
-        team_id: team.id,
-        round_index: roundIndex,
-        group_id: groupId,
-        text: cleanedText,
-        masked,
+      .upsert(answerData, {
+        onConflict: 'session_id,team_id,round_index'
       });
 
-    console.log('answers-submit: Insert result', { hasError: !!insertError, error: insertError?.message });
+    console.log('answers-submit: Upsert result', { hasError: !!upsertError, error: upsertError?.message });
 
-    if (insertError) throw insertError;
+    if (upsertError) throw upsertError;
 
-  console.log('answers-submit: Success');
-  return corsResponse({ success: true });
+  console.log('answers-submit: Success', { isUpdate });
+  return corsResponse({ success: true, isUpdate });
 }
 
 function containsProfanity(text: string): boolean {

@@ -72,6 +72,7 @@ export interface Answer {
   groupId: string;
   text: string;
   createdAt: string;
+  updatedAt?: string;
   masked?: boolean;
 }
 
