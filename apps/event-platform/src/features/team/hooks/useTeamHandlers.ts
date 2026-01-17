@@ -167,18 +167,21 @@ export function useTeamHandlers({
     const isUpdating = !!myAnswer;
     
     try {
-      await submitAnswer({
+      const response = await submitAnswer({
         sessionId: session.id,
         text: maskProfanity(parsed.data),
       });
       
       toast({
-        title: isUpdating ? "Answer updated" : "Answer locked in",
+        title: response?.isUpdate ? "Answer updated!" : "Answer locked in!",
         variant: "success",
       });
-    } catch (error) {
+    } catch (error: any) {
+      console.error('Submit answer error:', error);
+      
+      const errorMessage = error instanceof Error ? error.message : "Failed to submit answer";
       toast({
-        title: "Failed to submit answer",
+        title: errorMessage,
         variant: "error",
       });
     } finally {

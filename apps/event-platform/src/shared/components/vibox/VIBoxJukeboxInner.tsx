@@ -77,20 +77,7 @@ export function VIBoxJukeboxInner({
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // iOS-safe body scroll locking - only lock on non-iOS devices
-  useEffect(() => {
-    if (!isOpen) return;
-
-    const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent);
-
-    if (!isIOS) {
-      document.body.style.overflow = 'hidden';
-      return () => {
-        document.body.style.overflow = '';
-      };
-    }
-  }, [isOpen]);
-
+  
   useEffect(() => {
     const el = bottomPlayerRef.current;
     if (!el) return;

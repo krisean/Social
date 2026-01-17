@@ -60,6 +60,11 @@ export interface SubmitAnswerRequest {
   text: string;
 }
 
+export interface SubmitAnswerResponse {
+  success: boolean;
+  isUpdate?: boolean;
+}
+
 export interface SubmitVoteRequest {
   sessionId: string;
   answerId: string;

@@ -18,6 +18,7 @@ import type {
   SessionAnalyticsResponse,
   StartGameRequest,
   SubmitAnswerRequest,
+  SubmitAnswerResponse,
   SubmitVoteRequest,
   TransitionPhaseRequest,
   SetPromptLibraryRequest,
@@ -560,7 +561,7 @@ export const advancePhase = async (payload: TransitionPhaseRequest) => {
 };
 
 export const submitAnswer = async (payload: SubmitAnswerRequest) => {
-  const { data, error } = await supabase.functions.invoke<{ success: boolean }>(
+  const { data, error } = await supabase.functions.invoke<SubmitAnswerResponse>(
     "answers-submit",
     { body: payload }
   );
