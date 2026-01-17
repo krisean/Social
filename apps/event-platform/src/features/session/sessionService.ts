@@ -1,4 +1,14 @@
 import { supabase } from "../../supabase/client";
+
+// Define team member interface
+interface TeamMember {
+  id: string;
+  team_id: string;
+  user_id: string;
+  is_captain: boolean;
+  joined_at: string;
+  player_name?: string;
+}
 import type {
   CreateSessionRequest,
   CreateSessionResponse,
@@ -82,13 +92,14 @@ function mapTeam(data: any): Team | null {
   
   return {
     id: data.id,
-    uid: data.uid,
+    uid: data.uid || null, // Handle nullable uid for teams without captains
     teamName: data.team_name,
     isHost: data.is_host ?? false,
     score: data.score ?? 0,
     joinedAt: data.joined_at ?? new Date().toISOString(),
     lastActiveAt: data.last_active_at,
     mascotId: typeof data.mascot_id === "number" ? data.mascot_id : undefined,
+    team_members: data.team_members || [], // Now properly fetched from the query
   };
 }
 
@@ -177,13 +188,25 @@ export function subscribeToTeams(
   sessionId: string,
   callback: (teams: Team[]) => void,
 ) {
+  console.log("🚀 subscribeToTeams called with sessionId:", sessionId);
+  
   // Initial fetch
   const fetchTeams = () => {
     console.log("Fetching teams for session:", sessionId);
     supabase
       .from("teams")
-      .select("*")
+      .select(`
+        *,
+        team_members (
+          id,
+          user_id,
+          player_name,
+          is_captain,
+          joined_at
+        )
+      `)
       .eq("session_id", sessionId)
+      .not("uid", "is", null) // Only fetch teams with captains
       .order("joined_at", { ascending: true })
       .then(({ data, error }) => {
         if (error) {
@@ -201,8 +224,8 @@ export function subscribeToTeams(
   // Initial fetch
   fetchTeams();
   
-  // Subscribe to changes
-  const channel = supabase
+  // Subscribe to teams table changes
+  const teamsChannel = supabase
     .channel(`teams:${sessionId}`)
     .on(
       "postgres_changes",
@@ -231,29 +254,65 @@ export function subscribeToTeams(
           fetchTeams();
         }
       }
-    )
-    .subscribe((status) => {
-      console.log("Teams subscription status:", status);
-      if (status === 'SUBSCRIBED') {
-        console.log("Successfully subscribed to teams for session:", sessionId);
-      } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-        console.error("Failed to subscribe to teams for session:", sessionId, status);
-        // Fallback: set up polling if subscription fails
-        console.log("Setting up fallback polling for teams");
-        const pollInterval = setInterval(fetchTeams, 5000); // Poll every 5 seconds
-        // Store interval ID for cleanup
-        (channel as any)._fallbackInterval = pollInterval;
+    );
+
+  // Subscribe to team_members table changes
+  const membersChannel = supabase
+    .channel(`team_members:${sessionId}`)
+    .on(
+      "postgres_changes",
+      {
+        event: "*",
+        schema: "public",
+        table: "team_members",
+      },
+      (payload) => {
+        console.log("🔥 Team member change detected:", {
+          eventType: payload.eventType,
+          sessionId: sessionId,
+          payload: payload,
+          timestamp: new Date().toISOString()
+        });
+        
+        // Always refetch teams when team_members change
+        console.log("🔄 Refetching teams due to team member change");
+        fetchTeams();
       }
-    });
+    );
+
+  // Subscribe both channels
+  teamsChannel.subscribe((status) => {
+    console.log("Teams subscription status:", status);
+    if (status === 'SUBSCRIBED') {
+      console.log("Successfully subscribed to teams for session:", sessionId);
+    } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+      console.error("Failed to subscribe to teams for session:", sessionId, status);
+      // Fallback: set up polling if subscription fails
+      console.log("Setting up fallback polling for teams");
+      const pollInterval = setInterval(fetchTeams, 5000); // Poll every 5 seconds
+      // Store interval ID for cleanup
+      (teamsChannel as any)._fallbackInterval = pollInterval;
+    }
+  });
+
+  membersChannel.subscribe((status) => {
+    console.log("Team members subscription status:", status);
+    if (status === 'SUBSCRIBED') {
+      console.log("Successfully subscribed to team members for session:", sessionId);
+    } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+      console.error("Failed to subscribe to team members for session:", sessionId, status);
+    }
+  });
   
   return () => {
-    console.log("Unsubscribing from teams for session:", sessionId);
+    console.log("Unsubscribing from teams and team members for session:", sessionId);
     // Clear fallback polling if it exists
-    const fallbackInterval = (channel as any)._fallbackInterval;
-    if (fallbackInterval) {
-      clearInterval(fallbackInterval);
+    const teamsFallbackInterval = (teamsChannel as any)._fallbackInterval;
+    if (teamsFallbackInterval) {
+      clearInterval(teamsFallbackInterval);
     }
-    channel.unsubscribe();
+    teamsChannel.unsubscribe();
+    membersChannel.unsubscribe();
   };
 }
 
@@ -564,6 +623,17 @@ export const pauseSession = async (payload: { sessionId: string; pause: boolean 
     { body: payload }
   );
   if (error) throw error;
+  return data;
+};
+
+export const leaveSession = async (payload: { sessionId: string; teamId: string }) => {
+  const { data, error } = await supabase.functions.invoke<{ success: boolean }>(
+    "sessions-leave",
+    { body: payload }
+  );
+
+  if (error) throw error;
+  if (!data) throw new Error("No response data from leave session");
   return data;
 };
 

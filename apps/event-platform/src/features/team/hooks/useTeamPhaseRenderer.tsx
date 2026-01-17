@@ -52,6 +52,8 @@ interface UseTeamPhaseRendererProps {
   handleLeave: () => void;
   scoreboardRef: any;
   roundSummaries: RoundSummary[];
+  votes: Vote[];
+  answers: Answer[];
 }
 
 export function useTeamPhaseRenderer({
@@ -92,6 +94,8 @@ export function useTeamPhaseRenderer({
   handleLeave,
   scoreboardRef,
   roundSummaries,
+  votes,
+  answers,
 }: UseTeamPhaseRendererProps) {
   return useMemo(() => {
     if (!session) return null;
@@ -152,6 +156,9 @@ export function useTeamPhaseRenderer({
             currentTeam={currentTeam}
             votesForMe={votesForMe}
             myRoundPoints={myRoundPoints}
+            votes={votes}
+            answers={activeGroupAnswers}
+            roundGroups={roundGroups}
           />
         );
       case "ended":

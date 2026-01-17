@@ -1,5 +1,5 @@
 import { Card, Leaderboard } from "@social/ui";
-import type { Session, Team } from "../../../shared/types";
+import type { Session, Team, Vote, Answer } from "../../../shared/types";
 import { statusHeadline } from "../../../shared/constants";
 import { useTheme } from "../../../shared/providers/ThemeProvider";
 import { useMemo } from "react";
@@ -14,6 +14,9 @@ interface ResultsPhaseProps {
   currentTeam: Team | null;
   votesForMe: number;
   myRoundPoints: number;
+  votes: Vote[];
+  answers: Answer[];
+  roundGroups: any[];
 }
 
 export function ResultsPhase({
@@ -22,8 +25,76 @@ export function ResultsPhase({
   currentTeam,
   votesForMe,
   myRoundPoints,
+  votes,
+  answers,
+  roundGroups,
 }: ResultsPhaseProps) {
   const { isDark } = useTheme();
+  
+  // Calculate voter rewards for current team
+  const voterRewards = useMemo(() => {
+    if (!currentTeam || !votes || !answers || !roundGroups.length) {
+      return { 
+        participationPoints: 0, 
+        accuracyPoints: 0, 
+        completionBonus: 0,
+        totalVoterPoints: 0,
+        votesCount: 0,
+        accurateVotes: 0
+      };
+    }
+    
+    // Get votes cast by current team
+    const myVotes = votes.filter(v => 
+      v.voterId === currentTeam.id && 
+      v.roundIndex === session.roundIndex
+    );
+    
+    const votesCount = myVotes.length;
+    const groupsVotedIn = new Set(myVotes.map(v => v.groupId));
+    
+    // Count accurate votes (votes for winners)
+    let accurateVotes = 0;
+    const voteCounts = new Map<string, number>();
+    
+    // Count votes per answer
+    votes.forEach(vote => {
+      if (vote.roundIndex === session.roundIndex) {
+        const current = voteCounts.get(vote.answerId) || 0;
+        voteCounts.set(vote.answerId, current + 1);
+      }
+    });
+    
+    // Check each vote for accuracy
+    for (const vote of myVotes) {
+      const answer = answers.find(a => a.id === vote.answerId);
+      if (answer) {
+        const voteCount = voteCounts.get(answer.id) || 0;
+        const groupAnswers = answers.filter(a => a.groupId === answer.groupId && a.roundIndex === session.roundIndex);
+        const maxVotes = Math.max(...groupAnswers.map(a => voteCounts.get(a.id) || 0));
+        if (voteCount === maxVotes && maxVotes > 0) {
+          accurateVotes++;
+        }
+      }
+    }
+    
+    // Calculate actual points (backend logic)
+    const participationPoints = votesCount * 1; // 1 point per vote
+    const accuracyPoints = accurateVotes * 2; // 2 points per accurate vote
+    const completionBonus = groupsVotedIn.size === roundGroups.length ? 3 : 0;
+    
+    // Apply 100x display multiplier
+    const displayMultiplier = 100;
+    
+    return {
+      participationPoints: participationPoints * displayMultiplier,
+      accuracyPoints: accuracyPoints * displayMultiplier,
+      completionBonus: completionBonus * displayMultiplier,
+      totalVoterPoints: (participationPoints + accuracyPoints + completionBonus) * displayMultiplier,
+      votesCount,
+      accurateVotes
+    };
+  }, [currentTeam, votes, answers, roundGroups, session.roundIndex]);
   
   // Get bonus information for current team's group
   const myBonus = useMemo(() => {
@@ -87,6 +158,40 @@ export function ResultsPhase({
           +{myRoundPoints}
         </p>
       </div>
+      
+      {/* Voter Rewards Display */}
+      {voterRewards.votesCount > 0 && (
+        <div className="rounded-3xl p-5 text-center shadow-2xl bg-slate-800">
+          <h3 className={`text-lg font-bold text-center mb-3 ${!isDark ? 'text-slate-900' : 'text-cyan-400'}`}>
+            🎯 Your Voter Rewards
+          </h3>
+          <div className={`space-y-1 text-sm ${!isDark ? 'text-slate-700' : 'text-slate-300'}`}>
+            <div className="flex justify-between">
+              <span>Participation ({voterRewards.votesCount} votes)</span>
+              <span className="font-semibold">+{voterRewards.participationPoints}</span>
+            </div>
+            <div className="flex justify-between">
+              <span>Accuracy ({voterRewards.accurateVotes} correct)</span>
+              <span className="font-semibold">+{voterRewards.accuracyPoints}</span>
+            </div>
+            {voterRewards.completionBonus > 0 && (
+              <div className="flex justify-between">
+                <span>Completion Bonus ✨</span>
+                <span className="font-semibold">+{voterRewards.completionBonus}</span>
+              </div>
+            )}
+            <div className={`flex justify-between pt-2 border-t ${!isDark ? 'border-slate-300' : 'border-slate-600'}`}>
+              <span className="font-bold">Total Voter Points</span>
+              <span className="font-bold text-lg">+{voterRewards.totalVoterPoints}</span>
+            </div>
+          </div>
+          {voterRewards.votesCount > 0 && (
+            <p className={`text-xs text-center mt-2 ${!isDark ? 'text-slate-600' : 'text-slate-400'}`}>
+              Accuracy: {Math.round((voterRewards.accurateVotes / voterRewards.votesCount) * 100)}%
+            </p>
+          )}
+        </div>
+      )}
     </Card>
   );
 }

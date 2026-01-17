@@ -100,7 +100,7 @@ export function Leaderboard({
               <div className="flex-1 min-w-0">
                 <p className={`truncate transition-all duration-200 ${
                   !isDark ? 'text-slate-900' : 'text-white drop-shadow-sm'
-                }`}>{team.teamName}</p>
+                }`} title={team.teamName}>{team.teamName}</p>
               </div>
 
               {/* Points */}
@@ -175,7 +175,7 @@ export function Leaderboard({
               <div className="flex-1 min-w-0">
                 <p className={`truncate font-semibold ${
                   !isDark ? 'text-slate-900' : 'text-white'
-                }`}>
+                }`} title={team.teamName}>
                   {team.teamName}
                 </p>
               </div>
@@ -264,6 +264,7 @@ export function Leaderboard({
                     ? "text-brand-primary"
                     : (!isDark ? "text-slate-800" : "text-slate-200")
                 }`}
+                title={team.teamName}
               >
                 {team.teamName}
               </p>

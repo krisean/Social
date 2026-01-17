@@ -2,8 +2,9 @@ import { useEffect, useCallback } from "react";
 import type { Session, Team, SessionStatus } from "../../../shared/types";
 import { useGameState } from "../../../application";
 import { getErrorMessage } from "../../../shared/utils/errors";
-import { joinSession } from "../../session/sessionService";
+import { joinSession, leaveSession } from "../../session/sessionService";
 import { supabase } from "../../../supabase/client";
+import { useAuth } from "../../../shared/providers/AuthContext";
 
 interface UseTeamEffectsProps {
   sessionId: string | null;
@@ -58,9 +59,11 @@ export function useTeamEffects({
   getHasManuallyLeft,
   setHasManuallyLeft,
 }: UseTeamEffectsProps) {
+  const { user } = useAuth();
   const gameState = useGameState({ 
     sessionId: sessionId ?? undefined, 
-    userId: teamSession?.uid
+    userId: user?.id,
+    teamSession
   });
 
   // Reset joinForm when teamSession is cleared (e.g., after kick or logout)
@@ -164,19 +167,46 @@ export function useTeamEffects({
   ]);
 
   // Handle manual leave
-  const handleLeave = useCallback(() => {
-    console.log("Leave session clicked - redirecting to join form");
+  const handleLeave = useCallback(async () => {
+    console.log("🔥 Leave session clicked - removing from team and redirecting");
     
-    // Don't delete team from database - this allows rejoining during gameplay
-    // if they left by accident or got disconnected
-    // Only clear local session storage
+    // Show confirmation dialog
+    const confirmed = window.confirm("Are you sure you want to leave the session?");
+    if (!confirmed) {
+      console.log("🔥 User cancelled leave session");
+      return;
+    }
     
+    try {
+      // Remove user from team in database
+      const currentTeam = gameState.userTeam;
+      if (sessionId && currentTeam) {
+        console.log("🔥 Calling leaveSession API:", { sessionId, teamId: currentTeam.id });
+        await leaveSession({ sessionId, teamId: currentTeam.id });
+        console.log("✅ Successfully left team in database");
+      } else {
+        console.log("⚠️ No sessionId or currentTeam found:", { sessionId, currentTeam });
+      }
+    } catch (error) {
+      console.error("❌ Failed to leave team in database:", error);
+      // Continue with local cleanup even if database update fails
+    }
+    
+    // Clear local session storage
+    console.log("🔥 Clearing local session storage");
     clearTeamSession();
     setSessionId(null);
     setHasManuallyLeft(true);
+    
+    // Show completion message
+    alert("You have left the session. Redirecting to join page...");
+    
     // Redirect to join form
+    console.log("🔥 Redirecting to join form");
     window.location.href = '/play';
   }, [
+    sessionId,
+    gameState,
     clearTeamSession,
     setSessionId,
     setHasManuallyLeft,

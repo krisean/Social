@@ -94,16 +94,48 @@ async function handleStartSession(req: Request, uid: string, supabase: any): Pro
   // Get all non-host teams
   const { data: teams } = await supabase
     .from('teams')
-    .select('id')
+    .select('id, captain_id')
     .eq('session_id', sessionId)
     .eq('is_host', false);
     
-    if (!teams || teams.length === 0) {
-      throw new AppError(400, 'Need at least one player to start', 'failed-precondition');
-    }
+  if (!teams || teams.length === 0) {
+    throw new AppError(400, 'Need at least one player to start', 'failed-precondition');
+  }
+  
+  // Remove empty teams (teams without captains) before starting the game
+  const teamsWithCaptains = teams?.filter(t => t.captain_id) || [];
+  const emptyTeamIds = teams?.filter(t => !t.captain_id).map(t => t.id) || [];
+  
+  if (emptyTeamIds.length > 0) {
+    console.log(`Removing ${emptyTeamIds.length} empty teams:`, emptyTeamIds);
+    
+    // Delete team members for empty teams
+    await supabase
+      .from('team_members')
+      .delete()
+      .in('team_id', emptyTeamIds);
+    
+    // Delete the empty teams
+    await supabase
+      .from('teams')
+      .delete()
+      .in('id', emptyTeamIds);
+    
+    // Delete associated team codes
+    await supabase
+      .from('team_codes')
+      .delete()
+      .in('team_id', emptyTeamIds);
+    
+    console.log(`Cleaned up ${emptyTeamIds.length} empty teams`);
+  }
+  
+  if (teamsWithCaptains.length === 0) {
+    throw new AppError(400, 'Need at least one player to start', 'failed-precondition');
+  }
     
     // Shuffle teams
-    const shuffledTeamIds: string[] = shuffleArray(teams.map((t: { id: string }) => t.id));
+    const shuffledTeamIds: string[] = shuffleArray(teamsWithCaptains.map((t: { id: string }) => t.id));
     
     // Determine game mode
     const isJeopardyMode = session.settings?.gameMode === 'jeopardy';

@@ -149,12 +149,60 @@ export function useTeamComputations({
 
   const myRoundPoints = useMemo(() => {
     if (!myAnswer) return 0;
-    const basePoints = (voteCounts.get(myAnswer.id) ?? 0) * 100;
+    
+    // Calculate actual points based on backend logic
+    const voteCount = voteCounts.get(myAnswer.id) ?? 0;
+    let actualPoints = voteCount; // Base: 1 point per vote
+    
+    // Check if team won their group
     const wonGroup = roundSummaries.some((summary) =>
       summary.winners.some((winner) => winner.id === myAnswer.id),
     );
-    return basePoints + (wonGroup ? 1000 : 0);
-  }, [myAnswer, voteCounts, roundSummaries]);
+    
+    // Add 10-point group winner bonus for classic mode
+    if (wonGroup) {
+      actualPoints += 10;
+    } else {
+      // Check for second place bonus
+      // Get all answers in the same group and sort by vote count
+      const currentRound = session?.rounds?.[session.roundIndex];
+      if (currentRound && currentRound.groups) {
+        const myGroup = currentRound.groups.find(g => 
+          g.teamIds && g.teamIds.some(teamId => {
+            const teamAnswer = roundSummaries
+              .flatMap(s => s.answers)
+              .find(a => a.teamId === teamId && a.roundIndex === session.roundIndex);
+            return teamAnswer?.id === myAnswer.id;
+          })
+        );
+        
+        if (myGroup) {
+          // Get all answers in this group with their vote counts
+          const groupAnswers = roundSummaries
+            .flatMap(s => s.answers)
+            .filter(a => a.groupId === myGroup.id && a.roundIndex === session.roundIndex);
+          
+          // Sort by vote count to find second place
+          const sortedAnswers = groupAnswers
+            .map(answer => ({
+              answer,
+              votes: voteCounts.get(answer.id) || 0
+            }))
+            .sort((a, b) => b.votes - a.votes);
+          
+          // Check if this answer is second (and has votes)
+          if (sortedAnswers.length >= 2 && 
+              sortedAnswers[1].answer.id === myAnswer.id && 
+              sortedAnswers[1].votes > 0) {
+            actualPoints += 5; // Second place bonus
+          }
+        }
+      }
+    }
+    
+    // Apply 100x display multiplier
+    return actualPoints * 100;
+  }, [myAnswer, voteCounts, roundSummaries, session]);
 
   return {
     // Basic derived state

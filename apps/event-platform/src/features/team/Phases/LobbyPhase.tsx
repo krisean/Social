@@ -1,6 +1,9 @@
 import { Card } from "@social/ui";
 import { useTheme } from "../../../shared/providers/ThemeProvider";
 import { DrinkTank } from "../../../components/DrinkTank";
+import { TeamMembersCard } from "../components/TeamMembersCard";
+import { useTeamSession } from "../useTeamSession";
+import { useAuth } from "../../../shared/providers/AuthContext";
 import type { Team } from "../../../shared/types";
 
 
@@ -10,6 +13,40 @@ interface LobbyPhaseProps {
 
 export function LobbyPhase({ teams }: LobbyPhaseProps) {
   const { isDark } = useTheme();
+  const { teamSession } = useTeamSession();
+  const { user } = useAuth();
+  
+  // Find the current user's team
+  const currentTeam = teams.find(team => {
+    // Primary check: teamId from session
+    if (teamSession?.teamId && team.id === teamSession.teamId) {
+      return true;
+    }
+    // Fallback: check if team has members and user is in them
+    if (team.team_members && team.team_members.length > 0) {
+      // For authenticated users, check user_id match
+      if (user?.id) {
+        return team.team_members.some(member => member.user_id === user.id);
+      }
+      // For anonymous users, we can't reliably identify them by user_id (all NULL)
+      // So we'll rely on the teamId from session primarily
+    }
+    return false;
+  });
+  
+  // Only log when there are captain status issues
+  const captainCount = currentTeam?.team_members?.filter(m => m.is_captain).length || 0;
+  if (captainCount !== 1) {
+    console.log("LobbyPhase debug:", {
+      teams: teams.length,
+      teamId: teamSession?.teamId,
+      userId: user?.id,
+      currentTeam: currentTeam?.teamName,
+      hasMembers: currentTeam?.team_members?.length || 0,
+      captainCount
+    });
+  }
+  
   return (
     <>
       <Card className="space-y-5" isDark={isDark}>
@@ -20,6 +57,14 @@ export function LobbyPhase({ teams }: LobbyPhaseProps) {
           </p>
         </div>
       </Card>
+
+      {/* Team members card */}
+      {currentTeam && currentTeam.team_members && currentTeam.team_members.length > 0 && (
+        <TeamMembersCard 
+          teamMembers={currentTeam.team_members}
+          teamName={currentTeam.teamName}
+        />
+      )}
 
       {/* Floating mascot drink tank */}
       <DrinkTank teams={teams} className="mt-6" />

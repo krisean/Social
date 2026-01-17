@@ -72,7 +72,7 @@ export function Leaderboard({
 
               {/* Team name */}
               <div className="flex-1 min-w-0">
-                <p className="truncate text-slate-900">{team.teamName}</p>
+                <p className="truncate text-slate-900" title={team.teamName}>{team.teamName}</p>
               </div>
 
               {/* Points */}
@@ -127,7 +127,7 @@ export function Leaderboard({
 
               {/* Team name */}
               <div className="flex-1 min-w-0">
-                <p className="truncate font-semibold text-slate-900">
+                <p className="truncate font-semibold text-slate-900" title={team.teamName}>
                   {team.teamName}
                 </p>
               </div>
@@ -200,6 +200,7 @@ export function Leaderboard({
                 className={`truncate font-semibold ${
                   isHighlighted ? "text-brand-primary" : "text-slate-900"
                 }`}
+                title={team.teamName}
               >
                 {team.teamName}
               </p>

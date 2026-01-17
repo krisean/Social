@@ -309,7 +309,7 @@ export function EntryPage() {
                   </span>
                 </Link>
                 <Link
-                  to="/play"
+                  to="/join"
                   className={`group inline-flex items-center justify-center rounded-2xl px-6 py-4 text-lg
                             font-semibold transition hover:scale-[1.02]
                             focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2
