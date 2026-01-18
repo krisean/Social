@@ -19,14 +19,14 @@ export function Card({
   return (
     <div
       className={clsx(
-        "rounded-3xl border p-5 shadow-md transition",
+        "rounded-3xl border-[3px] p-5 shadow-md transition",
         // Light mode styles
-        !isDark && "border-slate-100 bg-white shadow-slate-300/40",
+        !isDark && "border-slate-200 bg-white shadow-slate-300/40",
         // Dark mode styles - Neon Nocturne theme
-        isDark && "border-fuchsia-500/30 bg-[#0a0a0a]/95 shadow-fuchsia-500/20",
+        isDark && "border-slate-600 bg-[#0a0a0a]/95 shadow-fuchsia-500/20",
         interactive &&
           "cursor-pointer hover:shadow-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-primary",
-        selected && "border-brand-primary shadow-lg",
+        selected && "border-cyan-400 border-2 shadow-lg",
         className,
       )}
     >

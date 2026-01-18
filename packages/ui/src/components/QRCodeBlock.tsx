@@ -8,7 +8,7 @@ interface QRCodeBlockProps {
 
 export function QRCodeBlock({ value, caption, isDark = false }: QRCodeBlockProps) {
   return (
-    <div className={`flex flex-col items-center gap-2 rounded-2xl p-4 shadow-lg ${!isDark ? 'bg-white shadow-slate-300/40' : 'bg-slate-800 shadow-fuchsia-500/20'}`}>
+    <div className={`flex flex-col items-center gap-2 rounded-2xl p-4 shadow-lg border-[3px] ${!isDark ? 'bg-white shadow-slate-300/40 border-slate-200' : 'bg-slate-800 shadow-fuchsia-500/20 border-slate-600'}`}>
       <div className={`overflow-hidden rounded-1xl p-1 shadow-inner ${!isDark ? 'bg-white' : 'bg-slate-900'}`}>
         <QRCode
           value={value}
@@ -18,7 +18,7 @@ export function QRCodeBlock({ value, caption, isDark = false }: QRCodeBlockProps
         />
       </div>
       {caption ? (
-        <p className={`text-center text-sm font-medium ${!isDark ? 'text-slate-600' : 'text-cyan-300'}`}>
+        <p className={`text-center text-lg font-semibold ${!isDark ? 'text-slate-600' : 'text-cyan-300'}`}>
           {caption}
         </p>
       ) : null}

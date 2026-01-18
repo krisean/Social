@@ -139,27 +139,54 @@ const DRINK_TANK_CONFIG = {
   initialOffset: 50,
 } as const;
 
-// Mascot bubble styles for drink tank
-const mascotBubbleStyles = `
-  .drink-tank-bubble {
+// Modern floating team card styles
+const mascotCardStyles = `
+  .team-float-card {
     position: absolute;
-    border-radius: 50%;
-    background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.6), rgba(255,255,255,0.15) 50%, transparent 70%);
-    border: 1px solid rgba(255,255,255,0.2);
-    box-shadow:
-      0 0 15px rgba(255,255,255,0.3),
-      inset 0 0 15px rgba(255,255,255,0.2),
-      inset -6px -6px 12px rgba(0,0,0,0.2);
-    filter: blur(0.4px);
+    border-radius: 1rem;
+    background: linear-gradient(135deg, rgba(30, 41, 59, 0.95), rgba(51, 65, 85, 0.85));
+    border: 1.5px solid rgba(6, 182, 212, 0.4);
+    box-shadow: 
+      0 8px 32px rgba(6, 182, 212, 0.15),
+      0 0 20px rgba(6, 182, 212, 0.1),
+      inset 0 1px 1px rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
     will-change: transform;
     display: flex;
     align-items: center;
     justify-content: center;
     transition: all ${DRINK_TANK_CONFIG.transitionDuration} cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    overflow: hidden;
   }
 
-  .drink-tank-bubble:hover {
-    transform: scale(1.05) translateY(-5px);
+  .team-float-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: radial-gradient(circle at 30% 30%, rgba(244, 114, 182, 0.08) 0%, rgba(6, 182, 212, 0.12) 50%, transparent 70%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .team-float-card:hover {
+    transform: scale(1.08) translateY(-8px);
+    border-color: rgba(6, 182, 212, 0.7);
+    box-shadow: 
+      0 12px 40px rgba(6, 182, 212, 0.25),
+      0 0 30px rgba(6, 182, 212, 0.2),
+      inset 0 1px 1px rgba(255, 255, 255, 0.15);
+  }
+
+  .team-float-name {
+    background: linear-gradient(135deg, rgba(30, 41, 59, 0.95), rgba(51, 65, 85, 0.9));
+    border: 1px solid rgba(6, 182, 212, 0.3);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    box-shadow: 
+      0 4px 12px rgba(0, 0, 0, 0.3),
+      0 0 8px rgba(6, 182, 212, 0.15);
   }
 `;
 
@@ -307,7 +334,7 @@ export function DrinkTank({ teams, className = "" }: DrinkTankProps) {
 
   return (
     <>
-      <style dangerouslySetInnerHTML={{ __html: mascotBubbleStyles }} />
+      <style dangerouslySetInnerHTML={{ __html: mascotCardStyles }} />
       <div
         ref={containerRef}
         className={`relative w-full overflow-visible pointer-events-none ${className}`}
@@ -331,39 +358,40 @@ export function DrinkTank({ teams, className = "" }: DrinkTankProps) {
                 position: 'absolute',
               }}
             >
-              {/* Mascot bubble and name group */}
+              {/* Modern team card with mascot and name */}
               <div className="flex flex-col items-center justify-center">
-                {/* Bubble and mascot container */}
+                {/* Card container with mascot */}
                 <div className="relative flex items-center justify-center">
                   <div
-                    className="drink-tank-bubble"
+                    className="team-float-card"
                     style={{
                       width: `clamp(${DRINK_TANK_CONFIG.bubbleMinSize}px, 8vw, ${DRINK_TANK_CONFIG.bubbleMaxSize}px)`,
                       height: `clamp(${DRINK_TANK_CONFIG.bubbleMinSize}px, 8vw, ${DRINK_TANK_CONFIG.bubbleMaxSize}px)`,
                     }}
                   >
-                    {/* Mascot positioned behind the bubble */}
+                    {/* Mascot positioned inside card */}
                     <div className="relative z-10 flex items-center justify-center w-full h-full">
                       {mascot ? (
                         <img
                           src={mascot.path}
                           alt={mascot.name}
-                          className="object-contain opacity-90"
+                          className="object-contain"
                           style={{
                             width: `clamp(${DRINK_TANK_CONFIG.mascotMinSize}px, 6vw, ${DRINK_TANK_CONFIG.mascotMaxSize}px)`,
                             height: `clamp(${DRINK_TANK_CONFIG.mascotMinSize}px, 6vw, ${DRINK_TANK_CONFIG.mascotMaxSize}px)`,
+                            filter: 'drop-shadow(0 2px 4px rgba(6, 182, 212, 0.3))',
                           }}
                           onError={(e) => {
                             e.currentTarget.style.display = "none";
                             const parent = e.currentTarget.parentElement;
                             if (parent) {
                               parent.textContent = team.teamName.charAt(0).toUpperCase();
-                              parent.className = "text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-amber-800 flex items-center justify-center w-full h-full opacity-80";
+                              parent.className = "text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-cyan-400 flex items-center justify-center w-full h-full";
                             }
                           }}
                         />
                       ) : (
-                        <span className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-amber-800 opacity-80">
+                        <span className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-cyan-400 drop-shadow-[0_2px_4px_rgba(6,182,212,0.4)]">
                           {team.teamName.charAt(0).toUpperCase()}
                         </span>
                       )}
@@ -371,12 +399,12 @@ export function DrinkTank({ teams, className = "" }: DrinkTankProps) {
                   </div>
                 </div>
 
-                {/* Team name below the bubble group */}
+                {/* Team name badge below card */}
                 <div
                   className="flex justify-center"
-                  style={{ marginTop: 'clamp(32px, 4vw, 48px)' }}
+                  style={{ marginTop: 'clamp(24px, 3vw, 36px)' }}
                 >
-                  <span className="text-xs sm:text-sm font-semibold text-black bg-white/75 rounded-full px-2 py-1 sm:px-3 sm:py-1 whitespace-nowrap shadow-sm">
+                  <span className="team-float-name text-xs sm:text-sm font-semibold text-cyan-100 rounded-full px-3 py-1.5 sm:px-4 sm:py-2 whitespace-nowrap">
                     {team.teamName}
                   </span>
                 </div>

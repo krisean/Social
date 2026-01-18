@@ -968,7 +968,7 @@ export function HostPage() {
               </div>
             )}
             {session ? (
-              <div className="space-y-4 rounded-3xl p-5 shadow-lg bg-slate-800 shadow-fuchsia-500/20">
+              <div className={`space-y-4 rounded-3xl p-5 shadow-lg border-[3px] ${!isDark ? 'bg-white shadow-slate-300/40 border-slate-200' : 'bg-slate-800 shadow-fuchsia-500/20 border-slate-600'}`}>
                 <div className="flex items-center justify-between">
                   <h3 className="text-lg font-semibold text-pink-400">
                     Lobby ({teams.length})
